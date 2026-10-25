@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
-import { CheckCircle2, ImageIcon, Loader2, Plus, Search, Upload, X } from "lucide-react";
+import { CheckCircle2, Crop, ImageIcon, Loader2, Plus, Search, Upload, X } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { GameCover } from "@/components/game-cover";
 import { steamHeroUrl } from "@/lib/steam/assets";
 import { setFavorites, updateProfile, uploadProfileImage, type AccountResult } from "../_actions/account";
+import { ImageCropper } from "./image-cropper";
 
 export type GameOption = { id: string; title: string; coverUrl: string | null; steamAppId: number | null };
 
@@ -89,7 +90,7 @@ function ProfileSection({ username, profile, steamAvatarUrl, favorites, options,
         >
           <div className="flex gap-2">
             <input value={form.avatarUrl} onChange={(e) => set("avatarUrl")(e.target.value)} placeholder="https://…" className={inputCls} />
-            {canUpload && <UploadButton kind="avatar" onUploaded={set("avatarUrl")} />}
+            {canUpload && <UploadButton kind="avatar" current={shownAvatar || null} onUploaded={set("avatarUrl")} />}
           </div>
         </Field>
 
@@ -107,6 +108,7 @@ function ProfileSection({ username, profile, steamAvatarUrl, favorites, options,
             {canUpload && (
               <UploadButton
                 kind="banner"
+                current={form.bannerUrl && !bannerBroken ? form.bannerUrl : null}
                 onUploaded={(url) => {
                   setBannerBroken(false);
                   set("bannerUrl")(url);
@@ -251,65 +253,79 @@ function FavoritesSection({ initial, options }: { initial: (GameOption | null)[]
 //  Upload
 // =============================================================================
 
-/** Tamanho máximo (lado maior) depois de reduzir no navegador. */
-const UPLOAD_MAX_SIDE = { avatar: 512, banner: 1920 } as const;
+/** Formato do recorte e tamanho final de cada imagem. */
+const CROP = {
+  avatar: { aspect: 1, outputWidth: 512, round: true, title: "Recortar foto de perfil" },
+  banner: { aspect: 4, outputWidth: 1920, round: false, title: "Recortar capa" },
+} as const;
 
 /**
- * Escolhe a imagem, reduz no navegador e envia. Sai em JPEG: leve e aceito pelos
- * cards de compartilhamento (que não desenham WebP). A imagem já fica salva no perfil.
+ * Escolhe a imagem, abre o recorte e envia o resultado (JPEG: leve e aceito pelos
+ * cards de compartilhamento, que não desenham WebP). A imagem já fica salva no perfil.
  */
-function UploadButton({ kind, onUploaded }: { kind: "avatar" | "banner"; onUploaded: (url: string) => void }) {
+function UploadButton({
+  kind,
+  current,
+  onUploaded,
+}: {
+  kind: "avatar" | "banner";
+  /** Imagem atual (link enviado, avatar da Steam ou arte de jogo): habilita "Ajustar" */
+  current: string | null;
+  onUploaded: (url: string) => void;
+}) {
   const input = useRef<HTMLInputElement>(null);
-  const [pending, startTransition] = useTransition();
+  const [file, setFile] = useState<File | string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function onPick(file: File | undefined) {
-    if (!file) return;
+  function onPick(picked: File | undefined) {
+    if (input.current) input.current.value = "";
+    if (!picked) return;
+    if (!picked.type.startsWith("image/")) return setError("Escolha um arquivo de imagem.");
     setError(null);
-    startTransition(async () => {
-      try {
-        const blob = await shrinkImage(file, UPLOAD_MAX_SIDE[kind]);
-        const data = new FormData();
-        data.set("kind", kind);
-        data.set("file", new File([blob], `${kind}.jpg`, { type: "image/jpeg" }));
-        const res = await uploadProfileImage(data);
-        if (res.ok) onUploaded(res.url);
-        else setError(res.message);
-      } catch {
-        setError("Não conseguimos ler essa imagem.");
-      } finally {
-        if (input.current) input.current.value = "";
-      }
-    });
+    setFile(picked);
+  }
+
+  async function upload(blob: Blob) {
+    const data = new FormData();
+    data.set("kind", kind);
+    data.set("file", new File([blob], `${kind}.jpg`, { type: "image/jpeg" }));
+    const res = await uploadProfileImage(data);
+    if (res.ok) {
+      onUploaded(res.url);
+      setFile(null);
+    } else {
+      setError(res.message);
+      setFile(null);
+    }
   }
 
   return (
     <div className="shrink-0">
       <input ref={input} type="file" accept="image/*" className="sr-only" onChange={(e) => onPick(e.target.files?.[0])} tabIndex={-1} />
-      <button
-        type="button"
-        onClick={() => input.current?.click()}
-        disabled={pending}
-        className="inline-flex h-full items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-50"
-      >
-        {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Upload className="size-4" aria-hidden />}
-        {pending ? "Enviando…" : "Enviar"}
-      </button>
+      <div className="flex h-full gap-2">
+        {current && (
+          <button
+            type="button"
+            onClick={() => setFile(current)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+            title="Recortar a imagem atual"
+          >
+            <Crop className="size-4" aria-hidden />
+            Ajustar
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => input.current?.click()}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+        >
+          <Upload className="size-4" aria-hidden />
+          Enviar
+        </button>
+      </div>
       {error && <span className="mt-1 block text-xs text-red-300">{error}</span>}
+      {file && <ImageCropper source={file} {...CROP[kind]} onCancel={() => setFile(null)} onConfirm={upload} />}
     </div>
-  );
-}
-
-async function shrinkImage(file: File, maxSide: number): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob falhou"))), "image/jpeg", 0.88),
   );
 }
 

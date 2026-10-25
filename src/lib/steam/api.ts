@@ -315,7 +315,11 @@ export type StoreAppDetails = {
   metacritic: { score: number; url: string | null } | null;
   screenshots: Screenshot[];
   trailers: Trailer[];
+  price: SteamPrice | null;
 };
+
+/** Preço em centavos (BRL). null em jogos grátis ou sem venda. */
+export type SteamPrice = { final: number; original: number; discountPercent: number };
 
 /** Detalhes da página da loja (descrição, gêneros, data). `null` se o app não existir. */
 export async function getAppDetails(appId: number): Promise<StoreAppDetails | null> {
@@ -339,6 +343,7 @@ export async function getAppDetails(appId: number): Promise<StoreAppDetails | nu
           metacritic?: { score: number; url?: string };
           screenshots?: { path_thumbnail: string; path_full: string }[];
           movies?: { name: string; thumbnail: string; hls_h264?: string }[];
+          price_overview?: { final: number; initial: number; discount_percent: number };
         };
       }
     >;
@@ -359,10 +364,44 @@ export async function getAppDetails(appId: number): Promise<StoreAppDetails | nu
         .filter((m) => m.hls_h264)
         .slice(0, 4)
         .map((m) => ({ name: m.name, thumb: m.thumbnail, hls: m.hls_h264! })),
+      price: data.price_overview
+        ? { final: data.price_overview.final, original: data.price_overview.initial, discountPercent: data.price_overview.discount_percent }
+        : null,
     };
   } catch {
     return null;
   }
+}
+
+/**
+ * Preços de vários jogos de uma vez (loja, sem chave). Jogos grátis ou fora de venda
+ * voltam com `null`; apps que falharam não aparecem no Map.
+ */
+export async function getPrices(appIds: number[]): Promise<Map<number, SteamPrice | null>> {
+  const out = new Map<number, SteamPrice | null>();
+  for (let i = 0; i < appIds.length; i += 50) {
+    const ids = appIds.slice(i, i + 50);
+    try {
+      const res = await fetch(`${STORE_API}/appdetails?appids=${ids.join(",")}&filters=price_overview&cc=BR`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) continue;
+      const body = (await res.json()) as Record<
+        string,
+        { success: boolean; data?: { price_overview?: { final: number; initial: number; discount_percent: number } } | [] }
+      >;
+      for (const id of ids) {
+        const item = body[String(id)];
+        if (!item?.success) continue;
+        const p = !Array.isArray(item.data) ? item.data?.price_overview : undefined;
+        out.set(id, p ? { final: p.final, original: p.initial, discountPercent: p.discount_percent } : null);
+      }
+    } catch {
+      // lote falhou: tenta de novo no próximo cron
+    }
+  }
+  return out;
 }
 
 export type StoreListItem = {

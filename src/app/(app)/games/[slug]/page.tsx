@@ -14,6 +14,7 @@ import { Avatar } from "@/components/avatar";
 import { GameCover } from "@/components/game-cover";
 import { ScoreBadge } from "@/components/score-badge";
 import { LogForm } from "./_components/log-form";
+import { WishlistButton } from "./_components/wishlist-button";
 import { Achievements } from "./_components/achievements";
 import { GameMedia, type Screenshot, type Trailer } from "./_components/media";
 import { GameNews } from "./_components/news";
@@ -22,6 +23,7 @@ import { GameReviews, parseReviewFilter } from "./_components/reviews";
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ reviews?: string }> };
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -34,8 +36,9 @@ export default async function GamePage({ params, searchParams }: Props) {
   const [game, viewer] = await Promise.all([getOrCreateGame(slug), getCurrentUser()]);
   if (!game) notFound();
 
-  const [myLog, ratingGroups, platinums, playingNow, activities] = await Promise.all([
+  const [myLog, wishlisted, ratingGroups, platinums, playingNow, activities] = await Promise.all([
     viewer ? prisma.gameLog.findUnique({ where: { userId_gameId: { userId: viewer.id, gameId: game.id } } }) : null,
+    viewer ? prisma.wishlistItem.findUnique({ where: { userId_gameId: { userId: viewer.id, gameId: game.id } } }).then(Boolean) : false,
     prisma.gameLog.groupBy({ by: ["rating"], where: { gameId: game.id, rating: { not: null } }, _count: { _all: true } }),
     prisma.gameLog.count({ where: { gameId: game.id, status: "PLATINUM" } }),
     prisma.gameLog.findMany({
@@ -115,6 +118,20 @@ export default async function GamePage({ params, searchParams }: Props) {
           </section>
 
           <div className="flex flex-wrap items-center gap-4 text-sm">
+            <WishlistButton gameId={game.id} slug={game.slug} initial={wishlisted} loggedIn={Boolean(viewer)} />
+            {game.priceFinal !== null && (
+              <span className="flex items-baseline gap-2">
+                {game.discountPercent ? (
+                  <>
+                    <span className="rounded-md bg-emerald-500 px-1.5 py-0.5 text-xs font-bold text-zinc-950">-{game.discountPercent}%</span>
+                    {game.priceOriginal && <span className="text-zinc-500 line-through">{brl.format(game.priceOriginal / 100)}</span>}
+                    <span className="font-semibold text-emerald-400">{brl.format(game.priceFinal / 100)}</span>
+                  </>
+                ) : (
+                  <span className="text-zinc-300">{brl.format(game.priceFinal / 100)}</span>
+                )}
+              </span>
+            )}
             {platinums > 0 && (
               <span className="flex items-center gap-1.5 text-amber-300">
                 <Trophy className="size-4" aria-hidden />

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Target, Trophy } from "lucide-react";
+import { ArrowLeft, Bookmark, Target, Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getShelf, getShelfCounts, parseTab, PROFILE_TABS } from "@/lib/profile-games";
 import { GameCover } from "@/components/game-cover";
@@ -24,6 +24,7 @@ const EMPTY: Record<string, string> = {
   quase: "Nenhum jogo perto da platina (80% ou mais das conquistas). As conquistas são conferidas aos poucos a cada sincronização.",
   dropados: "Nenhum jogo dropado.",
   backlog: "Backlog vazio.",
+  wishlist: "Nada na wishlist. Na página de um jogo, clique em “Quero jogar” para ser avisado das promoções.",
 };
 
 /** Jogos do perfil por categoria (aberta pelos números do perfil). */
@@ -58,6 +59,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
             >
               {t.slug === "platinas" && <Trophy className="size-3.5 text-amber-400" aria-hidden />}
               {t.slug === "quase" && <Target className="size-3.5 text-sky-400" aria-hidden />}
+              {t.slug === "wishlist" && <Bookmark className="size-3.5 text-emerald-400" aria-hidden />}
               {t.label}
               <span className={`rounded-full px-1.5 text-xs tabular-nums ${active ? "bg-zinc-700 text-zinc-200" : "bg-zinc-800 text-zinc-500"}`}>
                 {counts[t.slug].toLocaleString("pt-BR")}

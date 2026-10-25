@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { syncSteamForUser } from "@/lib/steam/sync";
+import { checkWishlistDeals } from "@/lib/deals";
+import { notifyWeeklySummaries } from "@/lib/weekly";
 
 /** Limite da função na Vercel (plano Hobby: até 60 s). */
 export const maxDuration = 60;
@@ -22,6 +24,20 @@ export async function GET(req: NextRequest) {
   }
 
   const started = Date.now();
+
+  // 1) Promoções da wishlist (rápido: preços em lote)
+  const deals = await checkWishlistDeals().catch((err) => {
+    console.error("[cron] promoções", err);
+    return { checked: 0, notified: 0, error: true };
+  });
+
+  // 2) Segunda-feira: avisa que o resumo semanal está pronto
+  const weekly = await notifyWeeklySummaries().catch((err) => {
+    console.error("[cron] resumo semanal", err);
+    return { notified: 0, error: true };
+  });
+
+  // 3) Sincronização da Steam de cada usuário, até o limite de tempo
   const users = await prisma.user.findMany({
     where: {
       steamId: { not: null },
@@ -49,6 +65,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  console.log("[cron] steam-sync", { ...summary, ms: Date.now() - started });
-  return NextResponse.json(summary);
+  console.log("[cron] steam-sync", { ...summary, deals, weekly, ms: Date.now() - started });
+  return NextResponse.json({ ...summary, deals, weekly });
 }

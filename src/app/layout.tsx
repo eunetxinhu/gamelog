@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { Pwa } from "@/components/pwa";
 
 export const metadata: Metadata = {
   // Base das URLs absolutas dos cards de compartilhamento (opengraph-image)
@@ -8,12 +9,19 @@ export const metadata: Metadata = {
   title: "GameLog",
   description: "Registre, avalie e compartilhe seus jogos, platinas e reviews.",
   openGraph: { siteName: "GameLog", locale: "pt_BR", type: "website" },
+  applicationName: "GameLog",
+  appleWebApp: { capable: true, title: "GameLog", statusBarStyle: "black-translucent" },
 };
+
+export const viewport: Viewport = { themeColor: "#09090b", colorScheme: "dark" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className="dark">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Pwa />
+      </body>
     </html>
   );
 }

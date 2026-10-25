@@ -85,7 +85,9 @@ export async function searchGames(query: string): Promise<SearchResult[]> {
 export async function getOrCreateGame(slug: string) {
   const existing = await prisma.game.findUnique({ where: { slug } });
   if (existing) {
-    const stale = !existing.mediaSyncedAt || Date.now() - existing.mediaSyncedAt.getTime() > MEDIA_TTL_MS;
+    // Sem preço salvo = veio de antes do campo existir: renova já
+    const stale =
+      !existing.mediaSyncedAt || !existing.priceCheckedAt || Date.now() - existing.mediaSyncedAt.getTime() > MEDIA_TTL_MS;
     return existing.steamAppId && (!existing.syncedAt || stale)
       ? enrichFromSteam(existing.id, existing.steamAppId, existing.coverUrl)
       : existing;
@@ -143,6 +145,10 @@ function steamDetailsData(details: StoreAppDetails, assets: StoreAssets | undefi
     heroUrl: assets?.hero ?? null,
     screenshots: details.screenshots,
     trailers: details.trailers,
+    priceFinal: details.price?.final ?? null,
+    priceOriginal: details.price?.original ?? null,
+    discountPercent: details.price?.discountPercent ?? null,
+    priceCheckedAt: now,
     syncedAt: now,
     mediaSyncedAt: now,
   };

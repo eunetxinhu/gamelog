@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, Settings, Target, Trophy } from "lucide-react";
+import { CalendarDays, ChevronRight, GitCompareArrows, Settings, Target, Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities } from "@/lib/activity";
@@ -12,6 +12,8 @@ import { formatRarity, RARE_PERCENT } from "@/lib/rarity";
 import { ActivityCard } from "@/components/activity-card";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
+import { LevelBadge } from "@/components/level-badge";
+import { getProgression } from "@/lib/progression";
 import { GameCover } from "@/components/game-cover";
 
 type Props = { params: Promise<{ username: string }> };
@@ -36,12 +38,12 @@ export default async function ProfilePage({ params }: Props) {
 
   const isMe = viewer?.id === profile.id;
 
-  const [following, library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites] = await Promise.all([
+  const [following, library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression] = await Promise.all([
     viewer && !isMe
       ? prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewer.id, followingId: profile.id } } })
       : null,
     prisma.libraryEntry.aggregate({ where: { userId: profile.id }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
-    prisma.gameLog.count({ where: { userId: profile.id, status: "COMPLETED" } }),
+    prisma.gameLog.findMany({ where: { userId: profile.id, status: "COMPLETED" }, select: { gameId: true } }),
     getPlatinums(profile.id),
     getPlaying(profile.id, 6),
     getNearPlatinum(profile.id, 6),
@@ -53,9 +55,13 @@ export default async function ProfilePage({ params }: Props) {
     }),
     getActivities({ where: { userId: profile.id }, viewerId: viewer?.id ?? null, take: 20 }),
     prisma.favoriteGame.findMany({ where: { userId: profile.id }, orderBy: { position: "asc" }, select: { game: { select: gameSelect } } }),
+    getProgression(profile.id),
   ]);
+  const earnedBadges = progression.badges.filter((b) => b.earned);
 
   const gamesHref = (aba: string) => `/u/${profile.username}/jogos?aba=${aba}`;
+  // Finalizados inclui as platinas (platinar implica ter terminado)
+  const completedCount = new Set([...completedLogs.map((l) => l.gameId), ...platinumList.map((p) => p.game.id)]).size;
   const name = profile.displayName ?? profile.username;
 
   return (
@@ -75,6 +81,9 @@ export default async function ProfilePage({ params }: Props) {
           <div className="min-w-0 flex-1 space-y-1">
             <h1 className="truncate text-2xl font-bold text-zinc-50">{name}</h1>
             <p className="text-sm text-zinc-400">@{profile.username}</p>
+            <Link href={`/u/${profile.username}/selos`} className="block pt-1" title="Ver nível e selos">
+              <LevelBadge level={progression.level} />
+            </Link>
             {profile.bio && <p className="max-w-prose pt-1 text-sm text-zinc-300">{profile.bio}</p>}
             <p className="flex gap-4 pt-2 text-sm text-zinc-400">
               <span>
@@ -94,7 +103,15 @@ export default async function ProfilePage({ params }: Props) {
                 <Settings className="size-4" aria-hidden /> Editar perfil
               </Link>
             ) : viewer ? (
-              <FollowButton userId={profile.id} following={Boolean(following)} />
+              <div className="flex flex-wrap gap-2">
+                <FollowButton userId={profile.id} following={Boolean(following)} />
+                <Link
+                  href={`/u/${profile.username}/comparar`}
+                  className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+                >
+                  <GitCompareArrows className="size-4" aria-hidden /> Comparar
+                </Link>
+              </div>
             ) : (
               <Link href={`/login?next=/u/${profile.username}`} className="text-sm text-sky-400 hover:underline">
                 Entre para seguir
@@ -119,6 +136,37 @@ export default async function ProfilePage({ params }: Props) {
           </ul>
         </section>
       )}
+
+      {/* ---- Selos ---------------------------------------------------------- */}
+      <Link
+        href={`/u/${profile.username}/selos`}
+        className="mt-4 flex items-center gap-3 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 transition hover:border-zinc-600"
+      >
+        <span className="shrink-0 text-xs uppercase tracking-wide text-zinc-500">
+          Selos {earnedBadges.length}/{progression.badges.length}
+        </span>
+        {earnedBadges.length === 0 ? (
+          <span className="text-sm text-zinc-500">Nenhum ainda. Veja como conquistar →</span>
+        ) : (
+          <span className="flex gap-1.5">
+            {earnedBadges.map((b) => (
+              <span key={b.id} title={`${b.name}: ${b.description}`} className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-lg ring-1 ring-amber-500/30">
+                {b.emoji}
+              </span>
+            ))}
+          </span>
+        )}
+        <ChevronRight className="ml-auto size-4 shrink-0 text-zinc-500" aria-hidden />
+      </Link>
+
+      <Link
+        href={`/u/${profile.username}/semana`}
+        className="mt-2 flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-600"
+      >
+        <CalendarDays className="size-4 text-sky-400" aria-hidden />
+        {isMe ? "Sua semana" : "Resumo da semana"}: jogos novos, finalizados e platinas dos últimos 7 dias
+        <ChevronRight className="ml-auto size-4 shrink-0 text-zinc-500" aria-hidden />
+      </Link>
 
       {/* ---- Números -------------------------------------------------------- */}
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

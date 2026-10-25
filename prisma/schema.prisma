@@ -54,6 +54,8 @@ enum NotificationType {
   COMMENT // comentou na sua publicação
   FOLLOW // começou a seguir você
   PLATINUM // alguém que você segue platinou
+  DEAL // jogo da sua wishlist entrou em promoção (sem actor)
+  WEEKLY // seu resumo semanal está pronto (sem actor)
 }
 
 enum LibrarySource {
@@ -96,6 +98,7 @@ model User {
   activities        Activity[]
   likes             ActivityLike[]
   comments          Comment[]
+  wishlist          WishlistItem[]
   /// Notificações recebidas
   notifications     Notification[] @relation("NotificationRecipient")
   /// Notificações que eu causei (curti, comentei, segui…)
@@ -156,6 +159,15 @@ model Game {
   libraryOf  LibraryEntry[]
   favoriteOf FavoriteGame[]
   activities Activity[]
+
+  wishlistedBy  WishlistItem[]
+  notifications Notification[]
+
+  // Preço na Steam (BRL, centavos), atualizado pelo cron para jogos em alguma wishlist
+  priceFinal      Int?      @map("price_final")
+  priceOriginal   Int?      @map("price_original")
+  discountPercent Int?      @map("discount_percent") @db.SmallInt
+  priceCheckedAt  DateTime? @map("price_checked_at")
 
   @@index([title])
   @@map("games")
@@ -288,20 +300,42 @@ model Notification {
   id         String           @id @default(cuid())
   /// Quem recebe
   userId     String           @map("user_id") @db.Uuid
-  /// Quem causou
-  actorId    String           @map("actor_id") @db.Uuid
+  /// Quem causou (null nas notificações do sistema: promoção, resumo semanal)
+  actorId    String?          @map("actor_id") @db.Uuid
   type       NotificationType
   activityId String?          @map("activity_id")
+  /// Jogo relacionado (promoção)
+  gameId     String?          @map("game_id")
   readAt     DateTime?        @map("read_at")
   createdAt  DateTime         @default(now()) @map("created_at")
 
   user     User      @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  actor    User      @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  actor    User?     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
   activity Activity? @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  game     Game?     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, readAt])
   @@map("notifications")
+}
+
+// -----------------------------------------------------------------------------
+//  WishlistItem — "Quero jogar", com alerta de promoção
+// -----------------------------------------------------------------------------
+
+model WishlistItem {
+  userId        String   @map("user_id") @db.Uuid
+  gameId        String   @map("game_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  /// Preço (centavos) do último aviso de promoção; null = avisar na próxima promoção
+  notifiedPrice Int?     @map("notified_price")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([userId, gameId])
+  @@index([gameId])
+  @@map("wishlist_items")
 }
 
 // -----------------------------------------------------------------------------
