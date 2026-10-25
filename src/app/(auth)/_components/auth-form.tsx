@@ -14,9 +14,9 @@ export function AuthForm({ mode, next, notice, steamLogin, inviteRef }: Props) {
   const otherHref = `${isSignup ? "/login" : "/signup"}?next=${encodeURIComponent(next)}`;
 
   return (
-    <section className="w-full max-w-sm rounded-2xl border border-brand-500/25 bg-black/70 p-5 shadow-2xl shadow-brand-950/60 backdrop-blur-md sm:p-6">
-      <h1 className="text-2xl font-bold text-zinc-50">{isSignup ? "Criar conta" : "Entrar"}</h1>
-      <p className="mt-1 text-sm text-zinc-400">
+    <section className="w-full max-w-[21rem] rounded-2xl border border-white/10 bg-black/45 p-5 shadow-2xl shadow-black/50 ring-1 ring-brand-500/15 backdrop-blur-[6px]">
+      <h1 className="text-xl font-bold text-zinc-50">{isSignup ? "Criar conta" : "Entrar"}</h1>
+      <p className="mt-1 text-sm text-zinc-400 [@media(max-height:900px)]:hidden">
         {isSignup ? "Registre, avalie e acompanhe seus jogos." : "Bem-vindo de volta ao Poneglyph.gg."}
       </p>
 
@@ -32,19 +32,19 @@ export function AuthForm({ mode, next, notice, steamLogin, inviteRef }: Props) {
               {/* Link comum (não <Link>): a rota redireciona para o site da Steam */}
               <a
                 href={inviteRef ? `/api/steam/login?ref=${encodeURIComponent(inviteRef)}` : "/api/steam/login"}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#1b2838] px-3.5 py-2.5 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-[#2a475e]"
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#1b2838] [@media(max-height:900px)]:mt-3 px-3.5 py-2.5 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-[#2a475e]"
               >
                 <SteamIcon />
                 {isSignup ? "Criar conta com Steam" : "Entrar com Steam"}
               </a>
-              <div className="mt-4 flex items-center gap-3 text-xs text-zinc-500">
+              <div className="mt-4 flex items-center gap-3 text-xs text-zinc-500 [@media(max-height:900px)]:mt-3">
                 <span className="h-px flex-1 bg-brand-900/50" />
                 ou com e-mail
                 <span className="h-px flex-1 bg-brand-900/50" />
               </div>
             </>
           )}
-          <form action={action} className={`${steamLogin ? "mt-4" : "mt-6"} space-y-4`}>
+          <form action={action} className={`${steamLogin ? "mt-4" : "mt-6"} space-y-4 [@media(max-height:900px)]:mt-3 [@media(max-height:900px)]:space-y-3`}>
             <input type="hidden" name="next" value={next} />
             {inviteRef && <input type="hidden" name="ref" value={inviteRef} />}
 
@@ -95,7 +95,7 @@ export function AuthForm({ mode, next, notice, steamLogin, inviteRef }: Props) {
         </>
       )}
 
-      <p className="mt-5 text-center text-sm text-zinc-400">
+      <p className="mt-5 text-center text-sm text-zinc-400 [@media(max-height:900px)]:mt-3">
         {isSignup ? "Já tem conta? " : "Ainda não tem conta? "}
         <Link href={otherHref} className="font-medium text-brand-400 hover:underline">
           {isSignup ? "Entrar" : "Criar conta"}
@@ -128,7 +128,7 @@ export function Field({ label, name, aside, ...rest }: { label: string; name: st
         name={name}
         required
         spellCheck={false}
-        className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+        className="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
         {...rest}
       />
     </div>

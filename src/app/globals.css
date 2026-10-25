@@ -84,3 +84,26 @@ body {
   background: rgb(212 27 38 / 0.45);
   color: #fff;
 }
+
+/* Tela de login com a arte (src/components/brand-stage.tsx explica as medidas) */
+.brand-stage-art {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 39%;
+}
+.brand-stage-content {
+  padding-top: calc(39dvh + max(15dvh, 8.44vw) + clamp(1.5rem, 4dvh, 3rem));
+}
+@media (max-aspect-ratio: 3/4) {
+  .brand-stage-art {
+    height: 72dvh;
+    -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent);
+    mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  }
+  .brand-stage-content {
+    padding-top: calc(72dvh * 0.539 + clamp(1.25rem, 3dvh, 2rem));
+  }
+}

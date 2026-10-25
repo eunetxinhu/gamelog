@@ -1,17 +1,17 @@
 import type { ReactNode } from "react";
 
 /*
- * Tela com a arte de login (public/brand/login.jpg, 1920×1080).
+ * Tela com a arte de login (public/brand/login.jpg, 1920×1080). As medidas ficam em
+ * globals.css (.brand-stage-*):
  *
- * O emblema da arte fica centralizado na horizontal, com o centro a 37% da altura
- * e meia altura de 160 px (de 1080). Com `object-fit: cover` + `object-position:
- * 50% 37%`, esse ponto cai sempre a 37% da altura da tela, em qualquer formato.
- * A imagem exibida tem altura max(100vh, 56,25vw), então o emblema termina em
- * 37vh + max(14,8vh, 8,33vw): o conteúdo começa logo abaixo, centralizado com ele.
+ * - O emblema está centralizado na horizontal, com o centro a 39% da altura da arte
+ *   (y = 420 de 1080) e a base a 53,9% (y = 582).
+ * - Tela deitada: a arte cobre tudo (`cover` + `object-position: 50% 39%`), então o
+ *   emblema fica sempre a 39% da altura da tela e termina em 39vh + max(15vh, 8,44vw).
+ * - Tela em pé (celular): a arte ocupa só os 72% de cima e some num degradê, para o
+ *   emblema ficar menor e mais alto e sobrar espaço para a caixa.
+ * Trocou a arte? Meça de novo o centro e a base do emblema e ajuste os números.
  */
-const EMBLEM_CENTER_Y = "37%";
-const CONTENT_TOP = "calc(37dvh + max(14.8dvh, 8.33vw) + 1rem)";
-
 export function BrandStage({ children }: { children: ReactNode }) {
   return (
     <main className="relative min-h-dvh bg-[#0c0101]">
@@ -23,12 +23,9 @@ export function BrandStage({ children }: { children: ReactNode }) {
         alt=""
         aria-hidden
         fetchPriority="high"
-        className="pointer-events-none fixed inset-0 size-full select-none object-cover"
-        style={{ objectPosition: `50% ${EMBLEM_CENTER_Y}` }}
+        className="brand-stage-art pointer-events-none select-none"
       />
-      <div className="relative flex flex-col items-center px-4 pb-10" style={{ paddingTop: CONTENT_TOP }}>
-        {children}
-      </div>
+      <div className="brand-stage-content relative flex flex-col items-center px-4 pb-10">{children}</div>
     </main>
   );
 }
