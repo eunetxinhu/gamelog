@@ -15,7 +15,8 @@ type Props = { params: Promise<{ username: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const username = decodeURIComponent((await params).username);
   return {
-    title: { absolute: `@${username} te convidou para o ${SITE_NAME}` },
+    title: { absolute: SITE_NAME },
+    openGraph: { title: `@${username} te convidou para o ${SITE_NAME}` },
     description: "Conecte sua Steam, mostre suas platinas e acompanhe o que seus amigos estão jogando.",
   };
 }

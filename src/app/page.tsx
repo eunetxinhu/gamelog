@@ -12,7 +12,8 @@ import { SITE_NAME } from "@/lib/brand";
 import { BrandLogo } from "@/components/brand-logo";
 
 export const metadata: Metadata = {
-  title: { absolute: `${SITE_NAME} · Sua vida gamer, platina por platina` },
+  title: { absolute: SITE_NAME },
+  openGraph: { title: `${SITE_NAME} · Sua vida gamer, platina por platina` },
   description: "Conecte sua Steam, mostre suas platinas automaticamente e acompanhe o que seus amigos estão jogando.",
 };
 
