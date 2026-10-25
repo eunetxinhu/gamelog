@@ -114,7 +114,8 @@ npm run dev
 2. Na Vercel: **Add New → Project**, importe o repositório. O build já é `prisma generate && next build`.
 3. Em **Settings → Environment Variables**, cadastre as mesmas variáveis do `.env`, trocando `APP_URL` pelo domínio da Vercel (ex.: `https://gamelog.vercel.app`, sem barra no final).
 4. No Supabase, em **Authentication → URL Configuration**: Site URL = o domínio da Vercel e, em Redirect URLs, `https://SEU-DOMINIO/auth/callback`.
-5. Migrations continuam rodando da sua máquina (`npx prisma migrate deploy`), apontando para o mesmo banco.
+5. Migrations rodam sozinhas no build de **produção** (`scripts/migrate-production.mjs` → `prisma migrate deploy`). Para isso, cadastre `DIRECT_URL` na Vercel (conexão direta do Supabase, porta 5432). Prévias de PR e o CI não mexem no banco. Se a migration falhar, o build falha e a versão anterior continua no ar.
+   - Sem acesso a uma máquina, também dá para colar o `migration.sql` no SQL Editor do Supabase, desde que a migration seja registrada em `_prisma_migrations` (senão o próximo deploy tenta aplicar de novo).
 
 O "Entrar com Steam" passa a voltar para `APP_URL/api/steam/callback` sozinho, e os cards de compartilhamento usam `APP_URL` como base.
 
