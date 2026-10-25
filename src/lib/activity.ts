@@ -82,10 +82,12 @@ export type FeedItem = {
   containsSpoiler: boolean;
   createdAt: Date;
   user: { id: string; username: string; displayName: string | null; avatarUrl: string | null };
-  game: { slug: string; title: string; coverUrl: string | null; steamAppId: number | null };
+  game: { slug: string; title: string; coverUrl: string | null; steamAppId: number | null; platinumRarity: number | null };
   likeCount: number;
+  ggCount: number;
   commentCount: number;
   likedByMe: boolean;
+  ggByMe: boolean;
 };
 
 export const PAGE_SIZE = 30;
@@ -106,11 +108,17 @@ export async function getActivities(opts: {
     take: opts.take ?? PAGE_SIZE,
     include: {
       user: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } },
-      game: { select: { slug: true, title: true, coverUrl: true, steamAppId: true } },
-      _count: { select: { likes: true, comments: true } },
-      likes: { where: { userId: opts.viewerId ?? "00000000-0000-0000-0000-000000000000" }, select: { userId: true } },
+      game: { select: { slug: true, title: true, coverUrl: true, steamAppId: true, platinumRarity: true } },
+      _count: { select: { comments: true } },
+      likes: { where: { userId: opts.viewerId ?? "00000000-0000-0000-0000-000000000000" }, select: { type: true } },
     },
   });
+
+  // Curtidas e GGs por publicação (uma query para a página toda)
+  const reactions = rows.length
+    ? await prisma.activityLike.groupBy({ by: ["activityId", "type"], where: { activityId: { in: rows.map((r) => r.id) } }, _count: { _all: true } })
+    : [];
+  const countOf = (id: string, type: "LIKE" | "GG") => reactions.find((x) => x.activityId === id && x.type === type)?._count._all ?? 0;
 
   return rows.map((r) => ({
     id: r.id,
@@ -127,8 +135,10 @@ export async function getActivities(opts: {
       avatarUrl: r.user.avatarUrl ?? r.user.steamAvatarUrl,
     },
     game: r.game,
-    likeCount: r._count.likes,
+    likeCount: countOf(r.id, "LIKE"),
+    ggCount: countOf(r.id, "GG"),
     commentCount: r._count.comments,
-    likedByMe: r.likes.length > 0,
+    likedByMe: r.likes.some((l) => l.type === "LIKE"),
+    ggByMe: r.likes.some((l) => l.type === "GG"),
   }));
 }

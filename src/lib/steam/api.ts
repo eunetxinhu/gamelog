@@ -163,25 +163,20 @@ export async function getAchievementDetails(appId: number, steamId: string | nul
   const day = { next: { revalidate: 86400 }, signal: AbortSignal.timeout(TIMEOUT_MS) };
   const schemaUrl = new URL(`${STEAM_API}/ISteamUserStats/GetSchemaForGame/v2/`);
   schemaUrl.search = new URLSearchParams({ key: apiKey(), appid: String(appId), l: "brazilian" }).toString();
-  const globalUrl = `${STEAM_API}/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid=${appId}`;
 
   type Schema = {
     game?: { availableGameStats?: { achievements?: { name: string; displayName: string; description?: string; icon: string; icongray: string; hidden: number }[] } };
   };
-  type Global = { achievementpercentages?: { achievements?: { name: string; percent: number | string }[] } };
 
   try {
-    const [schemaRes, globalRes, mine] = await Promise.all([
+    const [schemaRes, percentBy, mine] = await Promise.all([
       fetch(schemaUrl, day),
-      fetch(globalUrl, day),
+      getGlobalAchievementPercentages(appId).then((m) => m ?? new Map<string, number>()),
       steamId ? getPlayerAchievementList(steamId, appId) : Promise.resolve(null),
     ]);
     if (!schemaRes.ok) return null;
     const schema = ((await schemaRes.json()) as Schema).game?.availableGameStats?.achievements;
     if (!schema?.length) return null;
-
-    const global = globalRes.ok ? ((await globalRes.json()) as Global).achievementpercentages?.achievements ?? [] : [];
-    const percentBy = new Map(global.map((g) => [g.name, Number(g.percent)]));
 
     return schema.map((a) => {
       const m = mine?.get(a.name);
@@ -197,6 +192,22 @@ export async function getAchievementDetails(appId: number, steamId: string | nul
         unlockedAt: m?.unlockedAt ?? null,
       };
     });
+  } catch {
+    return null;
+  }
+}
+
+/** % de jogadores com cada conquista (sem API key; cache de 1 dia). `null` se o jogo não tem conquistas. */
+export async function getGlobalAchievementPercentages(appId: number): Promise<Map<string, number> | null> {
+  try {
+    const res = await fetch(`${STEAM_API}/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid=${appId}`, {
+      next: { revalidate: 86400 },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { achievementpercentages?: { achievements?: { name: string; percent: number | string }[] } };
+    const list = body.achievementpercentages?.achievements;
+    return list?.length ? new Map(list.map((a) => [a.name, Number(a.percent)])) : null;
   } catch {
     return null;
   }

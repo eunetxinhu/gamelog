@@ -6,7 +6,8 @@ import { relativeTime } from "@/lib/format";
 import { Avatar } from "./avatar";
 import { GameCover } from "./game-cover";
 import { RatingStars } from "./rating-stars";
-import { DeleteActivityButton, LikeButton } from "./activity-actions";
+import { DeleteActivityButton, ReactionButton } from "./activity-actions";
+import { formatRarity, RARE_PERCENT } from "@/lib/rarity";
 
 const TYPE = {
   STARTED_GAME: { verb: "começou a jogar", icon: Zap, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/30" },
@@ -61,6 +62,15 @@ export function ActivityCard({ item, viewerId }: Props) {
             <Icon className="size-3.5" aria-hidden />
             {isPlatinum ? "Platina conquistada" : t.verb.charAt(0).toUpperCase() + t.verb.slice(1)}
           </span>
+          {isPlatinum && item.game.platinumRarity !== null && (
+            <p className="text-xs text-zinc-400">
+              Só{" "}
+              <strong className={item.game.platinumRarity < RARE_PERCENT ? "text-fuchsia-300" : "text-amber-200"}>
+                {formatRarity(item.game.platinumRarity)}
+              </strong>{" "}
+              dos jogadores têm essa platina{item.game.platinumRarity < RARE_PERCENT && " 💎"}
+            </p>
+          )}
           {item.rating && (
             <div>
               <RatingStars value={item.rating} />
@@ -71,7 +81,10 @@ export function ActivityCard({ item, viewerId }: Props) {
       </div>
 
       <footer className="mt-3 flex items-center gap-1 border-t border-zinc-800/80 pt-2">
-        <LikeButton activityId={item.id} liked={item.likedByMe} count={item.likeCount} canLike={Boolean(viewerId)} />
+        <ReactionButton activityId={item.id} type="LIKE" active={item.likedByMe} count={item.likeCount} canReact={Boolean(viewerId)} />
+        {(item.type === "PLATINUM" || item.type === "COMPLETED") && (
+          <ReactionButton activityId={item.id} type="GG" active={item.ggByMe} count={item.ggCount} canReact={Boolean(viewerId)} />
+        )}
         <Link
           href={`/p/${item.id}#comentarios`}
           className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"

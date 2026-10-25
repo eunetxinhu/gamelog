@@ -42,8 +42,15 @@ enum ActivityType {
   REVIEW // avaliou / escreveu review sem mudar de status
 }
 
+/// Reações numa publicação
+enum ReactionType {
+  LIKE // ❤ curtida
+  GG // 🏆 "GG", só em platinas e finalizados
+}
+
 enum NotificationType {
   LIKE // curtiu sua publicação
+  GG // mandou "GG" na sua platina/finalizado
   COMMENT // comentou na sua publicação
   FOLLOW // começou a seguir você
   PLATINUM // alguém que você segue platinou
@@ -119,6 +126,11 @@ model Game {
   rawgId     Int? @unique @map("rawg_id")
   igdbId     Int? @unique @map("igdb_id")
   steamAppId Int? @unique @map("steam_app_id")
+
+  /// % de jogadores da Steam com a conquista mais rara = teto de quem tem a platina.
+  /// Preenchido na primeira vez que alguém platina o jogo.
+  platinumRarity          Float?    @map("platinum_rarity")
+  platinumRarityCheckedAt DateTime? @map("platinum_rarity_checked_at")
 
   /// Última vez que os metadados vieram da API externa (para revalidar cache).
   syncedAt  DateTime? @map("synced_at")
@@ -224,15 +236,17 @@ model Activity {
   @@map("activities")
 }
 
+/// Reação numa publicação (curtida ou GG). Uma de cada tipo por pessoa.
 model ActivityLike {
-  activityId String   @map("activity_id")
-  userId     String   @map("user_id") @db.Uuid
-  createdAt  DateTime @default(now()) @map("created_at")
+  activityId String       @map("activity_id")
+  userId     String       @map("user_id") @db.Uuid
+  type       ReactionType @default(LIKE)
+  createdAt  DateTime     @default(now()) @map("created_at")
 
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@id([activityId, userId])
+  @@id([activityId, userId, type])
   @@index([userId])
   @@map("activity_likes")
 }

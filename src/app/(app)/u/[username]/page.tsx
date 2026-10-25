@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, Settings, Trophy } from "lucide-react";
+import { ChevronRight, Settings, Target, Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities } from "@/lib/activity";
 import { formatPlaytime } from "@/lib/format";
-import { getPlatinums, getPlaying } from "@/lib/profile-games";
+import { getNearPlatinum, getPlatinums, getPlaying } from "@/lib/profile-games";
+import { formatRarity, RARE_PERCENT } from "@/lib/rarity";
 import { ActivityCard } from "@/components/activity-card";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
@@ -35,7 +36,7 @@ export default async function ProfilePage({ params }: Props) {
 
   const isMe = viewer?.id === profile.id;
 
-  const [following, library, completedCount, platinumList, playing, mostPlayed, activities, favorites] = await Promise.all([
+  const [following, library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites] = await Promise.all([
     viewer && !isMe
       ? prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewer.id, followingId: profile.id } } })
       : null,
@@ -43,6 +44,7 @@ export default async function ProfilePage({ params }: Props) {
     prisma.gameLog.count({ where: { userId: profile.id, status: "COMPLETED" } }),
     getPlatinums(profile.id),
     getPlaying(profile.id, 6),
+    getNearPlatinum(profile.id, 6),
     prisma.libraryEntry.findMany({
       where: { userId: profile.id, playtimeMinutes: { gt: 0 } },
       orderBy: { playtimeMinutes: "desc" },
@@ -164,8 +166,21 @@ export default async function ProfilePage({ params }: Props) {
 
           {platinumList.length > 0 && (
             <ShelfSection title="Platinas" href={gamesHref("platinas")} icon={<Trophy className="size-4 text-amber-400" aria-hidden />}>
-              {platinumList.slice(0, 9).map(({ game }) => (
-                <Shelf key={game.id} game={game} platinum />
+              {platinumList.slice(0, 9).map(({ game, rarity }) => (
+                <Shelf
+                  key={game.id}
+                  game={game}
+                  platinum
+                  sub={rarity !== null ? `${rarity < RARE_PERCENT ? "💎 " : ""}${formatRarity(rarity)} dos jogadores` : undefined}
+                />
+              ))}
+            </ShelfSection>
+          )}
+
+          {nearPlatinum.length > 0 && (
+            <ShelfSection title="Quase platinando" href={gamesHref("quase")} icon={<Target className="size-4 text-sky-400" aria-hidden />}>
+              {nearPlatinum.map(({ game, sub }) => (
+                <Shelf key={game.id} game={game} sub={sub ?? undefined} />
               ))}
             </ShelfSection>
           )}

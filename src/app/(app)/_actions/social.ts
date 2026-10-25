@@ -5,31 +5,35 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { notify } from "@/lib/notifications";
+import type { ReactionType } from "@/generated/prisma/enums";
 
 const COMMENT_MAX = 1000;
 
-/** Curte / descurte uma publicação. Devolve o estado final. */
-export async function toggleLike(activityId: string): Promise<{ ok: boolean; liked?: boolean }> {
-  const user = await getCurrentUser();
-  if (!user) return { ok: false };
+/** Publicações que aceitam "GG" (conquistas, não reviews nem "começou a jogar"). */
+const GG_TYPES = new Set(["PLATINUM", "COMPLETED"]);
 
-  const key = { activityId_userId: { activityId, userId: user.id } };
+/** Liga / desliga uma reação (curtida ou GG). Devolve o estado final. */
+export async function toggleReaction(activityId: string, type: ReactionType): Promise<{ ok: boolean; active?: boolean }> {
+  const user = await getCurrentUser();
+  if (!user || (type !== "LIKE" && type !== "GG")) return { ok: false };
+
+  const activity = await prisma.activity.findUnique({ where: { id: activityId }, select: { userId: true, type: true } });
+  if (!activity || (type === "GG" && !GG_TYPES.has(activity.type))) return { ok: false };
+
+  const key = { activityId_userId_type: { activityId, userId: user.id, type } };
   const existing = await prisma.activityLike.findUnique({ where: key });
   try {
     if (existing) await prisma.activityLike.delete({ where: key });
     else {
-      const like = await prisma.activityLike.create({
-        data: { activityId, userId: user.id },
-        select: { activity: { select: { userId: true } } },
-      });
-      await notify(prisma, { userId: like.activity.userId, actorId: user.id, type: "LIKE", activityId });
+      await prisma.activityLike.create({ data: { activityId, userId: user.id, type } });
+      await notify(prisma, { userId: activity.userId, actorId: user.id, type, activityId });
     }
   } catch (err) {
     // Clique duplo (P2002) ou publicação apagada (P2003/P2025): o estado final já é o certo
-    if (err instanceof Prisma.PrismaClientKnownRequestError) return { ok: true, liked: !existing };
+    if (err instanceof Prisma.PrismaClientKnownRequestError) return { ok: true, active: !existing };
     throw err;
   }
-  return { ok: true, liked: !existing };
+  return { ok: true, active: !existing };
 }
 
 /** Apaga uma publicação própria. */

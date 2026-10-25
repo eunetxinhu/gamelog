@@ -6,6 +6,7 @@ import type { LogStatus } from "@/generated/prisma/enums";
 import type { User } from "@/generated/prisma/client";
 import { recordActivity } from "@/lib/activity";
 import { resolveSteamCovers } from "@/lib/catalog";
+import { ensurePlatinumRarity } from "@/lib/rarity";
 import {
   getOwnedGames,
   getPlayerAchievements,
@@ -23,7 +24,7 @@ const SYNC_COOLDOWN_SECONDS = 5 * 60;
 /** Quantos jogos têm as conquistas checadas por sincronização. */
 const ACHIEVEMENT_CHECKS_PER_SYNC = 20;
 /** Jogos com menos conquistas que isso não contam como platina (ex.: CS2 tem 1). */
-const MIN_ACHIEVEMENTS_FOR_PLATINUM = 5;
+export const MIN_ACHIEVEMENTS_FOR_PLATINUM = 5;
 /** Platinas mais antigas que isso entram no perfil, mas não viram publicação no feed. */
 const PLATINUM_POST_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -249,7 +250,7 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
     const syncedAt = new Date();
     const appIds = allGames.map((g) => g.appid);
 
-    const { newGames, updatedGames, removedGames, posted } = await prisma.$transaction(
+    const { newGames, updatedGames, removedGames, posted, platinumGameIds } = await prisma.$transaction(
       async (tx) => {
         // 8a) Garante uma linha em `games` para cada appid (idempotente)
         if (allGames.length > 0) {
@@ -293,12 +294,14 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
 
         // 8d) Conquistas + platinas → publicação no feed (só platinas recentes)
         let platinums = 0;
+        const platinumGameIds: string[] = [];
         for (const [appId, progress] of achievements) {
           const gameId = gameIdByApp.get(appId);
           if (!gameId) continue;
           const isPlatinum =
             progress !== null && progress.total >= MIN_ACHIEVEMENTS_FOR_PLATINUM && progress.unlocked === progress.total;
           const platinumAt = isPlatinum ? (progress.lastUnlockAt ?? syncedAt) : null;
+          if (platinumAt) platinumGameIds.push(gameId);
 
           await tx.libraryEntry.update({
             where: { userId_gameId: { userId: user.id, gameId } },
@@ -337,13 +340,22 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
           updatedGames: updated,
           removedGames: removed.count,
           posted: { platinums, started },
+          platinumGameIds,
         };
       },
       { timeout: 30_000 },
     );
 
-    // Capas com o caminho real (jogos novos não têm a URL fixa). Não derruba a sincronização.
+    // Capas com o caminho real (jogos novos não têm a URL fixa) e raridade das platinas.
+    // Nada disso derruba a sincronização.
     await resolveSteamCovers(appIds).catch((err) => console.error("[steam] capas", err));
+    if (platinumGameIds.length > 0) {
+      const rarityGames = await prisma.game.findMany({
+        where: { id: { in: platinumGameIds } },
+        select: { id: true, steamAppId: true, platinumRarity: true, platinumRarityCheckedAt: true },
+      });
+      await ensurePlatinumRarity(rarityGames).catch((err) => console.error("[steam] raridade", err));
+    }
 
     // 9) Revalida as páginas que exibem estatísticas ----------------------------
     revalidatePath(`/u/${user.username}`);

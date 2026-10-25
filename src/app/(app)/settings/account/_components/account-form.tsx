@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
-import { CheckCircle2, ImageIcon, Loader2, Plus, Search, X } from "lucide-react";
+import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { CheckCircle2, ImageIcon, Loader2, Plus, Search, Upload, X } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { GameCover } from "@/components/game-cover";
 import { steamHeroUrl } from "@/lib/steam/assets";
-import { setFavorites, updateProfile, type AccountResult } from "../_actions/account";
+import { setFavorites, updateProfile, uploadProfileImage, type AccountResult } from "../_actions/account";
 
 export type GameOption = { id: string; title: string; coverUrl: string | null; steamAppId: number | null };
 
@@ -15,6 +15,8 @@ type Props = {
   steamAvatarUrl: string | null;
   favorites: (GameOption | null)[]; // sempre 4 posições
   options: GameOption[];
+  /** Upload de imagem disponível (precisa da chave secreta do Supabase no servidor) */
+  canUpload: boolean;
 };
 
 export function AccountForm(props: Props) {
@@ -30,7 +32,7 @@ export function AccountForm(props: Props) {
 //  Perfil
 // =============================================================================
 
-function ProfileSection({ username, profile, steamAvatarUrl, favorites, options }: Props) {
+function ProfileSection({ username, profile, steamAvatarUrl, favorites, options, canUpload }: Props) {
   const [form, setForm] = useState(profile);
   const [result, setResult] = useState<AccountResult | null>(null);
   const [bannerBroken, setBannerBroken] = useState(false);
@@ -85,19 +87,33 @@ function ProfileSection({ username, profile, steamAvatarUrl, favorites, options 
           hint={steamAvatarUrl ? "Vazio = usa o avatar da Steam" : undefined}
           error={fieldError("avatarUrl")}
         >
-          <input value={form.avatarUrl} onChange={(e) => set("avatarUrl")(e.target.value)} placeholder="https://…" className={inputCls} />
+          <div className="flex gap-2">
+            <input value={form.avatarUrl} onChange={(e) => set("avatarUrl")(e.target.value)} placeholder="https://…" className={inputCls} />
+            {canUpload && <UploadButton kind="avatar" onUploaded={set("avatarUrl")} />}
+          </div>
         </Field>
 
         <Field label="Capa de fundo (link da imagem)" error={fieldError("bannerUrl") ?? (bannerBroken && form.bannerUrl ? "Não conseguimos carregar essa imagem." : null)}>
-          <input
-            value={form.bannerUrl}
-            onChange={(e) => {
-              setBannerBroken(false);
-              set("bannerUrl")(e.target.value);
-            }}
-            placeholder="https://…"
-            className={inputCls}
-          />
+          <div className="flex gap-2">
+            <input
+              value={form.bannerUrl}
+              onChange={(e) => {
+                setBannerBroken(false);
+                set("bannerUrl")(e.target.value);
+              }}
+              placeholder="https://…"
+              className={inputCls}
+            />
+            {canUpload && (
+              <UploadButton
+                kind="banner"
+                onUploaded={(url) => {
+                  setBannerBroken(false);
+                  set("bannerUrl")(url);
+                }}
+              />
+            )}
+          </div>
           {bannerPicks.length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="flex items-center gap-1 text-xs text-zinc-500">
@@ -228,6 +244,72 @@ function FavoritesSection({ initial, options }: { initial: (GameOption | null)[]
 
       <SaveRow pending={pending} onSave={onSave} result={result} />
     </Section>
+  );
+}
+
+// =============================================================================
+//  Upload
+// =============================================================================
+
+/** Tamanho máximo (lado maior) depois de reduzir no navegador. */
+const UPLOAD_MAX_SIDE = { avatar: 512, banner: 1920 } as const;
+
+/**
+ * Escolhe a imagem, reduz no navegador e envia. Sai em JPEG: leve e aceito pelos
+ * cards de compartilhamento (que não desenham WebP). A imagem já fica salva no perfil.
+ */
+function UploadButton({ kind, onUploaded }: { kind: "avatar" | "banner"; onUploaded: (url: string) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function onPick(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        const blob = await shrinkImage(file, UPLOAD_MAX_SIDE[kind]);
+        const data = new FormData();
+        data.set("kind", kind);
+        data.set("file", new File([blob], `${kind}.jpg`, { type: "image/jpeg" }));
+        const res = await uploadProfileImage(data);
+        if (res.ok) onUploaded(res.url);
+        else setError(res.message);
+      } catch {
+        setError("Não conseguimos ler essa imagem.");
+      } finally {
+        if (input.current) input.current.value = "";
+      }
+    });
+  }
+
+  return (
+    <div className="shrink-0">
+      <input ref={input} type="file" accept="image/*" className="sr-only" onChange={(e) => onPick(e.target.files?.[0])} tabIndex={-1} />
+      <button
+        type="button"
+        onClick={() => input.current?.click()}
+        disabled={pending}
+        className="inline-flex h-full items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-50"
+      >
+        {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Upload className="size-4" aria-hidden />}
+        {pending ? "Enviando…" : "Enviar"}
+      </button>
+      {error && <span className="mt-1 block text-xs text-red-300">{error}</span>}
+    </div>
+  );
+}
+
+async function shrinkImage(file: File, maxSide: number): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob falhou"))), "image/jpeg", 0.88),
   );
 }
 

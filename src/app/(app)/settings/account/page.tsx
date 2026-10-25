@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { AccountForm, type GameOption } from "./_components/account-form";
 
 export const metadata: Metadata = { title: "Editar perfil · GameLog" };
@@ -43,6 +44,7 @@ export default async function AccountPage() {
         }}
         favorites={slots}
         options={[...options.values()]}
+        canUpload={hasSupabaseAdmin()}
       />
     </main>
   );

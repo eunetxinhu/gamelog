@@ -12,6 +12,7 @@ export const metadata: Metadata = { title: "Notificações · GameLog" };
 
 const TYPE = {
   LIKE: { icon: Heart, tone: "text-rose-400", text: "curtiu sua publicação" },
+  GG: { icon: Trophy, tone: "text-amber-400", text: "mandou GG 🏆 pra você" },
   COMMENT: { icon: MessageCircle, tone: "text-sky-400", text: "comentou na sua publicação" },
   FOLLOW: { icon: UserPlus, tone: "text-emerald-400", text: "começou a seguir você" },
   PLATINUM: { icon: Trophy, tone: "text-amber-400", text: "platinou" },

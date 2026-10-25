@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Trophy } from "lucide-react";
+import { ArrowLeft, Target, Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getShelf, getShelfCounts, parseTab, PROFILE_TABS } from "@/lib/profile-games";
 import { GameCover } from "@/components/game-cover";
 import { RatingStars } from "@/components/rating-stars";
+import { RARE_PERCENT } from "@/lib/rarity";
 
 type Props = { params: Promise<{ username: string }>; searchParams: Promise<{ aba?: string }> };
 
@@ -20,6 +21,7 @@ const EMPTY: Record<string, string> = {
   jogando: "Nada sendo jogado agora.",
   finalizados: "Nenhum jogo finalizado ainda.",
   platinas: "Nenhuma platina ainda.",
+  quase: "Nenhum jogo perto da platina (80% ou mais das conquistas). As conquistas são conferidas aos poucos a cada sincronização.",
   dropados: "Nenhum jogo dropado.",
   backlog: "Backlog vazio.",
 };
@@ -55,6 +57,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
               }`}
             >
               {t.slug === "platinas" && <Trophy className="size-3.5 text-amber-400" aria-hidden />}
+              {t.slug === "quase" && <Target className="size-3.5 text-sky-400" aria-hidden />}
               {t.label}
               <span className={`rounded-full px-1.5 text-xs tabular-nums ${active ? "bg-zinc-700 text-zinc-200" : "bg-zinc-800 text-zinc-500"}`}>
                 {counts[t.slug].toLocaleString("pt-BR")}
@@ -68,7 +71,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
         <p className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">{EMPTY[tab]}</p>
       ) : (
         <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
-          {items.map(({ game, sub, rating, platinum }) => (
+          {items.map(({ game, sub, rating, platinum, rarity }) => (
             <li key={game.id}>
               <Link href={`/games/${game.slug}`} className="group block space-y-1.5" title={game.title}>
                 <div className="relative">
@@ -85,6 +88,9 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
                   )}
                 </div>
                 <p className="line-clamp-2 text-xs font-medium text-zinc-200 group-hover:text-white">{game.title}</p>
+                {rarity != null && rarity < RARE_PERCENT && (
+                  <span className="inline-block rounded-full bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-300">💎 RARA</span>
+                )}
                 {rating && <RatingStars value={rating} />}
                 {sub && <p className="truncate text-[11px] text-zinc-500">{sub}</p>}
               </Link>
