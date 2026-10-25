@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
 import { toggleWishlist } from "../_actions/wishlist";
 
 /** "Quero jogar": entra na wishlist e avisa quando o jogo ficar em promoção na Steam. */
 export function WishlistButton({ gameId, initial, loggedIn, slug }: { gameId: string; initial: boolean; loggedIn: boolean; slug: string }) {
+  const router = useRouter();
   const [on, setOn] = useState(initial);
   const [pending, startTransition] = useTransition();
 
   function onClick() {
     if (!loggedIn) {
-      window.location.href = `/login?next=/games/${slug}`;
+      router.push(`/login?next=/games/${slug}`);
       return;
     }
     startTransition(async () => {

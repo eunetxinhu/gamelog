@@ -8,6 +8,7 @@ import { canMessage, conversationPair } from "@/lib/dm";
 import { sendPush } from "@/lib/push";
 import { isOurImage } from "@/lib/uploads";
 import { rateLimit } from "@/lib/rate-limit";
+import { wantsPush } from "@/lib/notification-prefs";
 
 const MAX_LENGTH = 2000;
 
@@ -27,7 +28,7 @@ export async function sendMessage(username: string, rawBody: string, rawImage?: 
 
   const recipient = await prisma.user.findUnique({
     where: { username: username.toLowerCase() },
-    select: { id: true, dmPolicy: true, bannedAt: true },
+    select: { id: true, dmPolicy: true, bannedAt: true, notificationPrefs: true },
   });
   if (!recipient) return { ok: false, message: "Usuário não encontrado." };
   const allowed = await canMessage(user.id, recipient);
@@ -48,7 +49,7 @@ export async function sendMessage(username: string, rawBody: string, rawImage?: 
   ]);
 
   const name = user.displayName ?? user.username;
-  after(() =>
+  if (wantsPush(recipient.notificationPrefs, "MESSAGE")) after(() =>
     sendPush([recipient.id], {
       title: `Mensagem de ${name}`,
       body: body ? body.slice(0, 120) : "📷 Foto",

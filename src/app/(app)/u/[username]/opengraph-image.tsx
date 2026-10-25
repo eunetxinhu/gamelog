@@ -62,7 +62,6 @@ export default async function Image({ params }: { params: Promise<{ username: st
     (
       <div style={{ display: "flex", position: "relative", width: "100%", height: "100%", background: "#09090b", color: "#fafafa" }}>
         {banner && (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={banner} alt="" width={1200} height={630} style={{ position: "absolute", inset: 0, objectFit: "cover", width: "100%", height: "100%", opacity: 0.35 }} />
         )}
         <div style={{ display: "flex", position: "absolute", inset: 0, background: "linear-gradient(90deg, #09090b 35%, rgba(9,9,11,0.6))" }} />
@@ -70,7 +69,6 @@ export default async function Image({ params }: { params: Promise<{ username: st
         <div style={{ display: "flex", position: "relative", width: "100%", padding: 64, gap: 48 }}>
           <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
             {avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={avatar} alt="" width={150} height={150} style={{ borderRadius: 999, border: "6px solid #18181b" }} />
             ) : (
               <div style={{ display: "flex", width: 150, height: 150, borderRadius: 999, background: "#0284c7", alignItems: "center", justifyContent: "center", fontSize: 72, fontWeight: 700 }}>
@@ -96,7 +94,6 @@ export default async function Image({ params }: { params: Promise<{ username: st
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16, width: 356, alignContent: "center" }}>
               {covers.map((src, i) =>
                 src ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img key={i} src={src} alt="" width={170} height={227} style={{ objectFit: "cover", borderRadius: 16, border: "3px solid #3f3f46" }} />
                 ) : (
                   <div key={i} style={{ display: "flex", width: 170, height: 227, borderRadius: 16, background: "#27272a", alignItems: "center", justifyContent: "center", padding: 12, fontSize: 22, textAlign: "center" }}>

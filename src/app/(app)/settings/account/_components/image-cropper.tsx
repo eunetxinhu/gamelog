@@ -66,11 +66,13 @@ export function ImageCropper({ source, aspect, outputWidth, round, title, onCanc
   );
 
   // Centraliza quando a imagem carrega ou a moldura muda de tamanho
-  useEffect(() => {
-    if (!natural) return;
+  // (ajuste de estado durante o render: sem efeito e sem render extra com a posição errada)
+  const layoutKey = natural ? `${natural.w}x${natural.h}@${frameW}` : null;
+  const [centeredFor, setCenteredFor] = useState<string | null>(null);
+  if (layoutKey && layoutKey !== centeredFor) {
+    setCenteredFor(layoutKey);
     setPos((p) => clamp(p.x === 0 && p.y === 0 ? { x: (frameW - dispW) / 2, y: (frameH - dispH) / 2 } : p));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [natural, frameW]);
+  }
 
   /** Muda o zoom mantendo o centro da moldura no mesmo ponto da imagem. */
   function applyZoom(next: number) {

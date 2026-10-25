@@ -64,7 +64,7 @@ export function MembershipButton({ clubId, member: initial, loggedIn }: { clubId
 
   function onClick() {
     if (!loggedIn) {
-      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+      router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
     startTransition(async () => {

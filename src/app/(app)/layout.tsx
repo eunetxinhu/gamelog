@@ -11,11 +11,8 @@ import { signOut } from "../(auth)/_actions/auth";
 import { SteamAutoSync } from "./_components/steam-auto-sync";
 import { MobileNav } from "./_components/mobile-nav";
 import { HeaderMenu } from "./_components/header-menu";
-import { shouldTouchLastSeen } from "@/lib/steam/schedule";
+import { needsAutoSync, shouldTouchLastSeen } from "@/lib/steam/schedule";
 import { upcomingWishlistCount } from "@/lib/releases";
-
-/** Sincronização automática só quando a última tem mais que isso. */
-const AUTO_SYNC_AFTER_MS = 30 * 60 * 1000;
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -32,9 +29,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         upcomingWishlistCount(user.id),
       ])
     : [0, 0, 0, 0];
-  const needsSync =
-    Boolean(user?.steamId) &&
-    (!user?.steamLastSyncAt || Date.now() - user.steamLastSyncAt.getTime() > AUTO_SYNC_AFTER_MS);
+  const needsSync = needsAutoSync(user);
 
   return (
     <>

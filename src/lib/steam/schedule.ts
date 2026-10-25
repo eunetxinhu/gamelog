@@ -34,6 +34,15 @@ export function nextSyncAt(input: { minutesLast2Weeks: number; lastSeenAt: Date 
   return new Date(now.getTime() + SYNC_INTERVAL[syncTier({ ...input, now })]);
 }
 
+/** A sincronização automática do layout roda quando a última tem mais que isso. */
+export const AUTO_SYNC_AFTER_MS = 30 * 60 * 1000;
+
+/** Precisa sincronizar ao abrir o site? (Steam vinculada e última sincronização velha) */
+export function needsAutoSync(user: { steamId: string | null; steamLastSyncAt: Date | null } | null, now = new Date()): boolean {
+  if (!user?.steamId) return false;
+  return !user.steamLastSyncAt || now.getTime() - user.steamLastSyncAt.getTime() > AUTO_SYNC_AFTER_MS;
+}
+
 /** Visita registrada no máximo 1x por hora (evita um UPDATE a cada página aberta). */
 export function shouldTouchLastSeen(lastSeenAt: Date | null, now = new Date()): boolean {
   return !lastSeenAt || now.getTime() - lastSeenAt.getTime() > HOUR;

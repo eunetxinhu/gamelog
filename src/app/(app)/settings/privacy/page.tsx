@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { appUrl } from "@/lib/app-url";
-import { BlockedList, InviteLink, PrivacySettings, PushToggle } from "./_components/privacy-form";
+import { BlockedList, InviteLink, NotificationPrefsForm, PrivacySettings, PushToggle } from "./_components/privacy-form";
+import { parsePrefs } from "@/lib/notification-prefs";
 
 export const metadata: Metadata = { title: "Privacidade e notificações · GameLog" };
 
@@ -25,6 +26,10 @@ export default async function PrivacyPage() {
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       <Section title="Notificações">
         <PushToggle publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
+      </Section>
+
+      <Section title="O que avisar" description="Escolha, para cada tipo, se avisa só no sino do site, também no celular, ou não avisa.">
+        <NotificationPrefsForm initial={parsePrefs(user.notificationPrefs)} />
       </Section>
 
       <Section title="Privacidade">

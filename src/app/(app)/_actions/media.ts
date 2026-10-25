@@ -13,5 +13,5 @@ export async function uploadMedia(formData: FormData): Promise<UploadResult> {
   if (kind !== "post" && kind !== "club" && kind !== "dm") return { ok: false, message: "Arquivo inválido." };
   const limit = await rateLimit("upload", user.id);
   if (!limit.ok) return { ok: false, message: limit.message };
-  return uploadImage(user.id, kind, formData.get("file"));
+  return uploadImage(user.id, kind, formData.get("file"), formData.get("thumb"));
 }

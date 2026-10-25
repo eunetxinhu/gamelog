@@ -4,7 +4,8 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, CheckCircle2, Gamepad2, ImagePlus, Loader2, RefreshCw, Search, X } from "lucide-react";
 import { uploadMedia } from "@/app/(app)/_actions/media";
-import { shrinkImage } from "@/lib/image-shrink";
+import { imageVariants } from "@/lib/image-shrink";
+import { takeSharedFiles } from "@/lib/share-inbox";
 import { CAPTION_MAX, MAX_PHOTOS } from "@/lib/photo-post";
 import { GameCover } from "@/components/game-cover";
 import { createPhotoPost, discardUpload, searchGamesForPost, type GameOption } from "../_actions/photo-post";
@@ -16,13 +17,15 @@ type Props = {
   quickGames: GameOption[];
   /** Abre já expandido (botão flutuante do celular manda ?postar=1) */
   startOpen?: boolean;
+  /** Veio do "Compartilhar" do celular: quantas fotos e o texto que veio junto */
+  shared?: { count: number; text: string | null } | null;
 };
 
 /**
  * "Compartilhar fotos" no topo do feed. Fotos do aparelho (galeria ou câmera),
  * sempre associadas a um jogo: sem escolher o jogo, não publica.
  */
-export function PhotoComposer({ quickGames, startOpen = false }: Props) {
+export function PhotoComposer({ quickGames, startOpen = false, shared = null }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(startOpen);
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -35,12 +38,31 @@ export function PhotoComposer({ quickGames, startOpen = false }: Props) {
   const section = useRef<HTMLElement>(null);
   const captionId = useId();
 
-  // Botão flutuante do celular (?postar=1): abre e rola até aqui
+  // Botão flutuante do celular (?postar=1): abre (ajuste durante o render) e rola até aqui
+  const [prevStartOpen, setPrevStartOpen] = useState(startOpen);
+  if (startOpen !== prevStartOpen) {
+    setPrevStartOpen(startOpen);
+    if (startOpen) setOpen(true);
+  }
   useEffect(() => {
-    if (!startOpen) return;
-    setOpen(true);
-    section.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    if (startOpen) section.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [startOpen]);
+
+  // Fotos compartilhadas da galeria: entram como se tivessem sido escolhidas aqui
+  const receivedShare = useRef(false);
+  useEffect(() => {
+    if (!shared || shared.count === 0 || receivedShare.current) return;
+    receivedShare.current = true;
+    takeSharedFiles()
+      .then((files) => {
+        if (shared.text) setCaption((c) => c || shared.text!.slice(0, CAPTION_MAX));
+        if (files.length) void onPick(files);
+        else setMessage({ tone: "error", text: "Não conseguimos receber as fotos compartilhadas. Escolha de novo por aqui." });
+      })
+      .catch(() => setMessage({ tone: "error", text: "Não conseguimos receber as fotos compartilhadas. Escolha de novo por aqui." }));
+    // onPick só depende de estado que ainda está vazio neste momento
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shared]);
 
   // Libera as prévias da memória ao sair
   const previews = useRef(new Set<string>());
@@ -56,10 +78,11 @@ export function PhotoComposer({ quickGames, startOpen = false }: Props) {
 
   async function upload(photo: Photo, file: File) {
     try {
-      const blob = await shrinkImage(file);
+      const { full, thumb } = await imageVariants(file);
       const data = new FormData();
       data.set("kind", "post");
-      data.set("file", new File([blob], "foto.jpg", { type: "image/jpeg" }));
+      data.set("file", full);
+      data.set("thumb", thumb);
       const res = await uploadMedia(data);
       if (res.ok) update(photo.key, { url: res.url, status: "done" });
       else update(photo.key, { status: "error", error: res.message });
@@ -68,7 +91,7 @@ export function PhotoComposer({ quickGames, startOpen = false }: Props) {
     }
   }
 
-  async function onPick(list: FileList | null) {
+  async function onPick(list: FileList | File[] | null) {
     // Copia antes de limpar o input: FileList é "ao vivo" e esvazia junto
     const files = list ? [...list] : [];
     if (fileInput.current) fileInput.current.value = "";
@@ -106,8 +129,8 @@ export function PhotoComposer({ quickGames, startOpen = false }: Props) {
   /** Tira o ?postar=1 da URL (senão o botão flutuante não abre de novo). */
   function clearOpenParam() {
     const url = new URL(window.location.href);
-    if (!url.searchParams.has("postar")) return;
-    url.searchParams.delete("postar");
+    if (!url.searchParams.has("postar") && !url.searchParams.has("compartilhado")) return;
+    for (const k of ["postar", "compartilhado", "texto"]) url.searchParams.delete(k);
     url.hash = "";
     router.replace(`${url.pathname}${url.search}`, { scroll: false });
   }
@@ -282,32 +305,27 @@ export function PhotoComposer({ quickGames, startOpen = false }: Props) {
 
 function GamePicker({ value, onChange, quickGames }: { value: GameOption | null; onChange: (g: GameOption | null) => void; quickGames: GameOption[] }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<GameOption[]>([]);
-  const [searching, setSearching] = useState(false);
+  // Resultado guardado junto com a busca que o gerou: "buscando" e a lista saem disso
+  const [found, setFound] = useState<{ q: string; items: GameOption[] } | null>(null);
   const inputId = useId();
+  const q = query.trim();
+  const active = q.length >= 2;
+  const results = active && found?.q === q ? found.items : [];
+  const searching = active && found?.q !== q;
 
   // Busca com espera de 350 ms depois de parar de digitar
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
+    if (!active) return;
     let alive = true;
     const t = setTimeout(async () => {
-      const found = await searchGamesForPost(q).catch(() => []);
-      if (alive) {
-        setResults(found);
-        setSearching(false);
-      }
+      const items = await searchGamesForPost(q).catch(() => []);
+      if (alive) setFound({ q, items });
     }, 350);
     return () => {
       alive = false;
       clearTimeout(t);
     };
-  }, [query]);
+  }, [q, active]);
 
   if (value) {
     return (

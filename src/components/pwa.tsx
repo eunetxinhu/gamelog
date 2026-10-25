@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Download, Share, X } from "lucide-react";
 
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
@@ -11,38 +11,39 @@ const DISMISS_KEY = "gamelog:install-dismissed";
  * Registra o service worker (só em produção) e mostra um aviso discreto para instalar
  * o app: botão nos navegadores que suportam (Chrome/Edge/Android) e instruções no iPhone.
  */
+/** Onde estamos: já instalado/dispensado (não mostra), iPhone (instruções) ou outro (botão). */
+function installEnv(): "hidden" | "ios" | "other" {
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || ("standalone" in navigator && (navigator as { standalone?: boolean }).standalone);
+  let dismissed = false;
+  try {
+    dismissed = localStorage.getItem(DISMISS_KEY) === "1";
+  } catch {
+    // armazenamento bloqueado: mostra normalmente
+  }
+  if (standalone || dismissed) return "hidden";
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent) ? "ios" : "other";
+}
+const noSubscribe = () => () => {};
+
 export function Pwa() {
+  const env = useSyncExternalStore(noSubscribe, installEnv, () => "hidden" as const);
   const [installEvent, setInstallEvent] = useState<InstallEvent | null>(null);
-  const [ios, setIos] = useState(false);
-  const [hidden, setHidden] = useState(true);
+  const [closed, setHidden] = useState(false);
+  const ios = env === "ios";
+  const hidden = closed || env === "hidden";
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
     }
-
-    const standalone = window.matchMedia("(display-mode: standalone)").matches || ("standalone" in navigator && (navigator as { standalone?: boolean }).standalone);
-    let dismissed = false;
-    try {
-      dismissed = localStorage.getItem(DISMISS_KEY) === "1";
-    } catch {
-      // armazenamento bloqueado: mostra normalmente
-    }
-    if (standalone || dismissed) return;
-
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent);
-    if (isIos) {
-      setIos(true);
-      setHidden(false);
-    }
+    if (env !== "other") return;
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setInstallEvent(e as InstallEvent);
-      setHidden(false);
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
-  }, []);
+  }, [env]);
 
   function dismiss() {
     setHidden(true);

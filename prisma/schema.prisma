@@ -129,11 +129,14 @@ model User {
 
   // ---- Privacidade e moderação ----------------------------------------------
   /// Perfil privado: atividade e biblioteca só para seguidores aprovados
-  isPrivate Boolean   @default(false) @map("is_private")
-  dmPolicy  DmPolicy  @default(FOLLOWING) @map("dm_policy")
-  isAdmin   Boolean   @default(false) @map("is_admin")
+  isPrivate         Boolean   @default(false) @map("is_private")
+  dmPolicy          DmPolicy  @default(FOLLOWING) @map("dm_policy")
+  isAdmin           Boolean   @default(false) @map("is_admin")
+  /// Notificações por categoria: { reactions: "off" | "app" | "push", … }.
+  /// Null ou categoria ausente = "push" (ver src/lib/notification-prefs.ts)
+  notificationPrefs Json?     @map("notification_prefs")
   /// Suspenso pela moderação: não publica, não comenta, não manda mensagem
-  bannedAt  DateTime? @map("banned_at")
+  bannedAt          DateTime? @map("banned_at")
 
   // ---- Convite ----------------------------------------------------------------
   invitedById String? @map("invited_by_id") @db.Uuid

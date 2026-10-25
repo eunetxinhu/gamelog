@@ -46,7 +46,6 @@ export default async function Image({ params }: { params: Promise<{ username: st
         <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             {avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={avatar} alt="" width={88} height={88} style={{ borderRadius: 999 }} />
             ) : (
               <div style={{ display: "flex", width: 88, height: 88, borderRadius: 999, background: "#0284c7", alignItems: "center", justifyContent: "center", fontSize: 44 }}>
@@ -75,7 +74,6 @@ export default async function Image({ params }: { params: Promise<{ username: st
           <div style={{ display: "flex", flexDirection: "column", gap: 16, justifyContent: "center" }}>
             {covers.slice(0, 3).map((src, i) =>
               src ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img key={i} src={src} alt="" width={150} height={150} style={{ objectFit: "cover", borderRadius: 16, border: "3px solid #3f3f46" }} />
               ) : (
                 <div key={i} style={{ display: "flex", width: 150, height: 150, borderRadius: 16, background: "#27272a" }} />
