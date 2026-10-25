@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Settings, Trophy } from "lucide-react";
+import { ChevronRight, Settings, Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities } from "@/lib/activity";
-import { formatPlaytime, STATUS_LABEL } from "@/lib/format";
+import { formatPlaytime } from "@/lib/format";
+import { getPlatinums, getPlaying } from "@/lib/profile-games";
 import { ActivityCard } from "@/components/activity-card";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
@@ -34,56 +35,25 @@ export default async function ProfilePage({ params }: Props) {
 
   const isMe = viewer?.id === profile.id;
 
-  const [following, library, completedCount, platinumLogs, steamPlatinums, recent, playingLogs, mostPlayed, activities, favorites] =
-    await Promise.all([
-      viewer && !isMe
-        ? prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewer.id, followingId: profile.id } } })
-        : null,
-      prisma.libraryEntry.aggregate({ where: { userId: profile.id }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
-      prisma.gameLog.count({ where: { userId: profile.id, status: "COMPLETED" } }),
-      prisma.gameLog.findMany({
-        where: { userId: profile.id, status: "PLATINUM" },
-        orderBy: { updatedAt: "desc" },
-        select: { updatedAt: true, finishedAt: true, game: { select: gameSelect } },
-      }),
-      prisma.libraryEntry.findMany({
-        where: { userId: profile.id, platinumAt: { not: null } },
-        orderBy: { platinumAt: "desc" },
-        select: { platinumAt: true, game: { select: gameSelect } },
-      }),
-      prisma.libraryEntry.findMany({
-        where: { userId: profile.id, playtime2WeeksMinutes: { gt: 0 } },
-        orderBy: { playtime2WeeksMinutes: "desc" },
-        take: 6,
-        select: { playtime2WeeksMinutes: true, game: { select: gameSelect } },
-      }),
-      prisma.gameLog.findMany({
-        where: { userId: profile.id, status: "PLAYING" },
-        orderBy: { updatedAt: "desc" },
-        take: 6,
-        select: { game: { select: gameSelect } },
-      }),
-      prisma.libraryEntry.findMany({
-        where: { userId: profile.id, playtimeMinutes: { gt: 0 } },
-        orderBy: { playtimeMinutes: "desc" },
-        take: 12,
-        select: { playtimeMinutes: true, achievementsUnlocked: true, achievementsTotal: true, game: { select: gameSelect } },
-      }),
-      getActivities({ where: { userId: profile.id }, viewerId: viewer?.id ?? null, take: 20 }),
-      prisma.favoriteGame.findMany({ where: { userId: profile.id }, orderBy: { position: "asc" }, select: { game: { select: gameSelect } } }),
-    ]);
+  const [following, library, completedCount, platinumList, playing, mostPlayed, activities, favorites] = await Promise.all([
+    viewer && !isMe
+      ? prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewer.id, followingId: profile.id } } })
+      : null,
+    prisma.libraryEntry.aggregate({ where: { userId: profile.id }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
+    prisma.gameLog.count({ where: { userId: profile.id, status: "COMPLETED" } }),
+    getPlatinums(profile.id),
+    getPlaying(profile.id, 6),
+    prisma.libraryEntry.findMany({
+      where: { userId: profile.id, playtimeMinutes: { gt: 0 } },
+      orderBy: { playtimeMinutes: "desc" },
+      take: 12,
+      select: { playtimeMinutes: true, achievementsUnlocked: true, achievementsTotal: true, game: { select: gameSelect } },
+    }),
+    getActivities({ where: { userId: profile.id }, viewerId: viewer?.id ?? null, take: 20 }),
+    prisma.favoriteGame.findMany({ where: { userId: profile.id }, orderBy: { position: "asc" }, select: { game: { select: gameSelect } } }),
+  ]);
 
-  // Platinas: marcadas no perfil + detectadas na Steam (sem repetir o jogo)
-  const platinums = new Map<string, { game: (typeof steamPlatinums)[number]["game"]; at: Date }>();
-  for (const p of steamPlatinums) platinums.set(p.game.id, { game: p.game, at: p.platinumAt! });
-  for (const p of platinumLogs) if (!platinums.has(p.game.id)) platinums.set(p.game.id, { game: p.game, at: p.finishedAt ?? p.updatedAt });
-  const platinumList = [...platinums.values()].sort((a, b) => b.at.getTime() - a.at.getTime());
-
-  // Jogando agora: horas recentes na Steam + marcados como "Jogando"
-  const playing = new Map<string, { game: (typeof recent)[number]["game"]; sub: string }>();
-  for (const r of recent) playing.set(r.game.id, { game: r.game, sub: `${formatPlaytime(r.playtime2WeeksMinutes)} em 2 semanas` });
-  for (const l of playingLogs) if (!playing.has(l.game.id)) playing.set(l.game.id, { game: l.game, sub: STATUS_LABEL.PLAYING });
-
+  const gamesHref = (aba: string) => `/u/${profile.username}/jogos?aba=${aba}`;
   const name = profile.displayName ?? profile.username;
 
   return (
@@ -149,12 +119,12 @@ export default async function ProfilePage({ params }: Props) {
       )}
 
       {/* ---- Números -------------------------------------------------------- */}
-      <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Jogos" value={library._count._all.toLocaleString("pt-BR")} />
-        <Stat label="Horas jogadas" value={Math.round((library._sum.playtimeMinutes ?? 0) / 60).toLocaleString("pt-BR")} />
-        <Stat label="Finalizados" value={completedCount.toLocaleString("pt-BR")} />
-        <Stat label="Platinas" value={platinumList.length.toLocaleString("pt-BR")} highlight />
-      </dl>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat href={gamesHref("biblioteca")} label="Jogos" value={library._count._all.toLocaleString("pt-BR")} />
+        <Stat href={gamesHref("biblioteca")} label="Horas jogadas" value={Math.round((library._sum.playtimeMinutes ?? 0) / 60).toLocaleString("pt-BR")} />
+        <Stat href={gamesHref("finalizados")} label="Finalizados" value={completedCount.toLocaleString("pt-BR")} />
+        <Stat href={gamesHref("platinas")} label="Platinas" value={platinumList.length.toLocaleString("pt-BR")} highlight />
+      </div>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_320px]">
         {/* ---- Atividade ---------------------------------------------------- */}
@@ -184,16 +154,16 @@ export default async function ProfilePage({ params }: Props) {
         </section>
 
         <div className="space-y-10">
-          {playing.size > 0 && (
-            <ShelfSection title="Jogando agora">
-              {[...playing.values()].map(({ game, sub }) => (
-                <Shelf key={game.id} game={game} sub={sub} />
+          {playing.length > 0 && (
+            <ShelfSection title="Jogando agora" href={gamesHref("jogando")}>
+              {playing.map(({ game, sub }) => (
+                <Shelf key={game.id} game={game} sub={sub ?? undefined} />
               ))}
             </ShelfSection>
           )}
 
           {platinumList.length > 0 && (
-            <ShelfSection title="Platinas" icon={<Trophy className="size-4 text-amber-400" aria-hidden />}>
+            <ShelfSection title="Platinas" href={gamesHref("platinas")} icon={<Trophy className="size-4 text-amber-400" aria-hidden />}>
               {platinumList.slice(0, 9).map(({ game }) => (
                 <Shelf key={game.id} game={game} platinum />
               ))}
@@ -201,7 +171,7 @@ export default async function ProfilePage({ params }: Props) {
           )}
 
           {mostPlayed.length > 0 && (
-            <ShelfSection title="Mais jogados">
+            <ShelfSection title="Mais jogados" href={gamesHref("biblioteca")}>
               {mostPlayed.map((e) => (
                 <Shelf
                   key={e.game.id}
@@ -222,22 +192,36 @@ export default async function ProfilePage({ params }: Props) {
   );
 }
 
-function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+/** Número do perfil; clicar abre a lista de jogos daquela categoria. */
+function Stat({ href, label, value, highlight }: { href: string; label: string; value: string; highlight?: boolean }) {
   return (
-    <div className={`rounded-xl border p-4 ${highlight ? "border-amber-500/40 bg-amber-500/[0.06]" : "border-zinc-800 bg-zinc-900/60"}`}>
-      <dt className="text-xs uppercase tracking-wide text-zinc-500">{label}</dt>
-      <dd className={`mt-1 text-2xl font-bold ${highlight ? "text-amber-300" : "text-zinc-50"}`}>{value}</dd>
-    </div>
+    <Link
+      href={href}
+      className={`group rounded-xl border p-4 transition ${
+        highlight ? "border-amber-500/40 bg-amber-500/[0.06] hover:border-amber-400/70" : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-600"
+      }`}
+    >
+      <span className="flex items-center justify-between text-xs uppercase tracking-wide text-zinc-500">
+        {label}
+        <ChevronRight className="size-3.5 opacity-0 transition group-hover:opacity-100" aria-hidden />
+      </span>
+      <span className={`mt-1 block text-2xl font-bold ${highlight ? "text-amber-300" : "text-zinc-50"}`}>{value}</span>
+    </Link>
   );
 }
 
-function ShelfSection({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
+function ShelfSection({ title, href, icon, children }: { title: string; href: string; icon?: ReactNode; children: ReactNode }) {
   return (
     <section>
-      <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-zinc-50">
-        {icon}
-        {title}
-      </h2>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-50">
+          {icon}
+          {title}
+        </h2>
+        <Link href={href} className="text-xs font-medium text-sky-400 hover:underline">
+          Ver todos
+        </Link>
+      </div>
       <ul className="grid grid-cols-3 gap-3">{children}</ul>
     </section>
   );
