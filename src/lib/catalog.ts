@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
-import { getAppDetails, getStoreAssets, searchStore, steamCoverUrl, type StoreAssets } from "@/lib/steam/api";
+import { getAppDetails, getStoreAssets, searchStore, steamCoverUrl, type StoreAppDetails, type StoreAssets } from "@/lib/steam/api";
 
 /**
  * Catálogo de jogos. Fontes:
@@ -85,7 +85,10 @@ export async function searchGames(query: string): Promise<SearchResult[]> {
 export async function getOrCreateGame(slug: string) {
   const existing = await prisma.game.findUnique({ where: { slug } });
   if (existing) {
-    return existing.steamAppId && !existing.syncedAt ? enrichFromSteam(existing.id, existing.steamAppId, existing.coverUrl) : existing;
+    const stale = !existing.mediaSyncedAt || Date.now() - existing.mediaSyncedAt.getTime() > MEDIA_TTL_MS;
+    return existing.steamAppId && (!existing.syncedAt || stale)
+      ? enrichFromSteam(existing.id, existing.steamAppId, existing.coverUrl)
+      : existing;
   }
 
   const steamMatch = slug.match(/^steam-(\d{1,10})$/);
@@ -95,14 +98,9 @@ export async function getOrCreateGame(slug: string) {
     if (!details) return null;
     return upsertGame({ steamAppId: appId }, {
       slug,
-      title: details.name,
       steamAppId: appId,
       coverUrl: coverFrom(assets.get(appId), appId),
-      summary: details.summary,
-      genres: details.genres,
-      platforms: details.platforms,
-      releaseDate: details.releaseDate,
-      syncedAt: new Date(),
+      ...steamDetailsData(details, assets.get(appId)),
     });
   }
 
@@ -126,23 +124,40 @@ export async function getOrCreateGame(slug: string) {
   return null;
 }
 
-/** Jogos importados da biblioteca Steam chegam só com nome e capa: completa com a loja. */
+/** Mídia e Metascore mudam pouco: renova a cada 7 dias, na visita à página do jogo. */
+const MEDIA_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Campos de `games` que vêm da página da loja. */
+function steamDetailsData(details: StoreAppDetails, assets: StoreAssets | undefined) {
+  const now = new Date();
+  return {
+    title: details.name,
+    summary: details.summary,
+    genres: details.genres,
+    platforms: details.platforms,
+    releaseDate: details.releaseDate,
+    developers: details.developers,
+    publishers: details.publishers,
+    metacriticScore: details.metacritic?.score ?? null,
+    metacriticUrl: details.metacritic?.url ?? null,
+    heroUrl: assets?.hero ?? null,
+    screenshots: details.screenshots,
+    trailers: details.trailers,
+    syncedAt: now,
+    mediaSyncedAt: now,
+  };
+}
+
+/** Completa / renova um jogo da Steam com a loja (ficha, mídia, Metascore e, se faltar, a capa real). */
 async function enrichFromSteam(gameId: string, appId: number, coverUrl: string | null) {
   const needsCover = !coverUrl || coverUrl === steamCoverUrl(appId);
-  const [details, assets] = await Promise.all([getAppDetails(appId), needsCover ? getStoreAssets([appId]) : null]);
+  const [details, assets] = await Promise.all([getAppDetails(appId), getStoreAssets([appId])]);
+  const asset = assets.get(appId);
   return prisma.game.update({
     where: { id: gameId },
     data: details
-      ? {
-          ...(needsCover ? { coverUrl: coverFrom(assets?.get(appId), appId) } : {}),
-          title: details.name,
-          summary: details.summary,
-          genres: details.genres,
-          platforms: details.platforms,
-          releaseDate: details.releaseDate,
-          syncedAt: new Date(),
-        }
-      : { syncedAt: new Date() }, // app removido da loja: não tenta de novo a cada visita
+      ? { ...(needsCover ? { coverUrl: coverFrom(asset, appId) } : {}), ...steamDetailsData(details, asset) }
+      : { syncedAt: new Date(), mediaSyncedAt: new Date() }, // app removido da loja: não tenta de novo a cada visita
   });
 }
 

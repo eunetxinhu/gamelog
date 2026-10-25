@@ -127,6 +127,21 @@ model Game {
   igdbId     Int? @unique @map("igdb_id")
   steamAppId Int? @unique @map("steam_app_id")
 
+  // ---- Mídia e ficha (loja da Steam) -----------------------------------------
+  developers      String[]  @default([])
+  publishers      String[]  @default([])
+  /// Metascore (0–100) e link da página na Metacritic, vindos da loja da Steam
+  metacriticScore Int?      @map("metacritic_score") @db.SmallInt
+  metacriticUrl   String?   @map("metacritic_url")
+  /// Arte larga para o fundo da página do jogo
+  heroUrl         String?   @map("hero_url")
+  /// [{ thumb, full }]
+  screenshots     Json?
+  /// [{ name, thumb, hls }]
+  trailers        Json?
+  /// Última vez que mídia/ficha vieram da loja (renova a cada 7 dias)
+  mediaSyncedAt   DateTime? @map("media_synced_at")
+
   /// % de jogadores da Steam com a conquista mais rara = teto de quem tem a platina.
   /// Preenchido na primeira vez que alguém platina o jogo.
   platinumRarity          Float?    @map("platinum_rarity")

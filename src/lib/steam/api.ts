@@ -301,12 +301,20 @@ export async function searchStore(term: string): Promise<StoreSearchItem[]> {
   }
 }
 
+export type Screenshot = { thumb: string; full: string };
+export type Trailer = { name: string; thumb: string; hls: string };
+
 export type StoreAppDetails = {
   name: string;
   summary: string | null;
   genres: string[];
   platforms: string[];
   releaseDate: Date | null;
+  developers: string[];
+  publishers: string[];
+  metacritic: { score: number; url: string | null } | null;
+  screenshots: Screenshot[];
+  trailers: Trailer[];
 };
 
 /** Detalhes da página da loja (descrição, gêneros, data). `null` se o app não existir. */
@@ -326,6 +334,11 @@ export async function getAppDetails(appId: number): Promise<StoreAppDetails | nu
           genres?: { description: string }[];
           platforms?: Record<string, boolean>;
           release_date?: { date?: string };
+          developers?: string[];
+          publishers?: string[];
+          metacritic?: { score: number; url?: string };
+          screenshots?: { path_thumbnail: string; path_full: string }[];
+          movies?: { name: string; thumbnail: string; hls_h264?: string }[];
         };
       }
     >;
@@ -338,9 +351,106 @@ export async function getAppDetails(appId: number): Promise<StoreAppDetails | nu
       genres: data.genres?.map((g) => g.description) ?? [],
       platforms: Object.entries(data.platforms ?? {}).flatMap(([k, on]) => (on && PLATFORM_NAMES[k] ? [PLATFORM_NAMES[k]] : [])),
       releaseDate: parseStoreDate(data.release_date?.date),
+      developers: data.developers ?? [],
+      publishers: data.publishers ?? [],
+      metacritic: data.metacritic?.score ? { score: data.metacritic.score, url: data.metacritic.url ?? null } : null,
+      screenshots: (data.screenshots ?? []).slice(0, 12).map((x) => ({ thumb: x.path_thumbnail, full: x.path_full })),
+      trailers: (data.movies ?? [])
+        .filter((m) => m.hls_h264)
+        .slice(0, 4)
+        .map((m) => ({ name: m.name, thumb: m.thumbnail, hls: m.hls_h264! })),
     };
   } catch {
     return null;
+  }
+}
+
+export type StoreListItem = {
+  appId: number;
+  name: string;
+  image: string;
+  discountPercent: number;
+  /** centavos (BRL); null = sem preço (em breve / grátis) */
+  finalPrice: number | null;
+  originalPrice: number | null;
+};
+
+export type StoreHighlights = { topSellers: StoreListItem[]; newReleases: StoreListItem[]; comingSoon: StoreListItem[]; specials: StoreListItem[] };
+
+/** Vitrines da loja (mais vendidos, lançamentos, em breve, promoções). Cache de 1 hora. */
+export async function getStoreHighlights(): Promise<StoreHighlights | null> {
+  try {
+    const res = await fetch(`${STORE_API}/featuredcategories?cc=BR&l=portuguese`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    type Raw = {
+      id: number;
+      type: number;
+      name: string;
+      header_image?: string;
+      large_capsule_image?: string;
+      discount_percent?: number;
+      final_price?: number;
+      original_price?: number | null;
+    };
+    const body = (await res.json()) as Record<string, { items?: Raw[] }>;
+    const map = (items: Raw[] = []) => {
+      const seen = new Set<number>();
+      return items
+        .filter((i) => i.type === 0 && !seen.has(i.id) && seen.add(i.id))
+        .map((i) => ({
+          appId: i.id,
+          name: i.name,
+          image: i.header_image ?? i.large_capsule_image ?? "",
+          discountPercent: i.discount_percent ?? 0,
+          finalPrice: i.final_price || null,
+          originalPrice: i.original_price ?? null,
+        }));
+    };
+    return {
+      topSellers: map(body.top_sellers?.items),
+      newReleases: map(body.new_releases?.items).slice(0, 12),
+      comingSoon: map(body.coming_soon?.items),
+      specials: map(body.specials?.items),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export type SteamNewsItem = { title: string; url: string; date: Date; feed: string; excerpt: string };
+
+/** Notícias e patch notes de um jogo (anúncios oficiais primeiro). Cache de 1 hora. */
+export async function getGameNews(appId: number, count = 4): Promise<SteamNewsItem[]> {
+  try {
+    const res = await fetch(
+      `${STEAM_API}/ISteamNews/GetNewsForApp/v2/?appid=${appId}&count=${count * 3}&maxlength=240&format=json`,
+      { next: { revalidate: 3600 }, signal: AbortSignal.timeout(TIMEOUT_MS) },
+    );
+    if (!res.ok) return [];
+    const body = (await res.json()) as {
+      appnews?: { newsitems?: { title: string; url: string; date: number; feedlabel: string; feedname: string; contents: string }[] };
+    };
+    const items = body.appnews?.newsitems ?? [];
+    // Prefere os anúncios oficiais; completa com notícias de sites
+    const official = items.filter((n) => n.feedname === "steam_community_announcements");
+    const rest = items.filter((n) => n.feedname !== "steam_community_announcements");
+    return [...official, ...rest].slice(0, count).map((n) => ({
+      title: n.title,
+      url: n.url,
+      date: new Date(n.date * 1000),
+      feed: n.feedname === "steam_community_announcements" ? "Anúncio oficial" : n.feedlabel,
+      excerpt: n.contents
+        .replace(/\[[^\]]*\]/g, " ")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\{STEAM_CLAN_IMAGE\}\S*/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    }));
+  } catch {
+    return [];
   }
 }
 
