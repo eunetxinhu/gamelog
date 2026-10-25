@@ -14,7 +14,7 @@ import type { GameOption } from "./_actions/photo-post";
 
 export const metadata: Metadata = { title: "Feed · GameLog" };
 
-type Props = { searchParams: Promise<{ tab?: string; before?: string; senha?: string; postar?: string }> };
+type Props = { searchParams: Promise<{ tab?: string; before?: string; senha?: string; postar?: string; compartilhado?: string; texto?: string }> };
 
 const quickGameSelect = { slug: true, title: true, coverUrl: true, steamAppId: true, releaseDate: true } as const;
 
@@ -38,10 +38,11 @@ async function quickGamesFor(userId: string): Promise<GameOption[]> {
 }
 
 export default async function FeedPage({ searchParams }: Props) {
-  const viewer = await getCurrentUser();
-  if (!viewer) redirect("/login?next=/feed");
-
   const query = await searchParams;
+  const viewer = await getCurrentUser();
+  // Sem login, volta para cá depois (com o ?postar / ?compartilhado de quem veio do "Compartilhar")
+  if (!viewer) redirect(`/login?next=${encodeURIComponent(`/feed?${new URLSearchParams(query as Record<string, string>)}`)}`);
+
   const hidden = await blockedIds(viewer.id);
   const followingIds = (
     await prisma.follow.findMany({ where: { followerId: viewer.id, status: "ACCEPTED" }, select: { followingId: true } })
@@ -89,7 +90,11 @@ export default async function FeedPage({ searchParams }: Props) {
             Senha alterada com sucesso.
           </p>
         )}
-        {!viewer.bannedAt && <PhotoComposer quickGames={quickGames} startOpen={query.postar === "1"} />}
+        {!viewer.bannedAt && <PhotoComposer
+            quickGames={quickGames}
+            startOpen={query.postar === "1"}
+            shared={Number(query.compartilhado) > 0 ? { count: Number(query.compartilhado), text: query.texto?.slice(0, 500) ?? null } : null}
+          />}
 
         <nav className="mb-4 flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1 sm:mb-5" aria-label="Feed">
           <Tab href="/feed?tab=following" active={tab === "following"}>

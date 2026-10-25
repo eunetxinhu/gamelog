@@ -1,0 +1,81 @@
+name: Backup do banco
+
+# No plano grátis o Supabase não faz backup diário. Este workflow faz um dump lógico
+# toda noite (o mesmo método da documentação do Supabase: roles + schema + dados),
+# CRIPTOGRAFA com a sua senha e guarda como artefato por 30 dias.
+#
+# ⚠️ O repositório é público: qualquer pessoa pode baixar artefatos. Por isso o dump
+# só sai daqui criptografado (AES-256). Sem a senha, o arquivo não serve para nada.
+#
+# Configure em Settings → Secrets and variables → Actions:
+#   BACKUP_DATABASE_URL  conexão "Session pooler" do Supabase (porta 5432)
+#                        Project Settings → Database → Connection string → Session pooler
+#   BACKUP_PASSPHRASE    uma senha longa (guarde num gerenciador de senhas: sem ela
+#                        não dá para restaurar)
+#
+# Restaurar: veja "Backup e restauração" no README.
+on:
+  schedule:
+    - cron: "23 6 * * *" # 03h23 de Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Conferir segredos
+        id: check
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "::warning::Backup DESATIVADO: defina os segredos BACKUP_DATABASE_URL e BACKUP_PASSPHRASE."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.check.outputs.enabled == 'true'
+        with:
+          version: latest
+
+      - name: Dump (roles, schema e dados)
+        if: steps.check.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p dump
+          supabase db dump --db-url "$DB_URL" -f dump/roles.sql --role-only
+          supabase db dump --db-url "$DB_URL" -f dump/schema.sql
+          supabase db dump --db-url "$DB_URL" -f dump/data.sql --use-copy --data-only \
+            -x "storage.buckets_vectors" -x "storage.vector_indexes"
+          # Dump vazio = algo deu errado (conexão, permissão): falha em vez de guardar lixo
+          test -s dump/schema.sql
+          test -s dump/data.sql
+          ls -la dump
+
+      - name: Compactar e criptografar
+        if: steps.check.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y-%m-%d)
+          tar -czf "gamelog-$STAMP.tar.gz" -C dump .
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+            --symmetric --cipher-algo AES256 -o "gamelog-$STAMP.tar.gz.gpg" "gamelog-$STAMP.tar.gz"
+          # Nada em texto puro sobra no disco do runner
+          rm -rf dump "gamelog-$STAMP.tar.gz"
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          ls -la *.gpg
+
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.enabled == 'true'
+        with:
+          name: backup-${{ env.STAMP }}
+          path: gamelog-*.tar.gz.gpg
+          retention-days: 30
+          if-no-files-found: error

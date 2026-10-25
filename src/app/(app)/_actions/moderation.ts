@@ -7,6 +7,7 @@ import type { DmPolicy, ReportTarget } from "@/generated/prisma/enums";
 import { removeImage } from "@/lib/uploads";
 import { REPORT_REASONS } from "@/lib/report-reasons";
 import { rateLimit } from "@/lib/rate-limit";
+import { parsePrefs, type NotificationPrefs } from "@/lib/notification-prefs";
 
 /** Limite de denúncias por pessoa por dia (evita uso como arma). */
 const REPORTS_PER_DAY = 20;
@@ -114,6 +115,15 @@ export async function savePushSubscription(sub: { endpoint: string; keys: { p256
     create: { userId: user.id, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, userAgent: userAgent?.slice(0, 300) },
     update: { userId: user.id, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
   });
+  return { ok: true };
+}
+
+/** Salva o que avisar e por onde, por categoria. Valores inválidos viram o padrão. */
+export async function updateNotificationPrefs(prefs: NotificationPrefs): Promise<{ ok: boolean }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  await prisma.user.update({ where: { id: user.id }, data: { notificationPrefs: parsePrefs(prefs) } });
+  revalidatePath("/settings/privacy");
   return { ok: true };
 }
 

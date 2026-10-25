@@ -9,8 +9,15 @@ import { communityScore, MIN_RATINGS_FOR_SCORE } from "@/lib/score";
 import { GameCover } from "@/components/game-cover";
 import { ScoreBadge } from "@/components/score-badge";
 import { ScrollRow } from "@/components/scroll-row";
+import { WishlistQuickButton } from "@/components/wishlist-quick-button";
+import { getCurrentUser } from "@/lib/auth";
+import { wishlistSetFor } from "@/lib/wishlist";
+import { inWishlist } from "@/lib/wishlist-keys";
 
 export const metadata: Metadata = { title: "Jogos · GameLog" };
+
+/** Quem está vendo e o que já está na wishlist dele (para o botão sobre as capas). */
+type Wish = { loggedIn: boolean; set: Set<string> };
 
 type Props = { searchParams: Promise<{ q?: string }> };
 
@@ -18,6 +25,7 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
 
 export default async function GamesPage({ searchParams }: Props) {
   const q = ((await searchParams).q ?? "").trim();
+  const viewerId = (await getCurrentUser())?.id ?? null;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-5 sm:py-8">
@@ -46,7 +54,7 @@ export default async function GamesPage({ searchParams }: Props) {
         </button>
       </form>
 
-      {q ? <SearchResults q={q} /> : <Hub />}
+      {q ? <SearchResults q={q} viewerId={viewerId} /> : <Hub viewerId={viewerId} />}
     </main>
   );
 }
@@ -55,9 +63,10 @@ export default async function GamesPage({ searchParams }: Props) {
 //  Busca
 // =============================================================================
 
-async function SearchResults({ q }: { q: string }) {
+async function SearchResults({ q, viewerId }: { q: string; viewerId: string | null }) {
   const { results, didYouMean } = await searchGames(q);
   if (results.length === 0) return <p className="text-sm text-zinc-500">Nenhum jogo encontrado para “{q}”.</p>;
+  const wish: Wish = { loggedIn: !!viewerId, set: await wishlistSetFor(viewerId, results) };
   return (
     <>
       {didYouMean && (
@@ -78,6 +87,7 @@ async function SearchResults({ q }: { q: string }) {
             coverUrl={r.coverUrl}
             steamAppId={r.steamAppId}
             sub={r.source === "GameLog" ? (r.year ?? "No GameLog") : (r.year ?? r.source)}
+            wish={wish}
           />
         ))}
       </ul>
@@ -89,7 +99,7 @@ async function SearchResults({ q }: { q: string }) {
 //  Hub (sem busca)
 // =============================================================================
 
-async function Hub() {
+async function Hub({ viewerId }: { viewerId: string | null }) {
   const [store, bestRaw, popular] = await Promise.all([
     getStoreHighlights(),
     // Melhores no GameLog: maior média, com um mínimo de notas
@@ -110,6 +120,15 @@ async function Hub() {
     }),
   ]);
 
+  const storeItems = store ? [...store.topSellers, ...store.newReleases, ...store.comingSoon, ...store.specials] : [];
+  const wish: Wish = {
+    loggedIn: !!viewerId,
+    set: await wishlistSetFor(viewerId, [
+      ...storeItems.map((i) => ({ slug: `steam-${i.appId}`, steamAppId: i.appId })),
+      ...popular.map((g) => ({ slug: g.slug, steamAppId: g.steamAppId })),
+    ]),
+  };
+
   const bestGames = new Map(
     (
       await prisma.game.findMany({
@@ -126,7 +145,7 @@ async function Hub() {
   return (
     <div className="space-y-12">
       {store && store.topSellers.length > 0 && (
-        <StoreRow title="Mais vendidos na Steam" icon={<Flame className="size-4 text-orange-400" aria-hidden />} items={store.topSellers} />
+        <StoreRow title="Mais vendidos na Steam" icon={<Flame className="size-4 text-orange-400" aria-hidden />} items={store.topSellers} wish={wish} />
       )}
 
       {best.length > 0 && (
@@ -155,13 +174,13 @@ async function Hub() {
       )}
 
       {store && store.newReleases.length > 0 && (
-        <StoreRow title="Novos lançamentos" icon={<Sparkles className="size-4 text-sky-400" aria-hidden />} items={store.newReleases} />
+        <StoreRow title="Novos lançamentos" icon={<Sparkles className="size-4 text-sky-400" aria-hidden />} items={store.newReleases} wish={wish} />
       )}
       {store && store.comingSoon.length > 0 && (
-        <StoreRow title="Em breve" icon={<CalendarClock className="size-4 text-violet-400" aria-hidden />} items={store.comingSoon} upcoming />
+        <StoreRow title="Em breve" icon={<CalendarClock className="size-4 text-violet-400" aria-hidden />} items={store.comingSoon} wish={wish} upcoming />
       )}
       {store && store.specials.length > 0 && (
-        <StoreRow title="Promoções na Steam" icon={<Percent className="size-4 text-emerald-400" aria-hidden />} items={store.specials} />
+        <StoreRow title="Promoções na Steam" icon={<Percent className="size-4 text-emerald-400" aria-hidden />} items={store.specials} wish={wish} />
       )}
 
       {popular.length > 0 && (
@@ -169,7 +188,7 @@ async function Hub() {
           <SectionTitle icon={<Users className="size-4 text-sky-400" aria-hidden />}>Mais registrados no GameLog</SectionTitle>
           <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
             {popular.map((g) => (
-              <CoverTile key={g.slug} {...g} sub={`${g._count.logs} ${g._count.logs === 1 ? "registro" : "registros"}`} />
+              <CoverTile key={g.slug} {...g} wish={wish} sub={`${g._count.logs} ${g._count.logs === 1 ? "registro" : "registros"}`} />
             ))}
           </ul>
         </section>
@@ -190,13 +209,25 @@ function SectionTitle({ icon, children }: { icon: ReactNode; children: ReactNode
 }
 
 /** Fileira horizontal com as imagens largas da loja e preço/desconto. */
-function StoreRow({ title, icon, items, upcoming }: { title: string; icon: ReactNode; items: StoreListItem[]; upcoming?: boolean }) {
+function StoreRow({
+  title,
+  icon,
+  items,
+  upcoming,
+  wish,
+}: {
+  title: string;
+  icon: ReactNode;
+  items: StoreListItem[];
+  upcoming?: boolean;
+  wish: Wish;
+}) {
   return (
     <section>
       <SectionTitle icon={icon}>{title}</SectionTitle>
       <ScrollRow label={title} className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4">
         {items.map((item) => (
-          <li key={item.appId} className="w-[68vw] max-w-56 shrink-0 snap-start sm:w-56">
+          <li key={item.appId} className="relative w-[68vw] max-w-56 shrink-0 snap-start sm:w-56">
             <Link href={`/games/steam-${item.appId}`} className="group block">
               <div className="relative overflow-hidden rounded-lg ring-1 ring-white/10 transition group-hover:ring-sky-500">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -223,6 +254,13 @@ function StoreRow({ title, icon, items, upcoming }: { title: string; icon: React
                 )}
               </p>
             </Link>
+            <WishlistQuickButton
+              slug={`steam-${item.appId}`}
+              title={item.name}
+              initial={inWishlist(wish.set, { slug: `steam-${item.appId}`, steamAppId: item.appId })}
+              loggedIn={wish.loggedIn}
+              className="right-1.5 top-1.5"
+            />
           </li>
         ))}
       </ScrollRow>
@@ -230,14 +268,28 @@ function StoreRow({ title, icon, items, upcoming }: { title: string; icon: React
   );
 }
 
-function CoverTile(props: { slug: string; title: string; coverUrl: string | null; steamAppId: number | null; sub?: string | number }) {
+function CoverTile(props: {
+  slug: string;
+  title: string;
+  coverUrl: string | null;
+  steamAppId: number | null;
+  sub?: string | number;
+  wish: Wish;
+}) {
   return (
-    <li>
+    <li className="relative">
       <Link href={`/games/${props.slug}`} className="group block space-y-1.5">
         <GameCover title={props.title} coverUrl={props.coverUrl} steamAppId={props.steamAppId} className="transition group-hover:ring-sky-500" />
         <p className="line-clamp-2 text-xs font-medium text-zinc-200 group-hover:text-white">{props.title}</p>
         {props.sub && <p className="text-[11px] text-zinc-500">{props.sub}</p>}
       </Link>
+      <WishlistQuickButton
+        slug={props.slug}
+        title={props.title}
+        initial={inWishlist(props.wish.set, props)}
+        loggedIn={props.wish.loggedIn}
+        className="right-1 top-1"
+      />
     </li>
   );
 }

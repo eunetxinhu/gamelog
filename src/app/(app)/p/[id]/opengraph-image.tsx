@@ -62,7 +62,6 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           }}
         >
           {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img src={cover} alt="" width={330} height={518} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
           ) : (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", fontSize: 36, padding: 24, textAlign: "center" }}>
@@ -74,7 +73,6 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             {avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={avatar} alt="" width={80} height={80} style={{ borderRadius: 999 }} />
             ) : (
               <div style={{ display: "flex", width: 80, height: 80, borderRadius: 999, background: "#0284c7", alignItems: "center", justifyContent: "center", fontSize: 40, fontWeight: 700 }}>

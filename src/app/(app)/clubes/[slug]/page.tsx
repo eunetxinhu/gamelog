@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { thumbOf } from "@/lib/image-urls";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Crown, Shield } from "lucide-react";
@@ -104,7 +105,7 @@ export default async function ClubPage({ params }: Props) {
                   {p.imageUrl && (
                     <a href={p.imageUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block sm:w-fit">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.imageUrl} alt="" loading="lazy" className="max-h-96 w-full rounded-xl object-contain ring-1 ring-white/10 sm:w-auto" />
+                      <img src={thumbOf(p.imageUrl)} alt="" loading="lazy" className="max-h-96 w-full rounded-xl object-contain ring-1 ring-white/10 sm:w-auto" />
                     </a>
                   )}
                 </article>

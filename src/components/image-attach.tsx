@@ -3,7 +3,8 @@
 import { useRef, useState, useTransition } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { uploadMedia } from "@/app/(app)/_actions/media";
-import { shrinkImage } from "@/lib/image-shrink";
+import { imageVariants } from "@/lib/image-shrink";
+import { thumbOf } from "@/lib/image-urls";
 
 /**
  * Botão "Adicionar foto": reduz a imagem no navegador, envia e devolve a URL.
@@ -31,10 +32,11 @@ export function ImageAttach({
     setError(null);
     startTransition(async () => {
       try {
-        const blob = await shrinkImage(file);
+        const { full, thumb } = await imageVariants(file);
         const data = new FormData();
         data.set("kind", kind);
-        data.set("file", new File([blob], "foto.jpg", { type: "image/jpeg" }));
+        data.set("file", full);
+        data.set("thumb", thumb);
         const res = await uploadMedia(data);
         if (res.ok) onChange(res.url);
         else setError(res.message);
@@ -49,7 +51,7 @@ export function ImageAttach({
       {value && (
         <div className="relative w-fit">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="Foto anexada" className="max-h-48 rounded-lg ring-1 ring-white/10" />
+          <img src={thumbOf(value)} alt="Foto anexada" className="max-h-48 rounded-lg ring-1 ring-white/10" />
           <button
             type="button"
             onClick={() => onChange(null)}

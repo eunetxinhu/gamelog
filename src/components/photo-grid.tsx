@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Lightbox } from "./lightbox";
+import { thumbOf } from "@/lib/image-urls";
 
 /**
  * Fotos de uma publicação com a largura do card. 1 foto: inteira; 2: lado a lado;
@@ -21,7 +22,7 @@ export function PhotoGrid({ images, title }: { images: string[]; title: string }
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={thumbOf(src)}
         alt={`Foto de ${title}`}
         loading="lazy"
         className={`size-full transition group-hover:opacity-90 ${images.length === 1 ? "object-contain" : "object-cover"}`}

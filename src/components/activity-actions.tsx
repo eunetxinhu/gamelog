@@ -1,6 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Heart, Trash2, Trophy } from "lucide-react";
 import { deleteActivity, toggleReaction } from "@/app/(app)/_actions/social";
 
@@ -24,13 +25,14 @@ export function ReactionButton({
   canReact: boolean;
 }) {
   const r = REACTION[type];
+  const router = useRouter();
   const [state, setState] = useState({ active, count });
   const [optimistic, setOptimistic] = useOptimistic(state);
   const [, startTransition] = useTransition();
 
   function onClick() {
     if (!canReact) {
-      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+      router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
     const next = { active: !optimistic.active, count: optimistic.count + (optimistic.active ? -1 : 1) };

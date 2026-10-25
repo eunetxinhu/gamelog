@@ -12,8 +12,13 @@ export function HeaderMenu({ username }: { username: string }) {
   const box = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
-  // Fecha ao navegar e ao tocar fora
-  useEffect(() => setOpen(false), [pathname]);
+  // Fecha ao navegar (ajuste de estado durante o render, sem efeito) …
+  const [path, setPath] = useState(pathname);
+  if (path !== pathname) {
+    setPath(pathname);
+    setOpen(false);
+  }
+  // … e ao tocar fora
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {

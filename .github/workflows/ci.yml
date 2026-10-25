@@ -1,6 +1,6 @@
 name: CI
 
-# A cada push e pull request: confere o schema, os tipos, os testes e o build.
+# A cada push e pull request: confere o schema, os tipos, o lint, os testes e o build.
 on:
   push:
     branches: [main]
@@ -38,6 +38,9 @@ jobs:
 
       - name: Tipos
         run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
 
       - name: Testes
         run: npm test

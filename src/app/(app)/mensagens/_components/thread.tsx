@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { thumbOf } from "@/lib/image-urls";
 import { useRouter } from "next/navigation";
 import { Loader2, Send, Trash2 } from "lucide-react";
 import { ImageAttach } from "@/components/image-attach";
@@ -92,7 +93,7 @@ export function Thread({
                   {m.imageUrl && (
                     <a href={m.imageUrl} target="_blank" rel="noopener noreferrer">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={m.imageUrl} alt="Foto" className="mb-1 max-h-64 rounded-lg" />
+                      <img src={thumbOf(m.imageUrl)} alt="Foto" loading="lazy" className="mb-1 max-h-64 rounded-lg" />
                     </a>
                   )}
                   {m.body && <MentionText text={m.body} className="block whitespace-pre-line break-words" />}

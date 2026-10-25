@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { Bell, BellOff, Check, Copy, Loader2, Lock } from "lucide-react";
 import { Avatar } from "@/components/avatar";
-import { removePushSubscription, savePushSubscription, unblockUser, updatePrivacy } from "@/app/(app)/_actions/moderation";
+import { removePushSubscription, savePushSubscription, unblockUser, updateNotificationPrefs, updatePrivacy } from "@/app/(app)/_actions/moderation";
+import { NOTIFICATION_CATEGORIES, NOTIFY_LEVELS, type NotificationPrefs, type NotifyLevel } from "@/lib/notification-prefs";
 
 type DmPolicy = "EVERYONE" | "FOLLOWING" | "NOBODY";
 
@@ -19,21 +20,27 @@ function urlBase64ToUint8Array(base64: string) {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
+/** O que o navegador permite (lido no client; no servidor é "loading"). */
+function pushSupport(publicKey: string | null): "unsupported" | "denied" | "ok" {
+  if (!publicKey || !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return "unsupported";
+  return Notification.permission === "denied" ? "denied" : "ok";
+}
+const noSubscribe = () => () => {};
+
 export function PushToggle({ publicKey }: { publicKey: string | null }) {
-  const [status, setStatus] = useState<"loading" | "unsupported" | "denied" | "off" | "on">("loading");
+  const support = useSyncExternalStore(noSubscribe, () => pushSupport(publicKey), () => "loading" as const);
+  // Estado da inscrição neste aparelho (só faz sentido quando o navegador suporta)
+  const [subscription, setStatus] = useState<"loading" | "denied" | "off" | "on">("loading");
+  const status = support === "ok" ? subscription : support;
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    if (!publicKey || !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-      setStatus("unsupported");
-      return;
-    }
-    if (Notification.permission === "denied") return setStatus("denied");
+    if (support !== "ok") return;
     navigator.serviceWorker.getRegistration().then(async (reg) => {
       const sub = await reg?.pushManager.getSubscription();
       setStatus(sub ? "on" : "off");
     });
-  }, [publicKey]);
+  }, [support]);
 
   function enable() {
     startTransition(async () => {
@@ -89,6 +96,78 @@ export function PushToggle({ publicKey }: { publicKey: string | null }) {
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Bell className="size-4" aria-hidden />} Ativar
         </button>
       )}
+    </div>
+  );
+}
+
+// =============================================================================
+//  O que avisar, por categoria
+// =============================================================================
+
+export function NotificationPrefsForm({ initial }: { initial: NotificationPrefs }) {
+  const [prefs, setPrefs] = useState(initial);
+  const [saved, setSaved] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const dirty = NOTIFICATION_CATEGORIES.some((c) => prefs[c.id] !== initial[c.id]);
+
+  function set(id: keyof NotificationPrefs, level: NotifyLevel) {
+    setSaved(false);
+    setPrefs((p) => ({ ...p, [id]: level }));
+  }
+
+  function save() {
+    startTransition(async () => {
+      if ((await updateNotificationPrefs(prefs)).ok) setSaved(true);
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <ul className="divide-y divide-zinc-800/80">
+        {NOTIFICATION_CATEGORIES.map((c) => (
+          <li key={c.id} className="flex flex-col gap-2 py-3 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm text-zinc-100">{c.label}</p>
+              {"hint" in c && <p className="text-xs text-zinc-500">{c.hint}</p>}
+            </div>
+            <div role="radiogroup" aria-label={c.label} className="flex shrink-0 gap-1 rounded-lg border border-zinc-800 bg-zinc-950/60 p-0.5">
+              {NOTIFY_LEVELS.map((l) => {
+                const on = prefs[c.id] === l.value;
+                return (
+                  <button
+                    key={l.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => set(c.id, l.value)}
+                    className={`flex-1 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium transition sm:flex-none ${
+                      on ? (l.value === "off" ? "bg-zinc-700 text-zinc-100" : "bg-sky-600 text-white") : "text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                );
+              })}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="flex items-center justify-end gap-3">
+        {saved && !dirty && (
+          <span role="status" className="flex items-center gap-1 text-sm text-emerald-300">
+            <Check className="size-4" aria-hidden /> Salvo
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={save}
+          disabled={pending || !dirty}
+          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-40"
+        >
+          {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} Salvar
+        </button>
+      </div>
+      <p className="text-xs text-zinc-500">“Site e celular” só chega no aparelho com as notificações push ativadas acima.</p>
     </div>
   );
 }
