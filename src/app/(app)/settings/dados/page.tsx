@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { DeleteAccountForm } from "./_components/delete-account-form";
 
-export const metadata: Metadata = { title: "Seus dados · GameLog" };
+export const metadata: Metadata = { title: "Seus dados" };
 
 /** LGPD: baixar uma cópia dos dados e excluir a conta. */
 export default async function DataPage() {
@@ -17,7 +17,7 @@ export default async function DataPage() {
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       <Section
         title="Baixar seus dados"
-        description="Um arquivo JSON com tudo o que o GameLog guarda sobre você: perfil, Steam vinculada, registros, biblioteca, publicações, comentários, mensagens, clubes e mais."
+        description="Um arquivo JSON com tudo o que o Poneglyph.gg guarda sobre você: perfil, Steam vinculada, registros, biblioteca, publicações, comentários, mensagens, clubes e mais."
       >
         <a
           href="/api/conta/exportar"

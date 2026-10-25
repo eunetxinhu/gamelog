@@ -18,7 +18,7 @@ const userSelect = { id: true, username: true, displayName: true, avatarUrl: tru
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const club = await prisma.club.findUnique({ where: { slug: (await params).slug }, select: { name: true, description: true } });
-  return { title: `${club?.name ?? "Clube"} · GameLog`, description: club?.description ?? undefined };
+  return { title: club?.name ?? "Clube", description: club?.description ?? undefined };
 }
 
 export default async function ClubPage({ params }: Props) {

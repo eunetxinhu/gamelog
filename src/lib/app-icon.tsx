@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 /**
- * Ícone do GameLog desenhado em código (sem arquivos de imagem no repositório).
+ * Ícone do Poneglyph.gg desenhado em código (sem arquivos de imagem no repositório).
  * `maskable` deixa uma margem de segurança: o Android recorta o ícone em círculo/gota.
  */
 export function appIcon(size: number, { maskable = false, rounded = true } = {}) {

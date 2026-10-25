@@ -8,9 +8,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { getActivities } from "@/lib/activity";
 import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { ActivityCard } from "@/components/activity-card";
+import { SITE_NAME } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "GameLog · Sua vida gamer, platina por platina",
+  title: { absolute: `${SITE_NAME} · Sua vida gamer, platina por platina` },
   description: "Conecte sua Steam, mostre suas platinas automaticamente e acompanhe o que seus amigos estão jogando.",
 };
 
@@ -30,7 +31,7 @@ export default async function Home() {
   return (
     <div className="min-h-dvh">
       <header className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        <span className="text-xl font-bold text-zinc-50">GameLog</span>
+        <span className="text-xl font-bold text-zinc-50">Poneglyph.gg</span>
         <nav className="flex items-center gap-2">
           <Link href="/login" className="rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50">
             Entrar
@@ -54,7 +55,7 @@ export default async function Home() {
               <span className="bg-gradient-to-r from-sky-400 to-violet-400 bg-clip-text text-transparent">platina por platina.</span>
             </h1>
             <p className="mt-4 max-w-md text-zinc-400">
-              Conecte sua Steam e o GameLog mostra sozinho os jogos que você começou, as platinas que conquistou e as horas
+              Conecte sua Steam e o Poneglyph.gg mostra sozinho os jogos que você começou, as platinas que conquistou e as horas
               jogadas. Avalie, comente e acompanhe seus amigos.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
@@ -109,7 +110,7 @@ export default async function Home() {
       </main>
 
       <footer className="border-t border-zinc-800 py-6 text-center text-xs text-zinc-500">
-        GameLog · não afiliado à Valve. Dados de jogos da Steam.
+        Poneglyph.gg · não afiliado à Valve. Dados de jogos da Steam.
       </footer>
     </div>
   );

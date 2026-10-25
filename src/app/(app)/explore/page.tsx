@@ -17,7 +17,7 @@ import { WishlistQuickButton } from "@/components/wishlist-quick-button";
 import { wishlistSetFor } from "@/lib/wishlist";
 import { inWishlist } from "@/lib/wishlist-keys";
 
-export const metadata: Metadata = { title: "Explorar · GameLog" };
+export const metadata: Metadata = { title: "Explorar" };
 
 /** Mínimo de notas para entrar em "Mais bem avaliados" (evita um 5★ solitário no topo). */
 const MIN_RATINGS = 2;

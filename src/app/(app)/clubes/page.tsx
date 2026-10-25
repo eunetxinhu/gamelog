@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { CreateClubForm } from "./_components/club-forms";
 
-export const metadata: Metadata = { title: "Clubes · GameLog" };
+export const metadata: Metadata = { title: "Clubes" };
 
 const clubSelect = {
   id: true,

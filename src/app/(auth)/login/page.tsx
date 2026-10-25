@@ -5,7 +5,7 @@ import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { AuthForm } from "../_components/auth-form";
 import { safeNext } from "../_actions/types";
 
-export const metadata: Metadata = { title: "Entrar · GameLog" };
+export const metadata: Metadata = { title: "Entrar" };
 
 type Props = { searchParams: Promise<{ next?: string; error?: string }> };
 

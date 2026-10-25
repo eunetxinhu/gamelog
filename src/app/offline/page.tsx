@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { WifiOff } from "lucide-react";
 
-export const metadata: Metadata = { title: "Sem conexão · GameLog" };
+export const metadata: Metadata = { title: "Sem conexão" };
 // Página estática: o service worker guarda esta versão para mostrar sem internet
 export const dynamic = "force-static";
 

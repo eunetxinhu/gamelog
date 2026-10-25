@@ -6,7 +6,7 @@ import { AuthForm } from "../_components/auth-form";
 import { safeNext } from "../_actions/types";
 import { cleanRef } from "@/lib/referral";
 
-export const metadata: Metadata = { title: "Criar conta · GameLog" };
+export const metadata: Metadata = { title: "Criar conta" };
 
 type Props = { searchParams: Promise<{ next?: string; ref?: string }> };
 

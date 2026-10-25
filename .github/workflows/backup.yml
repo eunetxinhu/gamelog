@@ -64,11 +64,11 @@ jobs:
         run: |
           set -euo pipefail
           STAMP=$(date -u +%Y-%m-%d)
-          tar -czf "gamelog-$STAMP.tar.gz" -C dump .
+          tar -czf "poneglyph-$STAMP.tar.gz" -C dump .
           gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
-            --symmetric --cipher-algo AES256 -o "gamelog-$STAMP.tar.gz.gpg" "gamelog-$STAMP.tar.gz"
+            --symmetric --cipher-algo AES256 -o "poneglyph-$STAMP.tar.gz.gpg" "poneglyph-$STAMP.tar.gz"
           # Nada em texto puro sobra no disco do runner
-          rm -rf dump "gamelog-$STAMP.tar.gz"
+          rm -rf dump "poneglyph-$STAMP.tar.gz"
           echo "STAMP=$STAMP" >> "$GITHUB_ENV"
           ls -la *.gpg
 
@@ -76,6 +76,6 @@ jobs:
         if: steps.check.outputs.enabled == 'true'
         with:
           name: backup-${{ env.STAMP }}
-          path: gamelog-*.tar.gz.gpg
+          path: poneglyph-*.tar.gz.gpg
           retention-days: 30
           if-no-files-found: error

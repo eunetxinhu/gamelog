@@ -32,7 +32,7 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const game = await prisma.game.findUnique({ where: { slug }, select: { title: true, summary: true } });
-  return { title: `${game?.title ?? "Jogo"} · GameLog`, description: game?.summary?.slice(0, 160) };
+  return { title: game?.title ?? "Jogo", description: game?.summary?.slice(0, 160) };
 }
 
 export default async function GamePage({ params, searchParams }: Props) {
@@ -64,7 +64,7 @@ export default async function GamePage({ params, searchParams }: Props) {
       : null,
   ]);
 
-  // Distribuição das estrelas e Nota GameLog (0–100)
+  // Distribuição das estrelas e Nota Poneglyph.gg (0–100)
   const dist = [5, 4, 3, 2, 1].map((stars) => ({ stars, n: ratingGroups.find((g) => g.rating === stars)?._count._all ?? 0 }));
   const ratingCount = dist.reduce((acc, d) => acc + d.n, 0);
   const avg = ratingCount ? dist.reduce((acc, d) => acc + d.stars * d.n, 0) / ratingCount : 0;
@@ -110,7 +110,7 @@ export default async function GamePage({ params, searchParams }: Props) {
           <section className="grid gap-5 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:grid-cols-[auto_auto_1fr] sm:items-center sm:p-5">
             <ScoreBadge
               score={score}
-              title="Nota GameLog"
+              title="Nota Poneglyph.gg"
               caption={ratingCount ? `${ratingCount} ${ratingCount === 1 ? "nota" : "notas"}` : "Sem notas ainda"}
             />
             {game.metacriticScore !== null && (
@@ -149,7 +149,7 @@ export default async function GamePage({ params, searchParams }: Props) {
             {platinums > 0 && (
               <span className="flex items-center gap-1.5 text-amber-300">
                 <Trophy className="size-4" aria-hidden />
-                {platinums} {platinums === 1 ? "platina" : "platinas"} no GameLog
+                {platinums} {platinums === 1 ? "platina" : "platinas"} no Poneglyph.gg
               </span>
             )}
             {game.steamAppId && (

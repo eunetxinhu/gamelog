@@ -1,4 +1,4 @@
-// Service worker do GameLog: página amigável sem internet + notificações push.
+// Service worker do Poneglyph.gg: página amigável sem internet + notificações push.
 // Nada de cache das páginas (o conteúdo é dinâmico e por usuário).
 const CACHE = "gamelog-offline-v1";
 const OFFLINE_URL = "/offline";
@@ -66,10 +66,10 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "GameLog", body: event.data ? event.data.text() : "" };
+    data = { title: "Poneglyph.gg", body: event.data ? event.data.text() : "" };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || "GameLog", {
+    self.registration.showNotification(data.title || "Poneglyph.gg", {
       body: data.body || "",
       icon: data.icon || "/icons/192",
       badge: "/icons/192",
@@ -80,7 +80,7 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Toque na notificação: foca uma aba aberta do GameLog (navegando para o link) ou abre uma nova
+// Toque na notificação: foca uma aba aberta do site (navegando para o link) ou abre uma nova
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || "/notifications", self.location.origin).href;

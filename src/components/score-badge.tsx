@@ -3,7 +3,7 @@ import { SCORE_BG, SCORE_TEXT, scoreInfo } from "@/lib/score";
 type Props = {
   /** 0–100; null = ainda sem notas suficientes ("a definir") */
   score: number | null;
-  /** Ex.: "Nota GameLog", "Metascore" */
+  /** Ex.: "Nota Poneglyph.gg", "Metascore" */
   title: string;
   /** Linha de baixo (ex.: "12 notas") */
   caption?: string;

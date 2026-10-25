@@ -7,7 +7,7 @@ import { AccountForm, type GameOption } from "./_components/account-form";
 import { ProfileCardEmbed } from "./_components/profile-card-embed";
 import { appUrl } from "@/lib/app-url";
 
-export const metadata: Metadata = { title: "Editar perfil · GameLog" };
+export const metadata: Metadata = { title: "Editar perfil" };
 
 const gameSelect = { id: true, title: true, coverUrl: true, steamAppId: true } as const;
 
@@ -51,7 +51,7 @@ export default async function AccountPage() {
 
       <section className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 sm:p-6">
         <h2 className="text-lg font-semibold text-zinc-50">Card do perfil</h2>
-        <p className="mb-4 text-sm text-zinc-400">Mostre seu GameLog na assinatura de fórum, no README do GitHub ou na bio.</p>
+        <p className="mb-4 text-sm text-zinc-400">Mostre seu Poneglyph.gg na assinatura de fórum, no README do GitHub ou na bio.</p>
         <ProfileCardEmbed username={user.username} origin={appUrl()} />
       </section>
     </main>

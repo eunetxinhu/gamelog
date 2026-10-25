@@ -8,7 +8,7 @@ import { blockedIds } from "@/lib/privacy";
 import { relativeTime } from "@/lib/format";
 import { Avatar } from "@/components/avatar";
 
-export const metadata: Metadata = { title: "Mensagens · GameLog" };
+export const metadata: Metadata = { title: "Mensagens" };
 
 const userSelect = { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } as const;
 

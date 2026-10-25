@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { firstDrawable, OG_SIZE, truncate } from "@/lib/og";
 import { steamCoverUrl, steamHeaderUrl } from "@/lib/steam/assets";
 
-export const alt = "Perfil no GameLog";
+export const alt = "Perfil no Poneglyph.gg";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 export const revalidate = 600;
@@ -29,7 +29,7 @@ export default async function Image({ params }: { params: Promise<{ username: st
   if (!user || user.bannedAt) {
     return new ImageResponse(
       <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b", color: "#38bdf8", fontSize: 96, fontWeight: 800 }}>
-        GameLog
+        Poneglyph.gg
       </div>,
       size,
     );
@@ -87,7 +87,7 @@ export default async function Image({ params }: { params: Promise<{ username: st
               ))}
             </div>
 
-            <div style={{ display: "flex", marginTop: "auto", fontSize: 30, fontWeight: 800, color: "#38bdf8" }}>GameLog</div>
+            <div style={{ display: "flex", marginTop: "auto", fontSize: 30, fontWeight: 800, color: "#38bdf8" }}>Poneglyph.gg</div>
           </div>
 
           {covers.length > 0 && (

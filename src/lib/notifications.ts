@@ -103,7 +103,7 @@ async function deliverPush(ids: string[]) {
     await Promise.all(
       // "Só no site": a notificação existe no sino, mas não vai para o aparelho
       rows.filter((n) => wantsPush(n.user.notificationPrefs, n.type)).map((n) => {
-        const who = n.actor ? (n.actor.displayName ?? n.actor.username) : "GameLog";
+        const who = n.actor ? (n.actor.displayName ?? n.actor.username) : "Poneglyph.gg";
         const game = n.activity?.game.title ?? n.game?.title ?? "";
         const post = n.activity ? `/p/${n.activity.id}` : n.actor ? `/u/${n.actor.username}` : "/notifications";
         const map: Record<NotificationType, PushPayload> = {

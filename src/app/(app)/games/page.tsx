@@ -14,7 +14,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { wishlistSetFor } from "@/lib/wishlist";
 import { inWishlist } from "@/lib/wishlist-keys";
 
-export const metadata: Metadata = { title: "Jogos · GameLog" };
+export const metadata: Metadata = { title: "Jogos" };
 
 /** Quem está vendo e o que já está na wishlist dele (para o botão sobre as capas). */
 type Wish = { loggedIn: boolean; set: Set<string> };
@@ -86,7 +86,7 @@ async function SearchResults({ q, viewerId }: { q: string; viewerId: string | nu
             title={r.title}
             coverUrl={r.coverUrl}
             steamAppId={r.steamAppId}
-            sub={r.source === "GameLog" ? (r.year ?? "No GameLog") : (r.year ?? r.source)}
+            sub={r.source === "GameLog" ? (r.year ?? "No Poneglyph.gg") : (r.year ?? r.source)}
             wish={wish}
           />
         ))}
@@ -102,7 +102,7 @@ async function SearchResults({ q, viewerId }: { q: string; viewerId: string | nu
 async function Hub({ viewerId }: { viewerId: string | null }) {
   const [store, bestRaw, popular] = await Promise.all([
     getStoreHighlights(),
-    // Melhores no GameLog: maior média, com um mínimo de notas
+    // Melhores no Poneglyph.gg: maior média, com um mínimo de notas
     prisma.gameLog.groupBy({
       by: ["gameId"],
       where: { rating: { not: null } },
@@ -150,7 +150,7 @@ async function Hub({ viewerId }: { viewerId: string | null }) {
 
       {best.length > 0 && (
         <section>
-          <SectionTitle icon={<Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />}>Melhores no GameLog</SectionTitle>
+          <SectionTitle icon={<Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />}>Melhores no Poneglyph.gg</SectionTitle>
           <ol className="divide-y divide-zinc-800/80 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
             {best.map(({ game, score, count }, i) => (
               <li key={game.id}>
@@ -165,7 +165,7 @@ async function Hub({ viewerId }: { viewerId: string | null }) {
                       {count} notas{game.metacriticScore !== null && ` · Metascore ${game.metacriticScore}`}
                     </span>
                   </span>
-                  <ScoreBadge score={score} title="Nota GameLog" size="sm" />
+                  <ScoreBadge score={score} title="Nota Poneglyph.gg" size="sm" />
                 </Link>
               </li>
             ))}
@@ -185,7 +185,7 @@ async function Hub({ viewerId }: { viewerId: string | null }) {
 
       {popular.length > 0 && (
         <section>
-          <SectionTitle icon={<Users className="size-4 text-sky-400" aria-hidden />}>Mais registrados no GameLog</SectionTitle>
+          <SectionTitle icon={<Users className="size-4 text-sky-400" aria-hidden />}>Mais registrados no Poneglyph.gg</SectionTitle>
           <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
             {popular.map((g) => (
               <CoverTile key={g.slug} {...g} wish={wish} sub={`${g._count.logs} ${g._count.logs === 1 ? "registro" : "registros"}`} />

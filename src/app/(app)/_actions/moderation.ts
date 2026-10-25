@@ -81,7 +81,7 @@ export async function reportContent(input: {
       },
     });
   }
-  return { ok: true, message: "Denúncia enviada. Obrigado por ajudar a manter o GameLog legal." };
+  return { ok: true, message: "Denúncia enviada. Obrigado por ajudar a manter o Poneglyph.gg legal." };
 }
 
 // -----------------------------------------------------------------------------

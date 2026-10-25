@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ResetPasswordForm } from "../_components/password-forms";
 
-export const metadata: Metadata = { title: "Criar nova senha · GameLog" };
+export const metadata: Metadata = { title: "Criar nova senha" };
 
 /**
  * Aberta pelo link do e-mail: o /auth/callback troca o código por uma sessão e

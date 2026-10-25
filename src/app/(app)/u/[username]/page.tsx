@@ -26,7 +26,7 @@ const gameSelect = { id: true, slug: true, title: true, coverUrl: true, steamApp
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
-  return { title: `@${decodeURIComponent(username)} · GameLog` };
+  return { title: `@${decodeURIComponent(username)}` };
 }
 
 export default async function ProfilePage({ params }: Props) {

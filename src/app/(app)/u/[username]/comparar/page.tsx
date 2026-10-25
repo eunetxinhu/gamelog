@@ -13,7 +13,7 @@ import { GameCover } from "@/components/game-cover";
 type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return { title: `Comparar com @${decodeURIComponent((await params).username)} · GameLog` };
+  return { title: `Comparar com @${decodeURIComponent((await params).username)}` };
 }
 
 const entrySelect = {

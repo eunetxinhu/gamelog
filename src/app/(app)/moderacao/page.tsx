@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
 import { ModerationActions, UnbanButton } from "./_components/moderation-actions";
 
-export const metadata: Metadata = { title: "Moderação · GameLog" };
+export const metadata: Metadata = { title: "Moderação" };
 
 const TARGET_LABEL = { ACTIVITY: "Publicação", COMMENT: "Comentário", USER: "Perfil", CLUB_POST: "Post de clube", MESSAGE: "Mensagem" } as const;
 

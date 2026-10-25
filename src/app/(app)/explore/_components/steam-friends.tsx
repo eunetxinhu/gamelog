@@ -9,7 +9,7 @@ import { FollowButton } from "@/components/follow-button";
 
 const STEAM_PRIVACY_URL = "https://steamcommunity.com/my/edit/settings";
 
-/** Amigos da Steam que já estão no GameLog (carregado em <Suspense> no Explorar). */
+/** Amigos da Steam que já estão no Poneglyph.gg (carregado em <Suspense> no Explorar). */
 export async function SteamFriends({ viewerId, steamId }: { viewerId: string; steamId: string }) {
   const friendIds = await getFriendList(steamId);
 
@@ -46,7 +46,7 @@ export async function SteamFriends({ viewerId, steamId }: { viewerId: string; st
   if (friends.length === 0) {
     return (
       <Box>
-        <p className="text-sm text-zinc-400">Nenhum dos seus {friendIds.length} amigos da Steam está no GameLog ainda. Que tal convidar? Seu link de convite fica em Configurações → Privacidade.</p>
+        <p className="text-sm text-zinc-400">Nenhum dos seus {friendIds.length} amigos da Steam está no Poneglyph.gg ainda. Que tal convidar? Seu link de convite fica em Configurações → Privacidade.</p>
       </Box>
     );
   }
@@ -77,7 +77,7 @@ export async function SteamFriends({ viewerId, steamId }: { viewerId: string; st
 function Box({ children }: { children: ReactNode }) {
   return (
     <section className="mb-10 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-      <h2 className="mb-3 text-lg font-semibold text-zinc-50">Seus amigos da Steam no GameLog</h2>
+      <h2 className="mb-3 text-lg font-semibold text-zinc-50">Seus amigos da Steam no Poneglyph.gg</h2>
       {children}
     </section>
   );

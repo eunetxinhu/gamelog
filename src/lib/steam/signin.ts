@@ -7,7 +7,7 @@ import { getPlayerSummary } from "@/lib/steam/api";
 import { applyReferral, findInviter } from "@/lib/referral";
 
 /**
- * "Entrar com Steam" sem conta no GameLog (o Supabase não tem a Steam como provedor):
+ * "Entrar com Steam" sem conta no site (o Supabase não tem a Steam como provedor):
  *  1. Já existe perfil com esse SteamID → entra nele (inclusive contas de e-mail que vincularam a Steam).
  *  2. Não existe → cria um usuário no Supabase Auth com e-mail interno e o perfil já vinculado.
  *  3. Abre a sessão: gera um magic link pela API de admin (nenhum e-mail é enviado) e
@@ -52,6 +52,7 @@ export async function signInWithSteam(steamId: string, ref: string | null = null
   return { isNew: Boolean(profile) };
 }
 
+// Não mudar com o nome do site: é o e-mail interno das contas que já entraram pela Steam.
 const STEAM_EMAIL_DOMAIN = "@steam-login.gamelog.app";
 
 /** E-mail interno das contas criadas pela Steam (nunca recebe mensagens). */
