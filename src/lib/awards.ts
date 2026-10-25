@@ -68,7 +68,7 @@ export function cleanAward(raw: AwardInput): { ok: true; value: CleanAward } | {
 /** Título de um usuário, pronto para exibir (null = sem título). */
 export type UserTitleData = { text: string; icon: AwardSymbol; style: AwardStyle } | null;
 
-export function titleOf(u: { title: string | null; titleIcon?: string | null; titleStyle?: string | null } | null | undefined): UserTitleData {
+export function titleOf(u: { title?: string | null; titleIcon?: string | null; titleStyle?: string | null } | null | undefined): UserTitleData {
   if (!u?.title) return null;
   return { text: u.title, ...awardLook(u.titleIcon, u.titleStyle) };
 }

@@ -7,8 +7,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { blockedIds } from "@/lib/privacy";
 import { formatPlaytime } from "@/lib/format";
-import { Avatar } from "@/components/avatar";
-import { FollowButton } from "@/components/follow-button";
+import { PeopleList, peopleSelect } from "@/components/people-list";
 import { GameCover } from "@/components/game-cover";
 import { ScrollRow } from "@/components/scroll-row";
 import { SteamFriends } from "./_components/steam-friends";
@@ -77,64 +76,13 @@ async function PeopleResults({ q, viewerId }: { q: string; viewerId: string | nu
   const ids = await searchUserIds(q, viewerId, 30);
   const found = await prisma.user.findMany({
     where: { id: { in: ids } },
-    select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, bio: true, isPrivate: true, _count: { select: { followers: { where: { status: "ACCEPTED" } } } } },
+    select: peopleSelect,
   });
 
   const people = ids.flatMap((id) => found.filter((p) => p.id === id));
 
   if (people.length === 0) return <p className="text-sm text-zinc-500">Ninguém encontrado para “{q}”.</p>;
   return <PeopleList people={people} viewerId={viewerId} />;
-}
-
-async function PeopleList({
-  people,
-  viewerId,
-}: {
-  people: {
-    id: string;
-    username: string;
-    displayName: string | null;
-    avatarUrl: string | null;
-    steamAvatarUrl: string | null;
-    bio: string | null;
-    isPrivate: boolean;
-    _count: { followers: number };
-  }[];
-  viewerId: string | null;
-}) {
-  const followState = new Map(
-    viewerId
-      ? (
-          await prisma.follow.findMany({
-            where: { followerId: viewerId, followingId: { in: people.map((p) => p.id) } },
-            select: { followingId: true, status: true },
-          })
-        ).map((f) => [f.followingId, f.status] as const)
-      : [],
-  );
-
-  return (
-    <ul className="grid gap-3 sm:grid-cols-2">
-      {people.map((p) => {
-        const name = p.displayName ?? p.username;
-        return (
-          <li key={p.id} className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-            <Link href={`/u/${p.username}`} className="flex min-w-0 flex-1 items-center gap-3">
-              <Avatar name={name} src={p.avatarUrl ?? p.steamAvatarUrl} size="md" />
-              <span className="min-w-0">
-                <span className="block truncate font-semibold text-zinc-100">{name}</span>
-                <span className="block truncate text-xs text-zinc-500">
-                  @{p.username} · {p._count.followers} {p._count.followers === 1 ? "seguidor" : "seguidores"}
-                </span>
-                {p.bio && <span className="mt-0.5 line-clamp-1 block text-xs text-zinc-400">{p.bio}</span>}
-              </span>
-            </Link>
-            {viewerId && viewerId !== p.id && <FollowButton userId={p.id} state={followState.get(p.id) ?? null} isPrivate={p.isPrivate} />}
-          </li>
-        );
-      })}
-    </ul>
-  );
 }
 
 // =============================================================================
@@ -173,7 +121,7 @@ async function Discover({ viewerId }: { viewerId: string | null }) {
       where: { bannedAt: null, id: { notIn: [...(viewerId ? [viewerId] : []), ...(await blockedIds(viewerId))] } },
       orderBy: [{ followers: { _count: "desc" } }, { activities: { _count: "desc" } }],
       take: 6,
-      select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, bio: true, isPrivate: true, _count: { select: { followers: { where: { status: "ACCEPTED" } } } } },
+      select: peopleSelect,
     }),
   ]);
 
