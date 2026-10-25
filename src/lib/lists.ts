@@ -2,12 +2,13 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { visibleUsersWhere } from "@/lib/privacy";
+import { titleOf, titleSelect, type UserTitleData } from "@/lib/awards";
 
 /** Capas que aparecem empilhadas no card da lista. */
 const PREVIEW_COVERS = 5;
 
 const cardInclude = {
-  user: { select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, title: true } },
+  user: { select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, ...titleSelect } },
   items: {
     orderBy: { position: "asc" },
     take: PREVIEW_COVERS,
@@ -22,7 +23,7 @@ export type ListCardData = {
   description: string | null;
   ranked: boolean;
   updatedAt: Date;
-  author: { username: string; name: string; avatar: string | null; title: string | null };
+  author: { username: string; name: string; avatar: string | null; title: UserTitleData };
   covers: { slug: string; title: string; coverUrl: string | null; steamAppId: number | null }[];
   itemCount: number;
   likeCount: number;
@@ -40,7 +41,7 @@ function toCard(l: Prisma.GameListGetPayload<{ include: typeof cardInclude }>): 
       username: l.user.username,
       name: l.user.displayName ?? l.user.username,
       avatar: l.user.avatarUrl ?? l.user.steamAvatarUrl,
-      title: l.user.title,
+      title: titleOf(l.user),
     },
     covers: l.items.map((i) => i.game),
     itemCount: l._count.items,
@@ -88,7 +89,7 @@ export async function getListForViewer(id: string, viewerId: string | null) {
   const list = await prisma.gameList.findFirst({
     where: { id, user: visible },
     include: {
-      user: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, title: true } },
+      user: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, ...titleSelect } },
       items: {
         orderBy: { position: "asc" },
         select: { note: true, position: true, game: { select: { id: true, slug: true, title: true, coverUrl: true, steamAppId: true, releaseDate: true } } },
@@ -102,7 +103,7 @@ export async function getListForViewer(id: string, viewerId: string | null) {
     where: { listId: id, user: visible },
     orderBy: { createdAt: "asc" },
     take: 200,
-    select: { id: true, body: true, createdAt: true, user: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, title: true } } },
+    select: { id: true, body: true, createdAt: true, user: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, ...titleSelect } } },
   });
   return { ...list, likedByMe: list.likes.length > 0, likeCount: list._count.likes, comments };
 }

@@ -45,6 +45,7 @@ export async function buildAccountExport(userId: string) {
       prisma.pushSubscription.findMany({ where: { userId }, select: { userAgent: true, createdAt: true } }),
     ]);
 
+  const awards = await prisma.awardedBadge.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, select: { name: true, description: true, createdAt: true } });
   const [lists, listLikes, listComments] = await Promise.all([
     prisma.gameList.findMany({
       where: { userId },
@@ -120,6 +121,8 @@ export async function buildAccountExport(userId: string) {
       criadaEm: l.createdAt,
       jogos: l.items.map((i) => ({ posicao: i.position, jogo: game(i.game), comentario: i.note })),
     })),
+    titulo: user.title,
+    selosExclusivos: awards.map((b) => ({ nome: b.name, descricao: b.description, recebidoEm: b.createdAt })),
     listasCurtidas: listLikes.map((l) => ({ lista: l.listId, curtidaEm: l.createdAt })),
     comentariosEmListas: listComments.map((c) => ({ lista: c.listId, texto: c.body, criadoEm: c.createdAt })),
     mensagens: conversations.map((c) => {

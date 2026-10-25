@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ShieldAlert } from "lucide-react";
+import { Crown, ShieldAlert } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
 import { ModerationActions, UnbanButton } from "./_components/moderation-actions";
+import { awardLook, titleOf } from "@/lib/awards";
+import { AwardPill, UserTitle } from "@/components/user-title";
 
 export const metadata: Metadata = { title: "Moderação" };
 
@@ -59,7 +61,7 @@ export default async function ModerationPage() {
   const user = await getCurrentUser();
   if (!user?.isAdmin) notFound();
 
-  const [reports, banned] = await Promise.all([
+  const [reports, banned, awarded] = await Promise.all([
     prisma.report.findMany({
       where: { status: "OPEN" },
       orderBy: { createdAt: "asc" },
@@ -67,6 +69,13 @@ export default async function ModerationPage() {
       include: { reporter: { select: { username: true } } },
     }),
     prisma.user.findMany({ where: { bannedAt: { not: null } }, orderBy: { bannedAt: "desc" }, take: 30, select: { id: true, username: true, bannedAt: true } }),
+    // Quem tem título ou selo exclusivo (para revisar os prêmios num lugar só)
+    prisma.user.findMany({
+      where: { OR: [{ title: { not: null } }, { awards: { some: {} } }] },
+      orderBy: { username: "asc" },
+      take: 100,
+      select: { id: true, username: true, title: true, titleIcon: true, titleStyle: true, awards: { select: { id: true, name: true, icon: true, style: true } } },
+    }),
   ]);
   const previews = await Promise.all(reports.map((r) => preview(r.targetType, r.targetId)));
 
@@ -120,6 +129,33 @@ export default async function ModerationPage() {
           </ul>
         </section>
       )}
+
+      <section className="mt-10">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-zinc-50">
+          <Crown className="size-5 text-amber-300" aria-hidden /> Premiados
+        </h2>
+        <p className="mb-3 text-sm text-zinc-500">Para dar ou tirar um título ou selo, abra o perfil e use o botão Premiar.</p>
+        {awarded.length === 0 ? (
+          <p className="text-sm text-zinc-500">Ninguém premiado ainda.</p>
+        ) : (
+          <ul className="space-y-2">
+            {awarded.map((u) => (
+              <li key={u.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
+                <Link href={`/u/${u.username}`} className="text-sm font-medium text-zinc-100 hover:underline">
+                  @{u.username}
+                </Link>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <UserTitle title={titleOf(u)} />
+                  {u.awards.map((b) => {
+                    const look = awardLook(b.icon, b.style);
+                    return <AwardPill key={b.id} text={b.name} icon={look.icon} style={look.style} size="xs" />;
+                  })}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }

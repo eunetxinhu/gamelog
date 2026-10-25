@@ -136,6 +136,7 @@ async function deliverPush(ids: string[]) {
             url: n.game ? `/games/${n.game.slug}` : "/lancamentos",
           },
           LIST_LIKE: { title: `${who} curtiu sua lista`, body: n.list?.title ?? "", url: n.list ? `/listas/${n.list.id}` : "/listas" },
+          AWARD: { title: "Você foi premiado! 🏴‍☠️", body: "Um título ou selo exclusivo apareceu no seu perfil", url: `/u/${n.user.username}` },
           LIST_COMMENT: { title: `${who} comentou na sua lista`, body: n.list?.title ?? "", url: n.list ? `/listas/${n.list.id}#comentarios` : "/listas" },
         };
         return sendPush([n.userId], { ...map[n.type], tag: n.type === "MESSAGE" ? `dm-${n.actorId}` : n.id });

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AtSign, CalendarDays, Heart, ListOrdered, Mail, MessageCircle, Percent, Rocket, Trophy, UserPlus } from "lucide-react";
+import { AtSign, CalendarDays, Crown, Heart, ListOrdered, Mail, MessageCircle, Percent, Rocket, Trophy, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
@@ -27,6 +27,7 @@ const TYPE = {
   RELEASE: { icon: Rocket, tone: "text-ember-400", text: "lançou hoje! 🎉" },
   LIST_LIKE: { icon: ListOrdered, tone: "text-rose-400", text: "curtiu sua lista" },
   LIST_COMMENT: { icon: MessageCircle, tone: "text-brand-400", text: "comentou na sua lista" },
+  AWARD: { icon: Crown, tone: "text-amber-300", text: "premiou seu perfil com um título ou selo exclusivo 🏴‍☠️" },
 } as const;
 
 export default async function NotificationsPage() {
@@ -77,6 +78,7 @@ export default async function NotificationsPage() {
             let href = "/notifications";
             if ((n.type === "DEAL" || n.type === "RELEASE") && n.game) href = `/games/${n.game.slug}`;
             else if (n.type === "WEEKLY") href = `/u/${user.username}/semana`;
+            else if (n.type === "AWARD") href = `/u/${user.username}`;
             else if (n.list) href = `/listas/${n.list.id}${n.type === "LIST_COMMENT" ? "#comentarios" : ""}`;
             else if (n.activity) href = `/p/${n.activity.id}${n.type === "COMMENT" ? "#comentarios" : ""}`;
             else if (n.actor) href = `/u/${n.actor.username}`;
