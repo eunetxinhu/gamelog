@@ -5,6 +5,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { NotificationType } from "@/generated/prisma/enums";
 import { sendPush, type PushPayload } from "@/lib/push";
 import { isBlockedEitherWay } from "@/lib/privacy";
+import { wantsInApp, wantsPush } from "@/lib/notification-prefs";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -19,6 +20,9 @@ export async function notify(db: Db, input: NotifyInput) {
   const actorId = input.actorId ?? null;
   if (actorId && input.userId === actorId) return;
   if (actorId && (await isBlockedEitherWay(input.userId, actorId))) return;
+  // Preferência da pessoa para este tipo (Configurações → Privacidade e notificações)
+  const recipient = await db.user.findUnique({ where: { id: input.userId }, select: { notificationPrefs: true } });
+  if (!recipient || !wantsInApp(recipient.notificationPrefs, input.type)) return;
 
   const repeatable: NotificationType[] = ["COMMENT", "MESSAGE", "MENTION", "DEAL"];
   if (!repeatable.includes(input.type)) {
@@ -37,7 +41,12 @@ export async function notify(db: Db, input: NotifyInput) {
 
 /** Avisa todos os seguidores (aprovados) de `actorId` (usado nas platinas). */
 export async function notifyFollowers(db: Db, actorId: string, type: NotificationType, activityId: string) {
-  const followers = await db.follow.findMany({ where: { followingId: actorId, status: "ACCEPTED" }, select: { followerId: true } });
+  const followers = (
+    await db.follow.findMany({
+      where: { followingId: actorId, status: "ACCEPTED" },
+      select: { followerId: true, follower: { select: { notificationPrefs: true } } },
+    })
+  ).filter((f) => wantsInApp(f.follower.notificationPrefs, type));
   if (followers.length === 0) return;
   const created = await db.notification.createManyAndReturn({
     data: followers.map((f) => ({ userId: f.followerId, actorId, type, activityId })),
@@ -47,7 +56,14 @@ export async function notifyFollowers(db: Db, actorId: string, type: Notificatio
 }
 
 /** Cria notificações do sistema em lote (promoção, resumo semanal) e manda os pushes. */
-export async function notifyMany(data: { userId: string; type: NotificationType; gameId?: string | null }[]) {
+export async function notifyMany(all: { userId: string; type: NotificationType; gameId?: string | null }[]) {
+  if (all.length === 0) return;
+  const prefs = new Map(
+    (await prisma.user.findMany({ where: { id: { in: [...new Set(all.map((d) => d.userId))] } }, select: { id: true, notificationPrefs: true } })).map(
+      (u) => [u.id, u.notificationPrefs],
+    ),
+  );
+  const data = all.filter((d) => prefs.has(d.userId) && wantsInApp(prefs.get(d.userId), d.type));
   if (data.length === 0) return;
   const created = await prisma.notification.createManyAndReturn({ data, select: { id: true } });
   schedulePush(created.map((c) => c.id));
@@ -78,14 +94,15 @@ async function deliverPush(ids: string[]) {
     const rows = await prisma.notification.findMany({
       where: { id: { in: ids } },
       include: {
-        user: { select: { username: true } },
+        user: { select: { username: true, notificationPrefs: true } },
         actor: { select: { username: true, displayName: true } },
         activity: { select: { id: true, game: { select: { title: true } } } },
         game: { select: { slug: true, title: true, discountPercent: true, priceFinal: true } },
       },
     });
     await Promise.all(
-      rows.map((n) => {
+      // "Só no site": a notificação existe no sino, mas não vai para o aparelho
+      rows.filter((n) => wantsPush(n.user.notificationPrefs, n.type)).map((n) => {
         const who = n.actor ? (n.actor.displayName ?? n.actor.username) : "GameLog";
         const game = n.activity?.game.title ?? n.game?.title ?? "";
         const post = n.activity ? `/p/${n.activity.id}` : n.actor ? `/u/${n.actor.username}` : "/notifications";

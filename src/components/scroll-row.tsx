@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
@@ -12,6 +12,7 @@ export function ScrollRow({ className = "", children, label }: { className?: str
   const list = useRef<HTMLUListElement>(null);
   const track = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ ratio: 1, pos: 0 });
+  const listId = useId();
 
   const measure = useCallback(() => {
     const el = list.current;
@@ -57,7 +58,7 @@ export function ScrollRow({ className = "", children, label }: { className?: str
 
   return (
     <div className="group/row relative">
-      <ul ref={list} className={`scrollbar-none ${className}`} aria-label={label}>
+      <ul ref={list} id={listId} className={`scrollbar-none ${className}`} aria-label={label}>
         {children}
       </ul>
 
@@ -69,6 +70,7 @@ export function ScrollRow({ className = "", children, label }: { className?: str
           <div
             ref={track}
             role="scrollbar"
+            aria-controls={listId}
             aria-orientation="horizontal"
             aria-valuenow={Math.round(view.pos * 100)}
             aria-valuemin={0}

@@ -1,8 +1,11 @@
 import "server-only";
 import { createSupabaseAdminClient, hasSupabaseAdmin } from "@/lib/supabase/admin";
+import { thumbOf, variantPaths } from "@/lib/image-urls";
 
 const BUCKET = "profile-media";
 const MAX_BYTES = 4 * 1024 * 1024;
+/** A miniatura (até 960 px, JPEG) fica bem abaixo disso */
+const MAX_THUMB_BYTES = 600 * 1024;
 const TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
 export type UploadKind = "avatar" | "banner" | "post" | "club" | "dm";
@@ -21,32 +24,59 @@ async function ensureBucket(admin: ReturnType<typeof createSupabaseAdminClient>)
   bucketReady = true;
 }
 
-/** Guarda a imagem em `<userId>/<kind>-<data>.<ext>` e devolve a URL pública. */
-export async function uploadImage(userId: string, kind: UploadKind, file: unknown): Promise<UploadResult> {
+/**
+ * Guarda a imagem em `<userId>/<kind>-<data>.<ext>` e devolve a URL pública.
+ * Com `thumb` (miniatura JPEG gerada no navegador), guarda o par `…-hd.jpg` + `…-sd.jpg`
+ * (ver lib/image-urls.ts): listas carregam a leve, a tela cheia carrega a grande.
+ */
+export async function uploadImage(userId: string, kind: UploadKind, file: unknown, thumb?: unknown): Promise<UploadResult> {
   if (!hasSupabaseAdmin()) return { ok: false, message: "Upload indisponível agora." };
   if (!(file instanceof File)) return { ok: false, message: "Arquivo inválido." };
   const ext = TYPES[file.type];
   if (!ext) return { ok: false, message: "Use uma imagem JPG, PNG ou WebP." };
   if (file.size > MAX_BYTES) return { ok: false, message: "A imagem passou de 4 MB." };
 
+  const withThumb = thumb instanceof File && file.type === "image/jpeg";
+  if (withThumb && (thumb.type !== "image/jpeg" || thumb.size > MAX_THUMB_BYTES)) return { ok: false, message: "Miniatura inválida." };
+
   const admin = createSupabaseAdminClient();
   await ensureBucket(admin);
-  const path = `${userId}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const up = await admin.storage.from(BUCKET).upload(path, file, { contentType: file.type, cacheControl: "31536000" });
-  if (up.error) {
-    console.error("[upload]", up.error.message);
-    return { ok: false, message: "Não foi possível enviar a imagem. Tente de novo." };
+  const bucket = admin.storage.from(BUCKET);
+  const base = `${userId}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const opts = { contentType: file.type, cacheControl: "31536000" };
+
+  if (!withThumb) {
+    const path = `${base}.${ext}`;
+    const up = await bucket.upload(path, file, opts);
+    if (up.error) return uploadFailed(up.error.message);
+    return { ok: true, url: bucket.getPublicUrl(path).data.publicUrl };
   }
-  return { ok: true, url: admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl };
+
+  // Miniatura primeiro: se a grande falhar, apaga a miniatura (nunca fica par pela metade)
+  const paths = variantPaths(base);
+  const small = await bucket.upload(paths.thumb, thumb, opts);
+  if (small.error) return uploadFailed(small.error.message);
+  const big = await bucket.upload(paths.full, file, opts);
+  if (big.error) {
+    await bucket.remove([paths.thumb]).catch(() => {});
+    return uploadFailed(big.error.message);
+  }
+  return { ok: true, url: bucket.getPublicUrl(paths.full).data.publicUrl };
 }
 
-/** Apaga uma imagem nossa (ignora URLs de fora, como avatares da Steam). */
+function uploadFailed(detail: string): UploadResult {
+  console.error("[upload]", detail);
+  return { ok: false, message: "Não foi possível enviar a imagem. Tente de novo." };
+}
+
+/** Apaga uma imagem nossa e a miniatura dela (ignora URLs de fora, como avatares da Steam). */
 export async function removeImage(url: string | null | undefined) {
   const marker = `/storage/v1/object/public/${BUCKET}/`;
   if (!url?.includes(marker) || !hasSupabaseAdmin()) return;
+  const paths = [...new Set([url, thumbOf(url)])].map((u) => u.split(marker)[1]);
   await createSupabaseAdminClient()
     .storage.from(BUCKET)
-    .remove([url.split(marker)[1]])
+    .remove(paths)
     .catch(() => {});
 }
 

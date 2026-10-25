@@ -89,6 +89,10 @@ Convenção: `_actions` e `_components` (pastas com `_`) são privadas da rota e
 | Limite de requisições | `lib/rate-limit.ts` (tabela `rate_limits`), regras em `lib/rate-limit-rules.ts` |
 | Busca tolerante a erros | `lib/search.ts` (pg_trgm) |
 | Sincronização da Steam por atividade | `lib/steam/schedule.ts`, `api/cron/steam-sync`, `.github/workflows/steam-sync.yml` |
+| Compartilhar fotos da galeria (Android) | `manifest.ts` (`share_target`), `public/sw.js`, `lib/share-inbox.ts`, `app/compartilhar/route.ts` |
+| Miniaturas das fotos | `lib/image-urls.ts` (`-hd.jpg` / `-sd.jpg`), `lib/image-shrink.ts`, `lib/uploads.ts` |
+| O que avisar, por tipo de notificação | `lib/notification-prefs.ts`, Configurações → Privacidade e notificações |
+| Backup diário criptografado | `.github/workflows/backup.yml` (ver "Backup e restauração") |
 
 ---
 
@@ -137,9 +141,38 @@ Para o sync de 3 em 3 horas funcionar no Hobby, o workflow `.github/workflows/st
 ```bash
 npm test            # vitest: regras puras (limites, datas, privacidade da Steam, calendário, fotos…)
 npm run typecheck
+npm run lint        # ESLint com as regras do Next.js (eslint.config.mjs)
 ```
 
-`.github/workflows/ci.yml` roda `prisma validate`, tipos, testes e `next build` em todo push e pull request.
+`.github/workflows/ci.yml` roda `prisma validate`, tipos, lint, testes e `next build` em todo push e pull request.
+
+### Backup e restauração
+
+No plano grátis o Supabase não faz backup diário. `.github/workflows/backup.yml` faz toda noite (03h23 de Brasília) o dump recomendado pelo Supabase (roles, schema e dados), **criptografa com AES-256** e guarda como artefato do GitHub por 30 dias. O repositório é público e qualquer um pode baixar artefatos, por isso o arquivo só sai criptografado.
+
+Configure em **Settings → Secrets and variables → Actions**:
+
+- `BACKUP_DATABASE_URL`: conexão **Session pooler** do Supabase (Project Settings → Database → Connection string → Session pooler, porta 5432). Os runners do GitHub não têm IPv6, então a conexão direta não funciona.
+- `BACKUP_PASSPHRASE`: uma senha longa. **Guarde num gerenciador de senhas: sem ela o backup não abre.**
+
+Para rodar na hora: Actions → Backup do banco → Run workflow.
+
+Restaurar (num projeto Supabase novo ou no mesmo, com o banco vazio):
+
+```bash
+# 1) Baixe o artefato backup-AAAA-MM-DD em Actions → Backup do banco → (execução) → Artifacts
+unzip backup-AAAA-MM-DD.zip
+gpg -d gamelog-AAAA-MM-DD.tar.gz.gpg | tar -xz        # pede a BACKUP_PASSPHRASE
+
+# 2) Restaura (comando da documentação do Supabase)
+psql --single-transaction --variable ON_ERROR_STOP=1 \
+  --file roles.sql --file schema.sql \
+  --command 'SET session_replication_role = replica' \
+  --file data.sql \
+  --dbname "CONEXAO_SESSION_POOLER"
+```
+
+As fotos ficam no Supabase Storage e não entram neste backup (só os links delas).
 
 ### Busca (pg_trgm)
 
