@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AtSign, CalendarDays, Heart, Mail, MessageCircle, Percent, Rocket, Trophy, UserPlus } from "lucide-react";
+import { AtSign, CalendarDays, Heart, ListOrdered, Mail, MessageCircle, Percent, Rocket, Trophy, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
@@ -25,6 +25,8 @@ const TYPE = {
   FOLLOW_REQUEST: { icon: UserPlus, tone: "text-amber-400", text: "pediu para seguir você" },
   INVITE_JOINED: { icon: UserPlus, tone: "text-emerald-400", text: "entrou no Poneglyph.gg pelo seu convite 🎉" },
   RELEASE: { icon: Rocket, tone: "text-fuchsia-400", text: "lançou hoje! 🎉" },
+  LIST_LIKE: { icon: ListOrdered, tone: "text-rose-400", text: "curtiu sua lista" },
+  LIST_COMMENT: { icon: MessageCircle, tone: "text-sky-400", text: "comentou na sua lista" },
 } as const;
 
 export default async function NotificationsPage() {
@@ -41,6 +43,7 @@ export default async function NotificationsPage() {
         actor: { select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } },
         activity: { select: { id: true, game: { select: { title: true } } } },
         game: { select: { slug: true, title: true, coverUrl: true, steamAppId: true, discountPercent: true, priceFinal: true } },
+        list: { select: { id: true, title: true } },
       },
     }),
     prisma.follow.findMany({
@@ -74,6 +77,7 @@ export default async function NotificationsPage() {
             let href = "/notifications";
             if ((n.type === "DEAL" || n.type === "RELEASE") && n.game) href = `/games/${n.game.slug}`;
             else if (n.type === "WEEKLY") href = `/u/${user.username}/semana`;
+            else if (n.list) href = `/listas/${n.list.id}${n.type === "LIST_COMMENT" ? "#comentarios" : ""}`;
             else if (n.activity) href = `/p/${n.activity.id}${n.type === "COMMENT" ? "#comentarios" : ""}`;
             else if (n.actor) href = `/u/${n.actor.username}`;
 
@@ -120,6 +124,7 @@ export default async function NotificationsPage() {
                         <strong className="text-zinc-100">{actorName}</strong> {t.text}
                         {n.activity && n.type === "PLATINUM" && <strong className="text-zinc-100"> {n.activity.game.title}</strong>}
                         {n.activity && n.type !== "PLATINUM" && <span className="text-zinc-500"> · {n.activity.game.title}</span>}
+                        {n.list && <span className="text-zinc-500"> · {n.list.title}</span>}
                       </>
                     )}
                   </p>

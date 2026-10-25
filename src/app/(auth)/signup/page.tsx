@@ -12,7 +12,8 @@ type Props = { searchParams: Promise<{ next?: string; ref?: string }> };
 
 export default async function SignupPage({ searchParams }: Props) {
   const query = await searchParams;
-  const next = safeNext(query.next);
+  // Conta nova começa pelos "Primeiros passos" (a não ser que tenha vindo de outro lugar)
+  const next = query.next ? safeNext(query.next) : "/bem-vindo";
   if (await getCurrentUser()) redirect(next);
 
   return (

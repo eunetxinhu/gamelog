@@ -12,6 +12,7 @@ import { formatRarity, RARE_PERCENT } from "@/lib/rarity";
 import { MentionText } from "./mention-text";
 import { PhotoGrid } from "./photo-grid";
 import { photoVerb } from "@/lib/photo-post";
+import { UserTitle } from "./user-title";
 
 const TYPE = {
   STARTED_GAME: { verb: "começou a jogar", icon: Zap, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/30" },
@@ -45,7 +46,8 @@ export function ActivityCard({ item, viewerId }: Props) {
         </Link>
         <div className="min-w-0 flex-1 text-sm leading-snug">
           <p className="text-zinc-300">
-            <UserLink username={item.user.username}>{name}</UserLink> {verb}{" "}
+            <UserLink username={item.user.username}>{name}</UserLink>
+            <UserTitle title={item.user.title} compact /> {verb}{" "}
             <Link href={`/games/${item.game.slug}`} className="font-semibold text-zinc-50 hover:underline">
               {item.game.title}
             </Link>

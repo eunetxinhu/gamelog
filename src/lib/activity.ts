@@ -101,7 +101,8 @@ export type FeedItem = {
   /** Fotos da publicação (inclui `imageUrl`, que é a primeira) */
   images: string[];
   meta: { apiName?: string; name?: string; description?: string; icon?: string; percent?: number } | null;
-  user: { id: string; username: string; displayName: string | null; avatarUrl: string | null };
+  /** `title`: título especial (ex.: "Fundador & CEO"), quando houver */
+  user: { id: string; username: string; displayName: string | null; avatarUrl: string | null; title: string | null };
   game: { slug: string; title: string; coverUrl: string | null; steamAppId: number | null; platinumRarity: number | null };
   likeCount: number;
   ggCount: number;
@@ -129,7 +130,7 @@ export async function getActivities(opts: {
     orderBy: { createdAt: "desc" },
     take: opts.take ?? PAGE_SIZE,
     include: {
-      user: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } },
+      user: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, title: true } },
       game: { select: { slug: true, title: true, coverUrl: true, steamAppId: true, platinumRarity: true } },
       _count: { select: { comments: true } },
       likes: { where: { userId: opts.viewerId ?? "00000000-0000-0000-0000-000000000000" }, select: { type: true } },
@@ -158,6 +159,7 @@ export async function getActivities(opts: {
       username: r.user.username,
       displayName: r.user.displayName,
       avatarUrl: r.user.avatarUrl ?? r.user.steamAvatarUrl,
+      title: r.user.title,
     },
     game: r.game,
     likeCount: countOf(r.id, "LIKE"),

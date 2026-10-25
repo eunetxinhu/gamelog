@@ -45,6 +45,16 @@ export async function buildAccountExport(userId: string) {
       prisma.pushSubscription.findMany({ where: { userId }, select: { userAgent: true, createdAt: true } }),
     ]);
 
+  const [lists, listLikes, listComments] = await Promise.all([
+    prisma.gameList.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+      include: { items: { orderBy: { position: "asc" }, select: { position: true, note: true, game: gameRef } } },
+    }),
+    prisma.gameListLike.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, select: { listId: true, createdAt: true } }),
+    prisma.gameListComment.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, select: { listId: true, body: true, createdAt: true } }),
+  ]);
+
   const game = (g: { title: string; slug: string; steamAppId: number | null }) => ({ titulo: g.title, slug: g.slug, steamAppId: g.steamAppId });
 
   return {
@@ -102,6 +112,16 @@ export async function buildAccountExport(userId: string) {
     seguidores: followers.map((f) => ({ usuario: f.follower.username, status: f.status, desde: f.createdAt })),
     wishlist: wishlist.map((w) => ({ jogo: game(w.game), adicionadoEm: w.createdAt })),
     favoritos: favorites.map((f) => ({ posicao: f.position, jogo: game(f.game) })),
+    listas: lists.map((l) => ({
+      id: l.id,
+      nome: l.title,
+      descricao: l.description,
+      numerada: l.ranked,
+      criadaEm: l.createdAt,
+      jogos: l.items.map((i) => ({ posicao: i.position, jogo: game(i.game), comentario: i.note })),
+    })),
+    listasCurtidas: listLikes.map((l) => ({ lista: l.listId, curtidaEm: l.createdAt })),
+    comentariosEmListas: listComments.map((c) => ({ lista: c.listId, texto: c.body, criadoEm: c.createdAt })),
     mensagens: conversations.map((c) => {
       const other = c.userAId === userId ? c.userB.username : c.userA.username;
       return {

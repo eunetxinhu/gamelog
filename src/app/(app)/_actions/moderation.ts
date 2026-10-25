@@ -155,6 +155,8 @@ async function removeTarget(type: ReportTarget, id: string) {
     await prisma.clubPost.deleteMany({ where: { id } });
     await removeImage(p?.imageUrl);
   } else if (type === "MESSAGE") await prisma.message.deleteMany({ where: { id } });
+  else if (type === "LIST") await prisma.gameList.deleteMany({ where: { id } });
+  else if (type === "LIST_COMMENT") await prisma.gameListComment.deleteMany({ where: { id } });
 }
 
 /** Autor do conteúdo denunciado (para suspender). */
@@ -163,6 +165,8 @@ async function authorOf(type: ReportTarget, id: string) {
   if (type === "ACTIVITY") return (await prisma.activity.findUnique({ where: { id }, select: { userId: true } }))?.userId;
   if (type === "COMMENT") return (await prisma.comment.findUnique({ where: { id }, select: { userId: true } }))?.userId;
   if (type === "CLUB_POST") return (await prisma.clubPost.findUnique({ where: { id }, select: { userId: true } }))?.userId;
+  if (type === "LIST") return (await prisma.gameList.findUnique({ where: { id }, select: { userId: true } }))?.userId;
+  if (type === "LIST_COMMENT") return (await prisma.gameListComment.findUnique({ where: { id }, select: { userId: true } }))?.userId;
   return (await prisma.message.findUnique({ where: { id }, select: { senderId: true } }))?.senderId;
 }
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { after } from "next/server";
 import Link from "next/link";
-import { Bell, CalendarClock, Compass, Gamepad2, LogOut, Mail, Medal, Newspaper, Settings, ShieldAlert, Users } from "lucide-react";
+import { Bell, CalendarClock, Compass, Gamepad2, ListOrdered, LogOut, Mail, Medal, Newspaper, Settings, ShieldAlert, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { unreadCount } from "@/lib/notifications";
 import { unreadMessages } from "@/lib/dm";
@@ -50,6 +50,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               </NavLink>
               <NavLink href="/explore" icon={<Compass className="size-4" aria-hidden />}>
                 Explorar
+              </NavLink>
+              <NavLink href="/listas" icon={<ListOrdered className="size-4" aria-hidden />}>
+                Listas
               </NavLink>
               <NavLink href="/ranking" icon={<Medal className="size-4" aria-hidden />}>
                 Ranking

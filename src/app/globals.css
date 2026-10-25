@@ -45,3 +45,10 @@ body {
     animation: none;
   }
 }
+
+/* Reflexo do título especial do perfil (src/components/user-title.tsx) */
+@keyframes title-shine {
+  0%, 70% { transform: translateX(0) skewX(-20deg); }
+  100% { transform: translateX(450%) skewX(-20deg); }
+}
+.title-shine { animation: title-shine 4s ease-in-out infinite; }

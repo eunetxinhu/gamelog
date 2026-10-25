@@ -82,6 +82,15 @@ export function AuthForm({ mode, next, notice, steamLogin, inviteRef }: Props) {
               {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
               {isSignup ? (pending ? "Criando…" : "Criar conta") : pending ? "Entrando…" : "Entrar"}
             </button>
+            {isSignup && (
+              <p className="text-center text-xs text-zinc-500">
+                Ao criar a conta, você concorda com as{" "}
+                <Link href="/regras" target="_blank" className="text-sky-400 hover:underline">
+                  regras da comunidade
+                </Link>
+                .
+              </p>
+            )}
           </form>
         </>
       )}

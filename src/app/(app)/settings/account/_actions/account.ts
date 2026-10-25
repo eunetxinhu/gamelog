@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { removeImage, uploadImage, type UploadResult } from "@/lib/uploads";
 import { rateLimit } from "@/lib/rate-limit";
+import { getOrCreateGame } from "@/lib/catalog";
 
 export type ProfileInput = { displayName: string; bio: string; avatarUrl: string; bannerUrl: string };
 export type AccountResult = { ok: true } | { ok: false; field?: keyof ProfileInput | "favorites"; message: string };
@@ -40,21 +41,30 @@ export async function updateProfile(input: ProfileInput): Promise<AccountResult>
   return { ok: true };
 }
 
-/** Top 4 do perfil: 4 posições, cada uma com um jogo ou vazia. */
-export async function setFavorites(gameIds: (string | null)[]): Promise<AccountResult> {
+/** Top 4 do perfil: 4 posições, cada uma com um jogo (slug) ou vazia. Pode ser qualquer jogo do catálogo. */
+export async function setFavorites(slugs: (string | null)[]): Promise<AccountResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, message: "Faça login de novo." };
 
-  const slots = gameIds.slice(0, 4).map((id, i) => ({ id, position: i + 1 })).filter((s): s is { id: string; position: number } => Boolean(s.id));
-  if (new Set(slots.map((s) => s.id)).size !== slots.length) {
+  const slots = slugs
+    .slice(0, 4)
+    .map((slug, i) => ({ slug, position: i + 1 }))
+    .filter((s): s is { slug: string; position: number } => typeof s.slug === "string" && /^[a-z0-9][a-z0-9-]{0,120}$/.test(s.slug));
+  if (new Set(slots.map((s) => s.slug)).size !== slots.length) {
     return { ok: false, field: "favorites", message: "O mesmo jogo aparece duas vezes." };
   }
-  const found = await prisma.game.count({ where: { id: { in: slots.map((s) => s.id) } } });
-  if (found !== slots.length) return { ok: false, field: "favorites", message: "Algum jogo não foi encontrado." };
+  // Jogos escolhidos pela busca podem ainda não estar no banco: cadastra (no máximo 4)
+  const ids: string[] = [];
+  for (const s of slots) {
+    const game = (await prisma.game.findUnique({ where: { slug: s.slug }, select: { id: true } })) ?? (await getOrCreateGame(s.slug));
+    if (!game) return { ok: false, field: "favorites", message: "Algum jogo não foi encontrado." };
+    ids.push(game.id);
+  }
+  if (new Set(ids).size !== ids.length) return { ok: false, field: "favorites", message: "O mesmo jogo aparece duas vezes." };
 
   await prisma.$transaction([
     prisma.favoriteGame.deleteMany({ where: { userId: user.id } }),
-    prisma.favoriteGame.createMany({ data: slots.map((s) => ({ userId: user.id, gameId: s.id, position: s.position })) }),
+    prisma.favoriteGame.createMany({ data: slots.map((s, i) => ({ userId: user.id, gameId: ids[i], position: s.position })) }),
   ]);
   revalidatePath(`/u/${user.username}`);
   return { ok: true };

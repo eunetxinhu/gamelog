@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarClock, LogOut, Medal, Menu, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { CalendarClock, ListOrdered, LogOut, Medal, Menu, ScrollText, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { signOut } from "../../(auth)/_actions/auth";
 
 /** Menu do topo no celular: o que não cabe na barra inferior. */
@@ -45,6 +45,9 @@ export function HeaderMenu({ username }: { username: string }) {
           <Link href={`/u/${username}`} className={item}>
             <UserRound className="size-5 text-zinc-400" aria-hidden /> Meu perfil
           </Link>
+          <Link href="/listas" className={item}>
+            <ListOrdered className="size-5 text-zinc-400" aria-hidden /> Listas
+          </Link>
           <Link href="/ranking" className={item}>
             <Medal className="size-5 text-zinc-400" aria-hidden /> Ranking
           </Link>
@@ -56,6 +59,9 @@ export function HeaderMenu({ username }: { username: string }) {
           </Link>
           <Link href="/settings/privacy" className={item}>
             <ShieldCheck className="size-5 text-zinc-400" aria-hidden /> Privacidade e convites
+          </Link>
+          <Link href="/regras" className={item}>
+            <ScrollText className="size-5 text-zinc-400" aria-hidden /> Regras da comunidade
           </Link>
           <form action={signOut} className="border-t border-zinc-800">
             <button type="submit" className={`${item} text-red-300`}>

@@ -16,8 +16,8 @@ export const NOTIFY_LEVELS: { value: NotifyLevel; label: string }[] = [
 ];
 
 export const NOTIFICATION_CATEGORIES = [
-  { id: "reactions", label: "Curtidas e GGs", types: ["LIKE", "GG"] },
-  { id: "comments", label: "Comentários", types: ["COMMENT"] },
+  { id: "reactions", label: "Curtidas e GGs", types: ["LIKE", "GG", "LIST_LIKE"] },
+  { id: "comments", label: "Comentários", types: ["COMMENT", "LIST_COMMENT"] },
   { id: "mentions", label: "Menções (@você)", types: ["MENTION"] },
   { id: "follows", label: "Novos seguidores e pedidos para seguir", types: ["FOLLOW", "FOLLOW_REQUEST", "INVITE_JOINED"] },
   { id: "messages", label: "Mensagens diretas", types: ["MESSAGE"], hint: "As mensagens sempre aparecem em Mensagens; isto controla o aviso." },
