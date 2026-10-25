@@ -48,7 +48,13 @@ export default async function ProfilePage({ params }: Props) {
     prisma.user.findUnique({
       where: { username },
       include: {
-        _count: { select: { followers: { where: { status: "ACCEPTED" } }, following: { where: { status: "ACCEPTED" } } } },
+        _count: {
+          select: {
+            // Contas suspensas não entram na conta (também não aparecem nas listas)
+            followers: { where: { status: "ACCEPTED", follower: { bannedAt: null } } },
+            following: { where: { status: "ACCEPTED", following: { bannedAt: null } } },
+          },
+        },
         awards: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, description: true, icon: true, style: true } },
       },
     }),
@@ -111,12 +117,12 @@ export default async function ProfilePage({ params }: Props) {
             )}
             {profile.bio && <p className="max-w-prose pt-1 text-sm text-zinc-300">{profile.bio}</p>}
             <p className="flex gap-4 pt-2 text-sm text-zinc-400">
-              <span>
-                <strong className="text-zinc-100">{profile._count.followers}</strong> seguidores
-              </span>
-              <span>
+              <Link href={`/u/${profile.username}/seguidores`} className="rounded hover:text-zinc-200 hover:underline">
+                <strong className="text-zinc-100">{profile._count.followers}</strong> {profile._count.followers === 1 ? "seguidor" : "seguidores"}
+              </Link>
+              <Link href={`/u/${profile.username}/seguindo`} className="rounded hover:text-zinc-200 hover:underline">
                 <strong className="text-zinc-100">{profile._count.following}</strong> seguindo
-              </span>
+              </Link>
             </p>
           </div>
           <div className="shrink-0">
