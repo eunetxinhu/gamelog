@@ -7,6 +7,7 @@ const TABS = [
   { href: "/settings/account", label: "Perfil" },
   { href: "/settings/profile", label: "Contas vinculadas", short: "Contas" },
   { href: "/settings/privacy", label: "Privacidade" },
+  { href: "/settings/dados", label: "Seus dados", short: "Dados" },
 ];
 
 export function SettingsTabs() {

@@ -10,6 +10,8 @@ import { DeleteActivityButton, ReactionButton } from "./activity-actions";
 import { ReportButton } from "./report-button";
 import { formatRarity, RARE_PERCENT } from "@/lib/rarity";
 import { MentionText } from "./mention-text";
+import { PhotoGrid } from "./photo-grid";
+import { photoVerb } from "@/lib/photo-post";
 
 const TYPE = {
   STARTED_GAME: { verb: "começou a jogar", icon: Zap, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/30" },
@@ -18,7 +20,7 @@ const TYPE = {
   DROPPED: { verb: "dropou", icon: Gamepad2, tone: "text-zinc-300 bg-zinc-500/10 ring-zinc-500/30" },
   REVIEW: { verb: "avaliou", icon: PenLine, tone: "text-violet-300 bg-violet-500/10 ring-violet-500/30" },
   RARE_ACHIEVEMENT: { verb: "desbloqueou uma conquista rara em", icon: Gem, tone: "text-fuchsia-300 bg-fuchsia-500/10 ring-fuchsia-500/30" },
-  SCREENSHOT: { verb: "compartilhou um print de", icon: Camera, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/30" },
+  SCREENSHOT: { verb: "compartilhou fotos de", icon: Camera, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/30" },
 } as const;
 
 type Props = { item: FeedItem; viewerId: string | null };
@@ -27,6 +29,7 @@ type Props = { item: FeedItem; viewerId: string | null };
 export function ActivityCard({ item, viewerId }: Props) {
   const t = TYPE[item.type];
   const Icon = t.icon;
+  const verb = item.type === "SCREENSHOT" ? photoVerb(item.images.length) : t.verb;
   const name = item.user.displayName ?? item.user.username;
   const isPlatinum = item.type === "PLATINUM";
 
@@ -42,7 +45,7 @@ export function ActivityCard({ item, viewerId }: Props) {
         </Link>
         <div className="min-w-0 flex-1 text-sm leading-snug">
           <p className="text-zinc-300">
-            <UserLink username={item.user.username}>{name}</UserLink> {t.verb}{" "}
+            <UserLink username={item.user.username}>{name}</UserLink> {verb}{" "}
             <Link href={`/games/${item.game.slug}`} className="font-semibold text-zinc-50 hover:underline">
               {item.game.title}
             </Link>
@@ -65,7 +68,7 @@ export function ActivityCard({ item, viewerId }: Props) {
         <div className="min-w-0 flex-1 space-y-2">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${t.tone}`}>
             <Icon className="size-3.5" aria-hidden />
-            {isPlatinum ? "Platina conquistada" : t.verb.charAt(0).toUpperCase() + t.verb.slice(1)}
+            {isPlatinum ? "Platina conquistada" : item.type === "SCREENSHOT" ? (item.images.length > 1 ? "Fotos" : "Foto") : t.verb.charAt(0).toUpperCase() + t.verb.slice(1)}
           </span>
           {isPlatinum && item.game.platinumRarity !== null && (
             <p className="text-xs text-zinc-400">
@@ -100,18 +103,8 @@ export function ActivityCard({ item, viewerId }: Props) {
         </div>
       </div>
 
-      {/* Print com a largura do card (no celular a coluna ao lado da capa é estreita demais) */}
-      {item.imageUrl && (
-        <a href={item.imageUrl} target="_blank" rel="noopener noreferrer" className="mt-3 block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={item.imageUrl}
-            alt={`Print de ${item.game.title}`}
-            loading="lazy"
-            className="max-h-[28rem] w-full rounded-xl bg-black/40 object-contain ring-1 ring-white/10"
-          />
-        </a>
-      )}
+      {/* Fotos com a largura do card (no celular a coluna ao lado da capa é estreita demais) */}
+      <PhotoGrid images={item.images} title={item.game.title} />
 
       <footer className="-mx-1.5 mt-3 flex items-center gap-1 border-t border-zinc-800/80 pt-2">
         <ReactionButton activityId={item.id} type="LIKE" active={item.likedByMe} count={item.likeCount} canReact={Boolean(viewerId)} />

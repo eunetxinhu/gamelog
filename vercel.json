@@ -3,8 +3,12 @@
   "framework": "nextjs",
   "crons": [
     {
-      "path": "/api/cron/steam-sync",
+      "path": "/api/cron/daily",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/steam-sync",
+      "schedule": "30 9 * * *"
     }
   ]
 }

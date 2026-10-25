@@ -1,0 +1,31 @@
+name: Sincronizar Steam
+
+# O plano Hobby da Vercel só permite cron 1x por dia. Este workflow chama o mesmo
+# endpoint de hora em hora; ele só sincroniza quem está "vencido" (ver
+# src/lib/steam/schedule.ts), então quem joga muito é atualizado a cada ~3 h.
+#
+# Configure em Settings → Secrets and variables → Actions:
+#   APP_URL      URL pública do site (ex.: https://gamelog.vercel.app)
+#   CRON_SECRET  o mesmo valor da variável CRON_SECRET na Vercel
+on:
+  schedule:
+    - cron: "17 * * * *" # minuto 17: foge do pico do minuto 0 no GitHub
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Chamar /api/cron/steam-sync
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::notice::Defina os segredos APP_URL e CRON_SECRET para ativar a sincronização de hora em hora."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/steam-sync"

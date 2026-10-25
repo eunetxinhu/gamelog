@@ -12,6 +12,7 @@ import { FollowButton } from "@/components/follow-button";
 import { GameCover } from "@/components/game-cover";
 import { ScrollRow } from "@/components/scroll-row";
 import { SteamFriends } from "./_components/steam-friends";
+import { searchUserIds } from "@/lib/search";
 
 export const metadata: Metadata = { title: "Explorar · GameLog" };
 
@@ -69,16 +70,14 @@ export default async function ExplorePage({ searchParams }: Props) {
 // =============================================================================
 
 async function PeopleResults({ q, viewerId }: { q: string; viewerId: string | null }) {
-  const people = await prisma.user.findMany({
-    where: {
-      bannedAt: null,
-      id: { notIn: await blockedIds(viewerId) },
-      OR: [{ username: { contains: q, mode: "insensitive" } }, { displayName: { contains: q, mode: "insensitive" } }],
-    },
-    orderBy: { followers: { _count: "desc" } },
-    take: 30,
+  // Mais parecidos primeiro, tolerando erro de digitação ("netinho" acha "eunetxinhu")
+  const ids = await searchUserIds(q, viewerId, 30);
+  const found = await prisma.user.findMany({
+    where: { id: { in: ids } },
     select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, bio: true, isPrivate: true, _count: { select: { followers: { where: { status: "ACCEPTED" } } } } },
   });
+
+  const people = ids.flatMap((id) => found.filter((p) => p.id === id));
 
   if (people.length === 0) return <p className="text-sm text-zinc-500">Ninguém encontrado para “{q}”.</p>;
   return <PeopleList people={people} viewerId={viewerId} />;

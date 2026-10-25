@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Medal, Menu, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { CalendarClock, LogOut, Medal, Menu, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { signOut } from "../../(auth)/_actions/auth";
 
 /** Menu do topo no celular: o que não cabe na barra inferior. */
@@ -42,6 +42,9 @@ export function HeaderMenu({ username }: { username: string }) {
           </Link>
           <Link href="/ranking" className={item}>
             <Medal className="size-5 text-zinc-400" aria-hidden /> Ranking
+          </Link>
+          <Link href="/lancamentos" className={item}>
+            <CalendarClock className="size-5 text-zinc-400" aria-hidden /> Lançamentos
           </Link>
           <Link href="/settings/account" className={item}>
             <Settings className="size-5 text-zinc-400" aria-hidden /> Configurações

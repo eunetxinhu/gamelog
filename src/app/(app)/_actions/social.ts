@@ -7,6 +7,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { notify } from "@/lib/notifications";
 import { isBlockedEitherWay } from "@/lib/privacy";
 import { notifyMentions } from "@/lib/mention-notify";
+import { rateLimit } from "@/lib/rate-limit";
+import { removeImage } from "@/lib/uploads";
 import type { ReactionType } from "@/generated/prisma/enums";
 
 const COMMENT_MAX = 1000;
@@ -18,6 +20,7 @@ const GG_TYPES = new Set(["PLATINUM", "COMPLETED"]);
 export async function toggleReaction(activityId: string, type: ReactionType): Promise<{ ok: boolean; active?: boolean }> {
   const user = await getCurrentUser();
   if (!user || user.bannedAt || (type !== "LIKE" && type !== "GG")) return { ok: false };
+  if (!(await rateLimit("reaction", user.id)).ok) return { ok: false };
 
   const activity = await prisma.activity.findUnique({ where: { id: activityId }, select: { userId: true, type: true } });
   if (!activity || (type === "GG" && !GG_TYPES.has(activity.type))) return { ok: false };
@@ -44,7 +47,10 @@ export async function deleteActivity(activityId: string): Promise<{ ok: boolean 
   const user = await getCurrentUser();
   if (!user) return { ok: false };
 
+  const activity = await prisma.activity.findFirst({ where: { id: activityId, userId: user.id }, select: { imageUrl: true, images: true } });
   const { count } = await prisma.activity.deleteMany({ where: { id: activityId, userId: user.id } });
+  // Fotos saem do Storage junto com a publicação
+  if (activity) await Promise.all([...new Set([activity.imageUrl, ...activity.images])].map((url) => removeImage(url)));
   revalidatePath("/feed");
   revalidatePath(`/u/${user.username}`);
   return { ok: count > 0 };
@@ -60,6 +66,8 @@ export async function toggleFollow(targetUserId: string): Promise<{ ok: boolean;
   const user = await getCurrentUser();
   if (!user || user.id === targetUserId) return { ok: false };
   if (user.bannedAt) return { ok: false, message: "Sua conta está suspensa." };
+  const limit = await rateLimit("follow", user.id);
+  if (!limit.ok) return { ok: false, message: limit.message };
 
   const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { username: true, isPrivate: true } });
   if (!target) return { ok: false };
@@ -127,6 +135,8 @@ export async function addComment(activityId: string, rawBody: string): Promise<C
   const body = rawBody.trim();
   if (!body) return { ok: false, message: "Escreva alguma coisa." };
   if (body.length > COMMENT_MAX) return { ok: false, message: `Máximo de ${COMMENT_MAX} caracteres.` };
+  const limit = await rateLimit("comment", user.id);
+  if (!limit.ok) return { ok: false, message: limit.message };
 
   const activity = await prisma.activity.findUnique({ where: { id: activityId }, select: { userId: true } });
   if (!activity) return { ok: false, message: "Essa publicação foi apagada." };

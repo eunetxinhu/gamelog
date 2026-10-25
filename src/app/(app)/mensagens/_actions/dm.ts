@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { canMessage, conversationPair } from "@/lib/dm";
 import { sendPush } from "@/lib/push";
 import { isOurImage } from "@/lib/uploads";
+import { rateLimit } from "@/lib/rate-limit";
 
 const MAX_LENGTH = 2000;
 
@@ -21,6 +22,8 @@ export async function sendMessage(username: string, rawBody: string, rawImage?: 
   const body = rawBody.trim().slice(0, MAX_LENGTH);
   const imageUrl = isOurImage(rawImage) ? rawImage : null;
   if (!body && !imageUrl) return { ok: false, message: "Escreva alguma coisa." };
+  const limit = await rateLimit("message", user.id);
+  if (!limit.ok) return { ok: false, message: limit.message };
 
   const recipient = await prisma.user.findUnique({
     where: { username: username.toLowerCase() },

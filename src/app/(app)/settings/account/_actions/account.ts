@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { removeImage, uploadImage, type UploadResult } from "@/lib/uploads";
+import { rateLimit } from "@/lib/rate-limit";
 
 export type ProfileInput = { displayName: string; bio: string; avatarUrl: string; bannerUrl: string };
 export type AccountResult = { ok: true } | { ok: false; field?: keyof ProfileInput | "favorites"; message: string };
@@ -70,6 +71,8 @@ export async function uploadProfileImage(formData: FormData): Promise<UploadResu
 
   const kind = formData.get("kind");
   if (kind !== "avatar" && kind !== "banner") return { ok: false, message: "Arquivo inválido." };
+  const limit = await rateLimit("upload", user.id);
+  if (!limit.ok) return { ok: false, message: limit.message };
   const res = await uploadImage(user.id, kind, formData.get("file"));
   if (!res.ok) return res;
 

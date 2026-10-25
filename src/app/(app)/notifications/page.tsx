@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AtSign, CalendarDays, Heart, Mail, MessageCircle, Percent, Trophy, UserPlus } from "lucide-react";
+import { AtSign, CalendarDays, Heart, Mail, MessageCircle, Percent, Rocket, Trophy, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
@@ -24,6 +24,7 @@ const TYPE = {
   MENTION: { icon: AtSign, tone: "text-violet-400", text: "mencionou você" },
   FOLLOW_REQUEST: { icon: UserPlus, tone: "text-amber-400", text: "pediu para seguir você" },
   INVITE_JOINED: { icon: UserPlus, tone: "text-emerald-400", text: "entrou no GameLog pelo seu convite 🎉" },
+  RELEASE: { icon: Rocket, tone: "text-fuchsia-400", text: "lançou hoje! 🎉" },
 } as const;
 
 export default async function NotificationsPage() {
@@ -71,7 +72,7 @@ export default async function NotificationsPage() {
             const actorName = n.actor ? (n.actor.displayName ?? n.actor.username) : null;
 
             let href = "/notifications";
-            if (n.type === "DEAL" && n.game) href = `/games/${n.game.slug}`;
+            if ((n.type === "DEAL" || n.type === "RELEASE") && n.game) href = `/games/${n.game.slug}`;
             else if (n.type === "WEEKLY") href = `/u/${user.username}/semana`;
             else if (n.activity) href = `/p/${n.activity.id}${n.type === "COMMENT" ? "#comentarios" : ""}`;
             else if (n.actor) href = `/u/${n.actor.username}`;
@@ -107,6 +108,10 @@ export default async function NotificationsPage() {
                             · -{n.game.discountPercent}%{n.game.priceFinal ? ` por ${brl.format(n.game.priceFinal / 100)}` : ""}
                           </span>
                         ) : null}
+                      </>
+                    ) : n.type === "RELEASE" && n.game ? (
+                      <>
+                        <strong className="text-zinc-100">{n.game.title}</strong>, da sua wishlist, {t.text}
                       </>
                     ) : n.type === "WEEKLY" ? (
                       <strong className="text-zinc-100">{t.text}</strong>

@@ -4,6 +4,9 @@ import { formatPlaytime } from "@/lib/format";
 import type { LogStatus } from "@/generated/prisma/enums";
 import { ensurePlatinumRarity, formatRarity } from "@/lib/rarity";
 import { MIN_ACHIEVEMENTS_FOR_PLATINUM } from "@/lib/steam/sync";
+import { achievementStats, completionPercent } from "@/lib/achievement-stats";
+import { getBacklogEstimates } from "@/lib/time-to-beat";
+import { formatEstimate } from "@/lib/time-to-beat-calc";
 
 /** Abas da página /u/[username]/jogos (o slug vai na URL: ?aba=platinas). */
 export const PROFILE_TABS = [
@@ -12,6 +15,7 @@ export const PROFILE_TABS = [
   { slug: "finalizados", label: "Finalizados" },
   { slug: "platinas", label: "Platinas" },
   { slug: "quase", label: "Quase lá" },
+  { slug: "conquistas", label: "Conquistas" },
   { slug: "dropados", label: "Dropados" },
   { slug: "backlog", label: "Backlog" },
   { slug: "wishlist", label: "Quero jogar" },
@@ -37,6 +41,8 @@ export type ShelfItem = {
   platinum: boolean;
   /** % de jogadores com a platina (só nas platinas) */
   rarity?: number | null;
+  /** % das conquistas (aba Conquistas) */
+  progress?: number;
 };
 
 const LOG_TAB_STATUS: Partial<Record<ProfileTab, LogStatus>> = {
@@ -162,6 +168,34 @@ export async function getShelf(userId: string, tab: ProfileTab): Promise<ShelfIt
     }));
   }
   if (tab === "jogando") return getPlaying(userId);
+  if (tab === "conquistas") {
+    const entries = await getAchievementEntries(userId);
+    return entries
+      .map((e) => ({ e, pct: completionPercent(e.achievementsUnlocked, e.achievementsTotal) }))
+      .sort((a, b) => b.pct - a.pct || (b.e.achievementsUnlocked ?? 0) - (a.e.achievementsUnlocked ?? 0))
+      .map(({ e, pct }) => ({
+        game: e.game,
+        sub: `${e.achievementsUnlocked ?? 0}/${e.achievementsTotal} · ${pct}%`,
+        rating: null,
+        platinum: Boolean(e.platinumAt),
+        progress: pct,
+      }));
+  }
+  if (tab === "backlog") {
+    const [logs, estimates] = await Promise.all([
+      prisma.gameLog.findMany({
+        where: { userId, status: "BACKLOG" },
+        orderBy: { updatedAt: "desc" },
+        take: 1000,
+        select: { rating: true, game: { select: gameSelect } },
+      }),
+      getBacklogEstimates(userId),
+    ]);
+    return logs.map((l) => {
+      const est = estimates.byGame.get(l.game.id);
+      return { game: l.game, sub: est ? `${formatEstimate(est.minutes)} para zerar` : null, rating: l.rating, platinum: false };
+    });
+  }
   if (tab === "quase") return getNearPlatinum(userId);
   if (tab === "wishlist") {
     const items = await prisma.wishlistItem.findMany({
@@ -224,15 +258,33 @@ export async function getShelf(userId: string, tab: ProfileTab): Promise<ShelfIt
   return logs.map((l) => ({ game: l.game, sub: null, rating: l.rating, platinum: false }));
 }
 
+/** Jogos da biblioteca com conquistas conhecidas (vindas da Steam). */
+function getAchievementEntries(userId: string) {
+  return prisma.libraryEntry.findMany({
+    where: { userId, achievementsTotal: { gt: 0 } },
+    select: { achievementsUnlocked: true, achievementsTotal: true, platinumAt: true, game: { select: gameSelect } },
+  });
+}
+
+/** Resumo das conquistas de alguém (perfil e aba Conquistas). */
+export async function getAchievementSummary(userId: string) {
+  const entries = await prisma.libraryEntry.findMany({
+    where: { userId, achievementsTotal: { gt: 0 } },
+    select: { achievementsUnlocked: true, achievementsTotal: true },
+  });
+  return achievementStats(entries.map((e) => ({ unlocked: e.achievementsUnlocked, total: e.achievementsTotal })));
+}
+
 /** Quantidade de cada aba (os mesmos critérios de getShelf). */
 export async function getShelfCounts(userId: string): Promise<Record<ProfileTab, number>> {
-  const [library, playing, completed, near, wishlist, byStatus] = await Promise.all([
+  const [library, playing, completed, near, wishlist, byStatus, withAchievements] = await Promise.all([
     prisma.libraryEntry.count({ where: { userId } }),
     getPlaying(userId).then((p) => p.length),
     getCompleted(userId),
     getNearPlatinum(userId).then((p) => p.length),
     prisma.wishlistItem.count({ where: { userId } }),
     prisma.gameLog.groupBy({ by: ["status"], where: { userId }, _count: { _all: true } }),
+    prisma.libraryEntry.count({ where: { userId, achievementsTotal: { gt: 0 } } }),
   ]);
   const status = (s: LogStatus) => byStatus.find((b) => b.status === s)?._count._all ?? 0;
   return {
@@ -241,6 +293,7 @@ export async function getShelfCounts(userId: string): Promise<Record<ProfileTab,
     finalizados: completed.length,
     platinas: completed.filter((c) => c.platinum).length,
     quase: near,
+    conquistas: withAchievements,
     dropados: status("DROPPED"),
     backlog: status("BACKLOG"),
     wishlist,

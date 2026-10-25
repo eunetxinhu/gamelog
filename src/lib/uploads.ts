@@ -55,3 +55,39 @@ export function isOurImage(url: string | null | undefined): url is string {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   return Boolean(base && url?.startsWith(base) && url.includes(`/storage/v1/object/public/${BUCKET}/`));
 }
+
+/**
+ * Apaga todos os arquivos da pessoa (`<userId>/…`), menos os de `keep` (URLs públicas).
+ * Usado na exclusão da conta.
+ */
+export async function removeUserFiles(userId: string, keep: string[] = []) {
+  if (!hasSupabaseAdmin()) return 0;
+  const bucket = createSupabaseAdminClient().storage.from(BUCKET);
+  const marker = `/storage/v1/object/public/${BUCKET}/`;
+  const keepPaths = new Set(keep.filter((u) => u.includes(marker)).map((u) => u.split(marker)[1]));
+
+  // Lista tudo primeiro (paginando) e só depois apaga: apagar durante a paginação pula arquivos
+  const paths: string[] = [];
+  for (let offset = 0; offset < 10_000; offset += 100) {
+    const { data, error } = await bucket.list(userId, { limit: 100, offset, sortBy: { column: "name", order: "asc" } });
+    if (error) throw error;
+    for (const f of data ?? []) {
+      const path = `${userId}/${f.name}`;
+      if (!keepPaths.has(path)) paths.push(path);
+    }
+    if (!data || data.length < 100) break;
+  }
+
+  let removed = 0;
+  for (let i = 0; i < paths.length; i += 100) {
+    const res = await bucket.remove(paths.slice(i, i + 100));
+    if (res.error) throw res.error;
+    removed += Math.min(100, paths.length - i);
+  }
+  return removed;
+}
+
+/** URL do nosso Storage **na pasta da própria pessoa** (ninguém posta foto enviada por outro). */
+export function isOwnImage(url: string | null | undefined, userId: string): url is string {
+  return isOurImage(url) && url.includes(`/storage/v1/object/public/${BUCKET}/${userId}/`);
+}

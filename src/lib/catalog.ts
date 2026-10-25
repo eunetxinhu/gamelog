@@ -2,6 +2,8 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { getAppDetails, getStoreAssets, searchStore, steamCoverUrl, type StoreAppDetails, type StoreAssets } from "@/lib/steam/api";
+import { searchLocalGames } from "@/lib/search";
+import { didYouMean, normalizeQuery, sameTitle } from "@/lib/search-query";
 
 /**
  * Catálogo de jogos. Fontes:
@@ -16,8 +18,10 @@ export type SearchResult = {
   coverUrl: string | null;
   steamAppId: number | null;
   year: number | null;
-  source: "Steam" | "RAWG";
+  source: "GameLog" | "Steam" | "RAWG";
 };
+
+export type SearchResponse = { results: SearchResult[]; didYouMean: string | null };
 
 const RAWG_API = "https://api.rawg.io/api";
 const TIMEOUT_MS = 10_000;
@@ -27,6 +31,9 @@ type RawgGame = {
   name: string;
   background_image: string | null;
   released: string | null;
+  tba?: boolean;
+  /** Média de horas jogadas na Steam (a RAWG cruza com os dados da Steam) */
+  playtime?: number;
   description_raw?: string;
   genres?: { name: string }[];
   platforms?: { platform: { name: string } }[] | null;
@@ -45,18 +52,42 @@ async function rawgGet<T>(path: string, params: Record<string, string> = {}): Pr
   }
 }
 
-export async function searchGames(query: string): Promise<SearchResult[]> {
-  const q = query.trim();
-  if (q.length < 2) return [];
+/**
+ * Busca em três fontes, nesta ordem: jogos já conhecidos no GameLog (tolerante a erro de
+ * digitação, ver lib/search.ts), loja da Steam e RAWG. Se a loja não achar quase nada e
+ * houver um título parecido no banco, busca de novo na loja com o título certo.
+ */
+export async function searchGames(query: string): Promise<SearchResponse> {
+  const q = normalizeQuery(query);
+  if (q.length < 2) return { results: [], didYouMean: null };
 
-  const [steamAll, rawg] = await Promise.all([
+  const [local, steamFirst, rawg] = await Promise.all([
+    searchLocalGames(q, 8).catch((err) => {
+      console.error("[busca] local", err);
+      return [];
+    }),
     searchStore(q),
     rawgGet<{ results: RawgGame[] }>("/games", { search: q, page_size: "12" }),
   ]);
-  const steam = steamAll.slice(0, 12);
+
+  // "zelda breth": a loja não acha nada, mas o banco sabe o título certo
+  const suggestion = didYouMean(q, local[0]);
+  const steamAll = steamFirst.length < 3 && suggestion ? [...steamFirst, ...(await searchStore(suggestion))] : steamFirst;
+  const steam = steamAll.filter((s, i, all) => all.findIndex((x) => x.appId === s.appId) === i).slice(0, 12);
   const assets = await getStoreAssets(steam.map((s) => s.appId));
 
-  const steamResults: SearchResult[] = steam.map((s) => ({
+  const localResults: SearchResult[] = local.map((g) => ({
+    slug: g.slug,
+    title: g.title,
+    coverUrl: g.coverUrl,
+    steamAppId: g.steamAppId,
+    year: g.year,
+    source: "GameLog",
+  }));
+  const knownSteam = new Set(local.flatMap((g) => (g.steamAppId ? [g.steamAppId] : [])));
+  const knownSlugs = new Set(local.map((g) => g.slug));
+
+  const steamResults: SearchResult[] = steam.filter((s) => !knownSteam.has(s.appId) && !knownSlugs.has(`steam-${s.appId}`)).map((s) => ({
     slug: `steam-${s.appId}`,
     title: s.name,
     coverUrl: coverFrom(assets.get(s.appId), s.appId),
@@ -65,10 +96,10 @@ export async function searchGames(query: string): Promise<SearchResult[]> {
     source: "Steam",
   }));
 
-  // RAWG sem os que já vieram da Steam com o mesmo nome
-  const seen = new Set(steamResults.map((r) => r.title.toLowerCase()));
+  // RAWG sem os que já vieram de outra fonte com o mesmo nome
+  const seenTitles = [...localResults, ...steamResults].map((r) => r.title);
   const rawgResults: SearchResult[] = (rawg?.results ?? [])
-    .filter((g) => !seen.has(g.name.toLowerCase()))
+    .filter((g) => !knownSlugs.has(`rawg-${g.id}`) && !seenTitles.some((t) => sameTitle(t, g.name)))
     .map((g) => ({
       slug: `rawg-${g.id}`,
       title: g.name,
@@ -78,7 +109,11 @@ export async function searchGames(query: string): Promise<SearchResult[]> {
       source: "RAWG",
     }));
 
-  return [...steamResults, ...rawgResults];
+  return {
+    results: [...localResults, ...steamResults, ...rawgResults],
+    // Só mostra a sugestão quando ela trouxe algo que a busca original não trazia
+    didYouMean: suggestion && steamFirst.length < 3 ? suggestion : null,
+  };
 }
 
 /** Acha o jogo pelo slug; se ainda não existe e o slug é de uma fonte conhecida, cria. */
@@ -118,7 +153,11 @@ export async function getOrCreateGame(slug: string) {
       summary: g.description_raw?.trim().slice(0, 1200) || null,
       genres: g.genres?.map((x) => x.name) ?? [],
       platforms: g.platforms?.map((p) => p.platform.name) ?? [],
-      releaseDate: g.released ? new Date(g.released) : null,
+      releaseDate: g.released && !g.tba ? new Date(g.released) : null,
+      comingSoon: Boolean(g.tba) || (g.released ? new Date(g.released).getTime() > Date.now() : false),
+      releaseDateText: g.tba ? "A anunciar" : null,
+      rawgPlaytimeHours: g.playtime ? Math.min(g.playtime, 32767) : null,
+      rawgPlaytimeCheckedAt: new Date(),
       syncedAt: new Date(),
     });
   }
@@ -138,6 +177,8 @@ function steamDetailsData(details: StoreAppDetails, assets: StoreAssets | undefi
     genres: details.genres,
     platforms: details.platforms,
     releaseDate: details.releaseDate,
+    releaseDateText: details.releaseDateText,
+    comingSoon: details.comingSoon,
     developers: details.developers,
     publishers: details.publishers,
     metacriticScore: details.metacritic?.score ?? null,
@@ -155,7 +196,7 @@ function steamDetailsData(details: StoreAppDetails, assets: StoreAssets | undefi
 }
 
 /** Completa / renova um jogo da Steam com a loja (ficha, mídia, Metascore e, se faltar, a capa real). */
-async function enrichFromSteam(gameId: string, appId: number, coverUrl: string | null) {
+export async function enrichFromSteam(gameId: string, appId: number, coverUrl: string | null) {
   const needsCover = !coverUrl || coverUrl === steamCoverUrl(appId);
   const [details, assets] = await Promise.all([getAppDetails(appId), getStoreAssets([appId])]);
   const asset = assets.get(appId);
@@ -177,6 +218,40 @@ async function upsertGame(where: Prisma.GameWhereUniqueInput, data: Prisma.GameC
     }
     throw err;
   }
+}
+
+/** Renova data de lançamento e situação de um jogo que só existe na RAWG. */
+export async function refreshFromRawg(gameId: string, rawgId: number) {
+  const g = await rawgGet<RawgGame>(`/games/${rawgId}`);
+  if (!g) return null;
+  return prisma.game.update({
+    where: { id: gameId },
+    data: {
+      releaseDate: g.released && !g.tba ? new Date(g.released) : null,
+      comingSoon: Boolean(g.tba) || (g.released ? new Date(g.released).getTime() > Date.now() : false),
+      releaseDateText: g.tba ? "A anunciar" : null,
+      rawgPlaytimeHours: g.playtime ? Math.min(g.playtime, 32767) : null,
+      rawgPlaytimeCheckedAt: new Date(),
+      syncedAt: new Date(),
+    },
+  });
+}
+
+/**
+ * Média de horas na Steam segundo a RAWG. Jogos da Steam não têm id da RAWG, então
+ * busca pelo título e só aceita nome igual (ignorando acento/pontuação).
+ * `undefined` = RAWG fora ou sem chave (tenta de novo depois); `null` = não achou.
+ */
+export async function lookupRawgPlaytime(game: { title: string; rawgId: number | null }): Promise<number | null | undefined> {
+  if (!process.env.RAWG_API_KEY) return undefined;
+  if (game.rawgId) {
+    const g = await rawgGet<RawgGame>(`/games/${game.rawgId}`);
+    return g ? (g.playtime || null) : undefined;
+  }
+  const list = await rawgGet<{ results: RawgGame[] }>("/games", { search: game.title, page_size: "5" });
+  if (!list) return undefined;
+  const match = list.results.find((r) => sameTitle(r.name, game.title));
+  return match?.playtime || null;
 }
 
 /** Capa vertical real; sem ela, o banner; sem nada, a URL fixa (o GameCover ainda tenta o fallback). */
