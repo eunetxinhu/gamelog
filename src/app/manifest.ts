@@ -16,9 +16,10 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "pt-BR",
     categories: ["games", "social", "entertainment"],
     icons: [
-      { src: "/icons/192", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/icons/512?maskable=1", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      // Android recorta em círculo/gota: a arte vai a 80% sobre o fundo escuro
+      { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     // "Compartilhar" do celular → post de fotos (Web Share Target; ver public/sw.js)
     share_target: {

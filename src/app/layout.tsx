@@ -7,7 +7,9 @@ import { SITE_NAME } from "@/lib/brand";
 export const metadata: Metadata = {
   // Base das URLs absolutas dos cards de compartilhamento (opengraph-image)
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
-  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
+  // A aba mostra sempre só o nome do site. O título de cada página vai para o
+  // compartilhamento (openGraph), definido nas páginas que valem a pena compartilhar.
+  title: { default: SITE_NAME, template: SITE_NAME },
   description: "Registre, avalie e compartilhe seus jogos, platinas e reviews.",
   openGraph: { siteName: SITE_NAME, locale: "pt_BR", type: "website" },
   applicationName: SITE_NAME,

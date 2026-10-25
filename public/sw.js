@@ -71,8 +71,9 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "Poneglyph.gg", {
       body: data.body || "",
-      icon: data.icon || "/icons/192",
-      badge: "/icons/192",
+      icon: data.icon || "/icons/icon-192.png",
+      // Selo da barra de status do Android: só a silhueta branca ("PNGP")
+      badge: "/icons/badge-96.png",
       tag: data.tag,
       renotify: Boolean(data.tag),
       data: { url: data.url || "/notifications" },

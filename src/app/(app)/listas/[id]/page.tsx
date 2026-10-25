@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const list = await getListForViewer(id, (await getCurrentUser())?.id ?? null);
   if (!list) return { title: "Lista" };
   const by = list.user.displayName ?? list.user.username;
-  return { title: `${list.title} (lista de ${by})`, description: list.description?.slice(0, 160) ?? `${list.items.length} jogos escolhidos por @${list.user.username}.` };
+  return { title: `${list.title} (lista de ${by})`, openGraph: { title: `${list.title} (lista de ${by})` }, description: list.description?.slice(0, 160) ?? `${list.items.length} jogos escolhidos por @${list.user.username}.` };
 }
 
 export default async function ListPage({ params }: Props) {

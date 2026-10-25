@@ -35,7 +35,7 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const game = await prisma.game.findUnique({ where: { slug }, select: { title: true, summary: true } });
-  return { title: game?.title ?? "Jogo", description: game?.summary?.slice(0, 160) };
+  return { title: game?.title ?? "Jogo", description: game?.summary?.slice(0, 160), openGraph: { title: game?.title ?? "Jogo" } };
 }
 
 export default async function GamePage({ params, searchParams }: Props) {

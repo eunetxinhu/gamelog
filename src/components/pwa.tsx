@@ -68,7 +68,7 @@ export function Pwa() {
   return (
     <div role="dialog" aria-label="Instalar o Poneglyph.gg" className="fixed inset-x-3 bottom-[calc(4.75rem_+_env(safe-area-inset-bottom))] z-40 mx-auto md:bottom-3 flex max-w-md items-center gap-3 rounded-2xl border border-zinc-700 bg-zinc-900/95 p-3 shadow-2xl backdrop-blur">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icons/192" alt="" className="size-10 rounded-xl" />
+      <img src="/icons/icon-192.png" alt="" className="size-10 rounded-xl" />
       <div className="min-w-0 flex-1 text-sm">
         <p className="font-semibold text-zinc-50">Instale o Poneglyph.gg</p>
         {ios ? (
