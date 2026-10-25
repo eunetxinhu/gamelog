@@ -13,8 +13,12 @@ export default async function LoginPage({ searchParams }: Props) {
   const next = safeNext(rawNext);
   if (await getCurrentUser()) redirect(next);
 
-  // ?error=confirm vem do /auth/callback quando o link de confirmação falha
-  const notice = error === "confirm" ? "O link de confirmação é inválido ou expirou. Entre ou cadastre-se de novo." : undefined;
+  // Vêm do /auth/callback (link de confirmação) e do /reset-password (link de nova senha)
+  const NOTICES: Record<string, string> = {
+    confirm: "O link de confirmação é inválido ou expirou. Entre ou cadastre-se de novo.",
+    reset: "O link para criar uma nova senha é inválido ou expirou. Peça outro em “Esqueci a senha” e abra-o neste navegador.",
+  };
+  const notice = error ? NOTICES[error] : undefined;
 
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-10">

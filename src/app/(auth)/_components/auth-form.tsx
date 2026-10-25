@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, type ComponentProps } from "react";
+import { useActionState, type ComponentProps, type ReactNode } from "react";
 import { AlertTriangle, Loader2, MailCheck } from "lucide-react";
 import { signIn, signUp } from "../_actions/auth";
 import type { AuthFormState } from "../_actions/types";
@@ -39,6 +39,13 @@ export function AuthForm({ mode, next, notice }: Props) {
             type="password"
             autoComplete={isSignup ? "new-password" : "current-password"}
             minLength={isSignup ? 6 : undefined}
+            aside={
+              !isSignup && (
+                <Link href="/forgot-password" className="text-xs font-normal text-sky-400 hover:underline">
+                  Esqueci a senha
+                </Link>
+              )
+            }
           />
 
           {(state.error || notice) && (
@@ -69,12 +76,16 @@ export function AuthForm({ mode, next, notice }: Props) {
   );
 }
 
-function Field({ label, name, ...rest }: { label: string; name: string } & ComponentProps<"input">) {
+/** Campo dos formulários de auth. `aside` aparece à direita do rótulo (ex.: "Esqueci a senha"). */
+export function Field({ label, name, aside, ...rest }: { label: string; name: string; aside?: ReactNode } & ComponentProps<"input">) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={name} className="text-sm font-medium text-zinc-200">
-        {label}
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label htmlFor={name} className="text-sm font-medium text-zinc-200">
+          {label}
+        </label>
+        {aside}
+      </div>
       <input
         id={name}
         name={name}

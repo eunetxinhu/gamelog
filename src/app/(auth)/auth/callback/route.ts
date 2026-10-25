@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { appUrl } from "@/lib/app-url";
 import { safeNext } from "../../_actions/types";
 
-/** Link de confirmação de e-mail do Supabase: troca o `code` por sessão. */
+/** Links do Supabase por e-mail (confirmar conta e criar nova senha): troca o `code` por sessão. */
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const next = safeNext(req.nextUrl.searchParams.get("next"));
@@ -15,5 +15,5 @@ export async function GET(req: NextRequest) {
     console.error("[auth] callback falhou", error.code, error.message);
   }
 
-  return NextResponse.redirect(new URL("/login?error=confirm", appUrl()));
+  return NextResponse.redirect(new URL(`/login?error=${next === "/reset-password" ? "reset" : "confirm"}`, appUrl()));
 }

@@ -11,7 +11,7 @@ import { Avatar } from "@/components/avatar";
 
 export const metadata: Metadata = { title: "Feed · GameLog" };
 
-type Props = { searchParams: Promise<{ tab?: string; before?: string }> };
+type Props = { searchParams: Promise<{ tab?: string; before?: string; senha?: string }> };
 
 export default async function FeedPage({ searchParams }: Props) {
   const viewer = await getCurrentUser();
@@ -47,6 +47,11 @@ export default async function FeedPage({ searchParams }: Props) {
   return (
     <main className="mx-auto grid max-w-5xl gap-8 px-4 py-8 lg:grid-cols-[1fr_280px]">
       <div className="min-w-0">
+        {query.senha === "alterada" && (
+          <p role="status" className="mb-5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.07] p-3 text-sm text-emerald-100">
+            Senha alterada com sucesso.
+          </p>
+        )}
         <nav className="mb-5 flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1" aria-label="Feed">
           <Tab href="/feed?tab=following" active={tab === "following"}>
             Seguindo
