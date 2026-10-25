@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { CheckCircle2, Crop, ImageIcon, Loader2, Plus, Search, Upload, X } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { GameCover } from "@/components/game-cover";
 import { steamHeroUrl } from "@/lib/steam/assets";
 import { setFavorites, updateProfile, uploadProfileImage, type AccountResult } from "../_actions/account";
 import { ImageCropper } from "./image-cropper";
+import { searchGamesForPost } from "@/app/(app)/feed/_actions/photo-post";
 
-export type GameOption = { id: string; title: string; coverUrl: string | null; steamAppId: number | null };
+export type GameOption = { slug: string; title: string; coverUrl: string | null; steamAppId: number | null };
 
 type Props = {
   username: string;
@@ -42,7 +43,7 @@ function ProfileSection({ username, profile, steamAvatarUrl, favorites, options,
 
   // Atalhos para a capa: arte larga dos favoritos (ou dos jogos mais jogados)
   const bannerPicks = [...favorites.filter((f): f is GameOption => Boolean(f)), ...options]
-    .filter((g, i, all) => g.steamAppId && all.findIndex((x) => x.id === g.id) === i)
+    .filter((g, i, all) => g.steamAppId && all.findIndex((x) => x.slug === g.slug) === i)
     .slice(0, 6);
 
   function onSave() {
@@ -123,7 +124,7 @@ function ProfileSection({ username, profile, steamAvatarUrl, favorites, options,
               </span>
               {bannerPicks.map((g) => (
                 <button
-                  key={g.id}
+                  key={g.slug}
                   type="button"
                   onClick={() => {
                     setBannerBroken(false);
@@ -157,9 +158,33 @@ function FavoritesSection({ initial, options }: { initial: (GameOption | null)[]
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const taken = new Set(slots.map((s) => s?.id));
-    return options.filter((g) => !taken.has(g.id) && (!q || g.title.toLowerCase().includes(q))).slice(0, 40);
+    const taken = new Set(slots.map((s) => s?.slug));
+    return options.filter((g) => !taken.has(g.slug) && (!q || g.title.toLowerCase().includes(q))).slice(0, 40);
   }, [options, query, slots]);
+
+  // Qualquer jogo do catálogo, não só os seus: busca no servidor a partir de 2 letras
+  const [remote, setRemote] = useState<GameOption[]>([]);
+  const [searching, setSearching] = useState(false);
+  const seq = useRef(0);
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) return;
+    const id = ++seq.current;
+    const t = setTimeout(async () => {
+      setSearching(true);
+      const found = await searchGamesForPost(term).catch(() => []);
+      if (id === seq.current) {
+        setRemote(found.map(({ slug, title, coverUrl, steamAppId }) => ({ slug, title, coverUrl, steamAppId })));
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+  const others = useMemo(() => {
+    if (query.trim().length < 2) return [];
+    const shown = new Set([...filtered.map((g) => g.slug), ...slots.map((s) => s?.slug)]);
+    return remote.filter((g) => !shown.has(g.slug)).slice(0, 8);
+  }, [remote, filtered, slots, query]);
 
   function choose(game: GameOption | null, index: number) {
     setSlots((s) => s.map((x, i) => (i === index ? game : x)));
@@ -170,11 +195,11 @@ function FavoritesSection({ initial, options }: { initial: (GameOption | null)[]
 
   function onSave() {
     setResult(null);
-    startTransition(async () => setResult(await setFavorites(slots.map((s) => s?.id ?? null))));
+    startTransition(async () => setResult(await setFavorites(slots.map((s) => s?.slug ?? null))));
   }
 
   return (
-    <Section title="Top 4" description="Seus jogos favoritos, em destaque no topo do perfil.">
+    <Section id="top4" title="Top 4" description="Seus jogos favoritos, em destaque no topo do perfil. Pode ser qualquer jogo.">
       <div className="grid grid-cols-4 gap-3">
         {slots.map((game, i) => (
           <div key={i} className="relative">
@@ -214,18 +239,14 @@ function FavoritesSection({ initial, options }: { initial: (GameOption | null)[]
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Posição ${picking + 1}: buscar nos seus jogos…`}
+              placeholder={`Posição ${picking + 1}: buscar jogo…`}
               className="min-w-0 flex-1 bg-transparent py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
             />
           </div>
-          {options.length === 0 ? (
-            <p className="p-2 text-sm text-zinc-500">
-              Você ainda não tem jogos. Vincule a Steam ou registre jogos pela busca em Jogos.
-            </p>
-          ) : (
-            <ul className="max-h-72 overflow-y-auto">
-              {filtered.map((g) => (
-                <li key={g.id}>
+          <ul className="max-h-80 overflow-y-auto">
+            {filtered.length > 0 && query.trim().length >= 2 && <li className="px-2 pb-1 pt-2 text-xs uppercase tracking-wide text-zinc-500">Seus jogos</li>}
+            {filtered.map((g) => (
+                <li key={g.slug}>
                   <button
                     type="button"
                     onClick={() => choose(g, picking)}
@@ -238,9 +259,26 @@ function FavoritesSection({ initial, options }: { initial: (GameOption | null)[]
                   </button>
                 </li>
               ))}
-              {filtered.length === 0 && <li className="p-2 text-sm text-zinc-500">Nenhum jogo encontrado.</li>}
-            </ul>
-          )}
+            {others.length > 0 && <li className="px-2 pb-1 pt-3 text-xs uppercase tracking-wide text-zinc-500">Outros jogos</li>}
+            {others.map((g) => (
+              <li key={g.slug}>
+                <button
+                  type="button"
+                  onClick={() => choose(g, picking)}
+                  className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+                >
+                  <span className="w-8 shrink-0">
+                    <GameCover title={g.title} coverUrl={g.coverUrl} steamAppId={g.steamAppId} />
+                  </span>
+                  <span className="truncate">{g.title}</span>
+                </button>
+              </li>
+            ))}
+            {searching && <li className="p-2 text-sm text-zinc-500">Buscando…</li>}
+            {!searching && filtered.length === 0 && others.length === 0 && (
+              <li className="p-2 text-sm text-zinc-500">{query.trim().length >= 2 ? "Nenhum jogo encontrado." : "Digite o nome de qualquer jogo."}</li>
+            )}
+          </ul>
         </div>
       )}
 
@@ -336,9 +374,9 @@ function UploadButton({
 const inputCls =
   "w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30";
 
-function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function Section({ id, title, description, children }: { id?: string; title: string; description: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 sm:p-6">
+    <section id={id} className="scroll-mt-20 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 sm:p-6">
       <h2 className="text-lg font-semibold text-zinc-50">{title}</h2>
       <p className="mb-5 text-sm text-zinc-400">{description}</p>
       {children}

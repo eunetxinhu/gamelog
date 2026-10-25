@@ -17,6 +17,9 @@ import { GameCover } from "@/components/game-cover";
 import { ScoreBadge } from "@/components/score-badge";
 import { LogForm } from "./_components/log-form";
 import { WishlistButton } from "./_components/wishlist-button";
+import { AddToList } from "./_components/add-to-list";
+import { getListCards } from "@/lib/lists";
+import { ListGrid } from "@/components/list-card";
 import { Achievements } from "./_components/achievements";
 import { GameMedia, type Screenshot, type Trailer } from "./_components/media";
 import { GameNews } from "./_components/news";
@@ -43,7 +46,7 @@ export default async function GamePage({ params, searchParams }: Props) {
   // Média da RAWG preenchida depois da resposta (aparece na próxima visita)
   if (!game.rawgPlaytimeCheckedAt) after(() => ensureRawgPlaytime(game));
 
-  const [myLog, wishlisted, ratingGroups, platinums, playingNow, activities, times, myLibrary] = await Promise.all([
+  const [myLog, wishlisted, ratingGroups, platinums, playingNow, activities, times, myLibrary, myLists, inLists] = await Promise.all([
     viewer ? prisma.gameLog.findUnique({ where: { userId_gameId: { userId: viewer.id, gameId: game.id } } }) : null,
     viewer ? prisma.wishlistItem.findUnique({ where: { userId_gameId: { userId: viewer.id, gameId: game.id } } }).then(Boolean) : false,
     prisma.gameLog.groupBy({ by: ["rating"], where: { gameId: game.id, rating: { not: null } }, _count: { _all: true } }),
@@ -62,6 +65,15 @@ export default async function GamePage({ params, searchParams }: Props) {
           select: { playtimeMinutes: true, platinumAt: true },
         })
       : null,
+    viewer
+      ? prisma.gameList.findMany({
+          where: { userId: viewer.id },
+          orderBy: { updatedAt: "desc" },
+          take: 50,
+          select: { id: true, title: true, items: { where: { gameId: game.id }, select: { gameId: true } } },
+        })
+      : [],
+    getListCards({ viewerId: viewer?.id ?? null, where: { items: { some: { gameId: game.id } } }, orderBy: [{ likes: { _count: "desc" } }, { updatedAt: "desc" }], take: 3 }),
   ]);
 
   // Distribuição das estrelas e Nota Poneglyph.gg (0–100)
@@ -133,6 +145,9 @@ export default async function GamePage({ params, searchParams }: Props) {
 
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <WishlistButton gameId={game.id} slug={game.slug} initial={wishlisted} loggedIn={Boolean(viewer)} />
+            {!viewer?.bannedAt && (
+              <AddToList slug={game.slug} loggedIn={Boolean(viewer)} lists={myLists.map((l) => ({ id: l.id, title: l.title, hasGame: l.items.length > 0 }))} />
+            )}
             {game.priceFinal !== null && (
               <span className="flex items-baseline gap-2">
                 {game.discountPercent ? (
@@ -220,6 +235,13 @@ export default async function GamePage({ params, searchParams }: Props) {
         <Suspense fallback={null}>
           <GameNews appId={game.steamAppId} />
         </Suspense>
+      )}
+
+      {inLists.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-3 text-lg font-semibold text-zinc-50">Em listas da comunidade</h2>
+          <ListGrid lists={inLists} />
+        </section>
       )}
 
       {playingNow.length > 0 && (

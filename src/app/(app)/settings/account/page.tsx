@@ -9,7 +9,7 @@ import { appUrl } from "@/lib/app-url";
 
 export const metadata: Metadata = { title: "Editar perfil" };
 
-const gameSelect = { id: true, title: true, coverUrl: true, steamAppId: true } as const;
+const gameSelect = { slug: true, title: true, coverUrl: true, steamAppId: true } as const;
 
 export default async function AccountPage() {
   const user = await getCurrentUser();
@@ -28,7 +28,7 @@ export default async function AccountPage() {
 
   // Opções do Top 4: jogos registrados primeiro, depois a biblioteca por horas jogadas
   const options = new Map<string, GameOption>();
-  for (const { game } of [...logged, ...library]) options.set(game.id, game);
+  for (const { game } of [...logged, ...library]) options.set(game.slug, game);
 
   const slots: (GameOption | null)[] = [null, null, null, null];
   for (const f of favorites) if (f.position >= 1 && f.position <= 4) slots[f.position - 1] = f.game;

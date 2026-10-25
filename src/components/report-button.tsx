@@ -5,7 +5,7 @@ import { Flag, Loader2, X } from "lucide-react";
 import { reportContent } from "@/app/(app)/_actions/moderation";
 import { REPORT_REASONS } from "@/lib/report-reasons";
 
-type Target = "ACTIVITY" | "COMMENT" | "USER" | "CLUB_POST" | "MESSAGE";
+type Target = "ACTIVITY" | "COMMENT" | "USER" | "CLUB_POST" | "MESSAGE" | "LIST" | "LIST_COMMENT";
 
 /** Ícone/botão "Denunciar" que abre o formulário de denúncia. */
 export function ReportButton({ targetType, targetId, label, className = "" }: { targetType: Target; targetId: string; label?: string; className?: string }) {

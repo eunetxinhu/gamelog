@@ -19,6 +19,9 @@ import { canMessage } from "@/lib/dm";
 import { ProfileMenu } from "@/components/profile-menu";
 import { GameCover } from "@/components/game-cover";
 import { ScrollRow } from "@/components/scroll-row";
+import { UserTitle } from "@/components/user-title";
+import { getListCards } from "@/lib/lists";
+import { ListGrid } from "@/components/list-card";
 
 type Props = { params: Promise<{ username: string }> };
 
@@ -65,12 +68,19 @@ export default async function ProfilePage({ params }: Props) {
           )}
         </div>
         <div className="flex flex-col gap-4 px-4 pb-5 sm:flex-row sm:items-end sm:px-6 sm:pb-6">
-          <div className="-mt-12 w-fit rounded-full ring-4 ring-zinc-950">
+          <div
+            className={`-mt-12 w-fit rounded-full ring-4 ${
+              profile.title ? "ring-amber-300/90 shadow-[0_0_28px_-4px_rgba(251,191,36,0.6)]" : "ring-zinc-950"
+            }`}
+          >
             <Avatar name={name} src={profile.avatarUrl ?? profile.steamAvatarUrl} size="lg" />
           </div>
           <div className="min-w-0 flex-1 space-y-1">
             <h1 className="truncate text-2xl font-bold text-zinc-50">{name}</h1>
-            <p className="text-sm text-zinc-400">@{profile.username}</p>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-400">
+              @{profile.username}
+              <UserTitle title={profile.title} />
+            </p>
             {data && (
               <Link href={`/u/${profile.username}/selos`} className="block pt-1" title="Ver nível e selos">
                 <LevelBadge level={data.progression.level} />
@@ -145,7 +155,7 @@ export default async function ProfilePage({ params }: Props) {
 
 /** Tudo que só aparece para quem pode ver o perfil. */
 async function loadProfileContent(profileId: string, viewerId: string | null) {
-  const [library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements] = await Promise.all([
+  const [library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount] = await Promise.all([
     prisma.libraryEntry.aggregate({ where: { userId: profileId }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
     prisma.gameLog.findMany({ where: { userId: profileId, status: "COMPLETED" }, select: { gameId: true } }),
     getPlatinums(profileId),
@@ -162,10 +172,12 @@ async function loadProfileContent(profileId: string, viewerId: string | null) {
     getProgression(profileId),
     prisma.wishlistItem.findMany({ where: { userId: profileId }, orderBy: { createdAt: "desc" }, take: 6, select: { game: { select: gameSelect } } }),
     getAchievementSummary(profileId),
+    getListCards({ viewerId, where: { userId: profileId }, take: 3 }),
+    prisma.gameList.count({ where: { userId: profileId, items: { some: {} } } }),
   ]);
   // Finalizados inclui as platinas (platinar implica ter terminado)
   const completedCount = new Set([...completedLogs.map((l) => l.gameId), ...platinumList.map((p) => p.game.id)]).size;
-  return { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, viewerId };
+  return { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, viewerId };
 }
 
 function LockedNotice({ text }: { text: string }) {
@@ -188,13 +200,29 @@ function ProfileContent({
   isMe: boolean;
   gamesHref: (aba: string) => string;
 }) {
-  const { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, viewerId } = data;
+  const { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, viewerId } = data;
   const earnedBadges = progression.badges.filter((b) => b.earned);
 
   return (
     <>
 
       {/* ---- Top 4 ---------------------------------------------------------- */}
+      {favorites.length === 0 && isMe && (
+        <Link
+          href="/settings/account#top4"
+          className="mt-6 flex items-center gap-4 rounded-2xl border border-dashed border-zinc-700 p-4 text-sm text-zinc-400 transition hover:border-sky-500/60 hover:text-zinc-200"
+        >
+          <span className="grid grid-cols-4 gap-1.5">
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className="h-10 w-7 rounded-md border border-dashed border-zinc-600" />
+            ))}
+          </span>
+          <span>
+            <strong className="block text-zinc-100">Escolha seu Top 4</strong>
+            Seus jogos favoritos em destaque aqui, para quem visita seu perfil.
+          </span>
+        </Link>
+      )}
       {favorites.length > 0 && (
         <section className="mt-6">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">Favoritos</h2>
@@ -271,6 +299,35 @@ function ProfileContent({
           )}
           <ChevronRight className="ml-auto size-4 shrink-0 text-zinc-500" aria-hidden />
         </Link>
+      )}
+
+      {/* ---- Listas --------------------------------------------------------- */}
+      {(lists.length > 0 || isMe) && (
+        <section className="mt-8 sm:mt-10">
+          <h2 className="mb-3 flex items-center text-lg font-semibold text-zinc-50">
+            Listas
+            {listCount > 0 && <span className="ml-2 text-sm font-normal text-zinc-500">{listCount}</span>}
+            {(listCount > lists.length || isMe) && (
+              <Link
+                href={listCount > lists.length ? `/listas?de=${profile.username}` : "/listas/nova"}
+                className="ml-auto text-sm font-normal text-sky-400 hover:underline"
+              >
+                {listCount > lists.length ? "Ver todas" : "Nova lista"}
+              </Link>
+            )}
+          </h2>
+          {lists.length > 0 ? (
+            <ListGrid lists={lists} showAuthor={false} />
+          ) : (
+            <Link
+              href="/listas/nova"
+              className="block rounded-2xl border border-dashed border-zinc-700 p-5 text-sm text-zinc-400 transition hover:border-sky-500/60 hover:text-zinc-200"
+            >
+              <strong className="block text-zinc-100">Crie sua primeira lista</strong>
+              “Melhores metroidvanias”, “Jogos para jogar em dupla”… listas aparecem aqui e em Listas, para a comunidade curtir e comentar.
+            </Link>
+          )}
+        </section>
       )}
 
       <div className="mt-8 grid gap-8 sm:mt-10 sm:gap-10 lg:grid-cols-[1fr_320px]">

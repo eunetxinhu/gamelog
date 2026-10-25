@@ -63,6 +63,8 @@ enum NotificationType {
   FOLLOW_REQUEST // pediu para seguir seu perfil privado
   INVITE_JOINED // alguém entrou pelo seu convite
   RELEASE // jogo da sua wishlist lançou hoje (sem actor)
+  LIST_LIKE // curtiu sua lista
+  LIST_COMMENT // comentou na sua lista
 }
 
 enum FollowStatus {
@@ -89,6 +91,8 @@ enum ReportTarget {
   USER
   CLUB_POST
   MESSAGE
+  LIST
+  LIST_COMMENT
 }
 
 enum ReportStatus {
@@ -137,6 +141,10 @@ model User {
   notificationPrefs Json?     @map("notification_prefs")
   /// Suspenso pela moderação: não publica, não comenta, não manda mensagem
   bannedAt          DateTime? @map("banned_at")
+  /// Título especial ao lado do nome (ex.: "Fundador & CEO"). Só pelo banco: não tem tela para editar.
+  title             String?   @db.VarChar(40)
+  /// Concluiu ou pulou o "Primeiros passos" (null = ainda mostra o convite no feed)
+  onboardedAt       DateTime? @map("onboarded_at")
 
   // ---- Convite ----------------------------------------------------------------
   invitedById String? @map("invited_by_id") @db.Uuid
@@ -177,6 +185,9 @@ model User {
   messagesSent      Message[]
   conversationsA    Conversation[]     @relation("ConversationA")
   conversationsB    Conversation[]     @relation("ConversationB")
+  lists             GameList[]
+  listLikes         GameListLike[]
+  listComments      GameListComment[]
 
   @@index([steamNextSyncAt])
   // Busca tolerante a erros de digitação (pg_trgm, ver src/lib/search.ts)
@@ -244,6 +255,7 @@ model Game {
   logs       GameLog[]
   libraryOf  LibraryEntry[]
   favoriteOf FavoriteGame[]
+  inLists    GameListItem[]
   activities Activity[]
 
   wishlistedBy  WishlistItem[]
@@ -401,6 +413,8 @@ model Notification {
   activityId String?          @map("activity_id")
   /// Jogo relacionado (promoção)
   gameId     String?          @map("game_id")
+  /// Lista relacionada (curtida ou comentário numa lista)
+  listId     String?          @map("list_id")
   readAt     DateTime?        @map("read_at")
   createdAt  DateTime         @default(now()) @map("created_at")
 
@@ -408,6 +422,7 @@ model Notification {
   actor    User?     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
   activity Activity? @relation(fields: [activityId], references: [id], onDelete: Cascade)
   game     Game?     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  list     GameList? @relation(fields: [listId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, readAt])
@@ -625,4 +640,74 @@ model RateLimit {
   @@id([key, windowStart])
   @@index([windowStart])
   @@map("rate_limits")
+}
+
+// -----------------------------------------------------------------------------
+//  Listas da comunidade ("Metroidvanias curtos", "Para jogar em dupla"…)
+// -----------------------------------------------------------------------------
+
+model GameList {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id") @db.Uuid
+  title       String   @db.VarChar(80)
+  description String?  @db.VarChar(1000)
+  /// Lista numerada (ranking) ou só uma coleção
+  ranked      Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         GameListItem[]
+  likes         GameListLike[]
+  comments      GameListComment[]
+  notifications Notification[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("game_lists")
+}
+
+model GameListItem {
+  listId   String  @map("list_id")
+  gameId   String  @map("game_id")
+  /// Ordem na lista, a partir de 1
+  position Int     @db.SmallInt
+  /// Comentário curto do autor sobre o jogo na lista
+  note     String? @db.VarChar(280)
+
+  list GameList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  game Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([listId, gameId])
+  @@index([listId, position])
+  @@index([gameId])
+  @@map("game_list_items")
+}
+
+model GameListLike {
+  listId    String   @map("list_id")
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  list GameList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([listId, userId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("game_list_likes")
+}
+
+model GameListComment {
+  id        String   @id @default(cuid())
+  listId    String   @map("list_id")
+  userId    String   @map("user_id") @db.Uuid
+  body      String   @db.VarChar(1000)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  list GameList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([listId, createdAt])
+  @@map("game_list_comments")
 }

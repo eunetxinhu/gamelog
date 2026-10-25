@@ -9,7 +9,14 @@ import { wantsInApp, wantsPush } from "@/lib/notification-prefs";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
-type NotifyInput = { userId: string; actorId?: string | null; type: NotificationType; activityId?: string | null; gameId?: string | null };
+type NotifyInput = {
+  userId: string;
+  actorId?: string | null;
+  type: NotificationType;
+  activityId?: string | null;
+  gameId?: string | null;
+  listId?: string | null;
+};
 
 /**
  * Cria uma notificação (e o push correspondente). Ignora quando a pessoa age sobre si
@@ -24,16 +31,16 @@ export async function notify(db: Db, input: NotifyInput) {
   const recipient = await db.user.findUnique({ where: { id: input.userId }, select: { notificationPrefs: true } });
   if (!recipient || !wantsInApp(recipient.notificationPrefs, input.type)) return;
 
-  const repeatable: NotificationType[] = ["COMMENT", "MESSAGE", "MENTION", "DEAL"];
+  const repeatable: NotificationType[] = ["COMMENT", "LIST_COMMENT", "MESSAGE", "MENTION", "DEAL"];
   if (!repeatable.includes(input.type)) {
     const dup = await db.notification.findFirst({
-      where: { userId: input.userId, actorId, type: input.type, activityId: input.activityId ?? null, readAt: null },
+      where: { userId: input.userId, actorId, type: input.type, activityId: input.activityId ?? null, listId: input.listId ?? null, readAt: null },
       select: { id: true },
     });
     if (dup) return;
   }
   const created = await db.notification.create({
-    data: { userId: input.userId, actorId, type: input.type, activityId: input.activityId ?? null, gameId: input.gameId ?? null },
+    data: { userId: input.userId, actorId, type: input.type, activityId: input.activityId ?? null, gameId: input.gameId ?? null, listId: input.listId ?? null },
     select: { id: true },
   });
   schedulePush([created.id]);
@@ -98,6 +105,7 @@ async function deliverPush(ids: string[]) {
         actor: { select: { username: true, displayName: true } },
         activity: { select: { id: true, game: { select: { title: true } } } },
         game: { select: { slug: true, title: true, discountPercent: true, priceFinal: true } },
+        list: { select: { id: true, title: true } },
       },
     });
     await Promise.all(
@@ -127,6 +135,8 @@ async function deliverPush(ids: string[]) {
             body: "Estava na sua wishlist. Bora jogar?",
             url: n.game ? `/games/${n.game.slug}` : "/lancamentos",
           },
+          LIST_LIKE: { title: `${who} curtiu sua lista`, body: n.list?.title ?? "", url: n.list ? `/listas/${n.list.id}` : "/listas" },
+          LIST_COMMENT: { title: `${who} comentou na sua lista`, body: n.list?.title ?? "", url: n.list ? `/listas/${n.list.id}#comentarios` : "/listas" },
         };
         return sendPush([n.userId], { ...map[n.type], tag: n.type === "MESSAGE" ? `dm-${n.actorId}` : n.id });
       }),

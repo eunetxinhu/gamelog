@@ -9,7 +9,15 @@ import { ModerationActions, UnbanButton } from "./_components/moderation-actions
 
 export const metadata: Metadata = { title: "Moderação" };
 
-const TARGET_LABEL = { ACTIVITY: "Publicação", COMMENT: "Comentário", USER: "Perfil", CLUB_POST: "Post de clube", MESSAGE: "Mensagem" } as const;
+const TARGET_LABEL = {
+  ACTIVITY: "Publicação",
+  COMMENT: "Comentário",
+  USER: "Perfil",
+  CLUB_POST: "Post de clube",
+  MESSAGE: "Mensagem",
+  LIST: "Lista",
+  LIST_COMMENT: "Comentário em lista",
+} as const;
 
 type Target = keyof typeof TARGET_LABEL;
 
@@ -30,6 +38,14 @@ async function preview(type: Target, id: string): Promise<{ author: string | nul
   if (type === "MESSAGE") {
     const m = await prisma.message.findUnique({ where: { id }, select: { body: true, imageUrl: true, sender: { select: { username: true } } } });
     return m ? { author: m.sender.username, text: [m.body, m.imageUrl ? "[foto]" : null].filter(Boolean).join(" · "), href: null } : gone();
+  }
+  if (type === "LIST") {
+    const l = await prisma.gameList.findUnique({ where: { id }, select: { title: true, description: true, user: { select: { username: true } } } });
+    return l ? { author: l.user.username, text: [l.title, l.description].filter(Boolean).join(" · "), href: `/listas/${id}` } : gone();
+  }
+  if (type === "LIST_COMMENT") {
+    const c = await prisma.gameListComment.findUnique({ where: { id }, select: { body: true, listId: true, user: { select: { username: true } } } });
+    return c ? { author: c.user.username, text: c.body, href: `/listas/${c.listId}#comentarios` } : gone();
   }
   const u = await prisma.user.findUnique({ where: { id }, select: { username: true, bio: true, displayName: true } });
   return u ? { author: u.username, text: [u.displayName, u.bio].filter(Boolean).join(" · ") || "(sem bio)", href: `/u/${u.username}` } : gone();

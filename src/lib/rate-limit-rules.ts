@@ -30,6 +30,7 @@ export const RATE_RULES = {
   report: [{ limit: 5, windowSec: MIN }],
   "club-create": [{ limit: 3, windowSec: DAY }],
   wishlist: [{ limit: 60, windowSec: MIN }, { limit: 600, windowSec: DAY }],
+  "list-write": [{ limit: 30, windowSec: HOUR }, { limit: 100, windowSec: DAY }],
   "club-post": [{ limit: 10, windowSec: MIN }, { limit: 200, windowSec: DAY }],
 
   // Publicar e enviar arquivos
