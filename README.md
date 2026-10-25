@@ -104,6 +104,44 @@ npm run dev
 
 O "Entrar com Steam" passa a voltar para `APP_URL/api/steam/callback` sozinho, e os cards de compartilhamento usam `APP_URL` como base.
 
+### Login com Steam
+
+Precisa da chave secreta do Supabase em `SUPABASE_SECRET_KEY` (Project Settings → API Keys → Secret keys → `sb_secret_…`), no `.env` e na Vercel. Sem ela o botão "Entrar com Steam" some do login e a Steam só pode ser vinculada a uma conta de e-mail. Contas criadas pela Steam usam um e-mail interno (`steam-<id>@steam-login.gamelog.app`) e não podem desvincular a Steam (é o único login delas).
+
+### Cron diário
+
+`vercel.json` agenda `/api/cron/steam-sync` todo dia às 9h UTC (plano Hobby: 1x/dia). Cadastre `CRON_SECRET` na Vercel (o mesmo valor do `.env`); ela envia `Authorization: Bearer <CRON_SECRET>` sozinha.
+
+### E-mails (Resend + Supabase)
+
+O SMTP padrão do Supabase manda poucos e-mails por hora; com mais usuários, cadastro e "Esqueci a senha" travam.
+
+1. Crie uma conta em resend.com e adicione seu domínio (Domains → Add Domain), configurando os registros DNS que ele mostrar. Sem domínio próprio, o Resend só envia para o seu próprio e-mail (bom para testar).
+2. Em API Keys, crie uma chave.
+3. No Supabase: Authentication → Emails → SMTP Settings → Enable custom SMTP:
+   - Host `smtp.resend.com`, porta `465`, usuário `resend`, senha = a chave do Resend
+   - Sender email `nao-responda@SEU-DOMINIO`, sender name `GameLog`
+4. Em Authentication → Rate Limits, aumente "Rate limit for sending emails".
+5. Em Authentication → Emails → Templates, troque os textos:
+
+**Confirm signup** — assunto: `Confirme sua conta no GameLog`
+
+```html
+<h2>Bem-vindo ao GameLog!</h2>
+<p>Falta só um passo: confirme seu e-mail para ativar sua conta.</p>
+<p><a href="{{ .ConfirmationURL }}">Confirmar minha conta</a></p>
+<p>Se você não criou uma conta, pode ignorar este e-mail.</p>
+```
+
+**Reset password** — assunto: `Crie uma nova senha no GameLog`
+
+```html
+<h2>Esqueceu a senha?</h2>
+<p>Clique no link abaixo para criar uma nova senha. Abra no mesmo navegador em que você pediu.</p>
+<p><a href="{{ .ConfirmationURL }}">Criar nova senha</a></p>
+<p>Se não foi você que pediu, ignore este e-mail: sua senha continua a mesma.</p>
+```
+
 ---
 
 ## 3. Decisões de arquitetura

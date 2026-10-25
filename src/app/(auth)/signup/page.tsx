@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { AuthForm } from "../_components/auth-form";
 import { safeNext } from "../_actions/types";
 
@@ -14,7 +15,7 @@ export default async function SignupPage({ searchParams }: Props) {
 
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-10">
-      <AuthForm mode="signup" next={next} />
+      <AuthForm mode="signup" next={next} steamLogin={hasSupabaseAdmin()} />
     </main>
   );
 }

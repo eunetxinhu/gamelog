@@ -67,7 +67,8 @@ function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnections
   function onUnlink() {
     if (!confirm("Desvincular a Steam? Os jogos importados saem da sua biblioteca (seus logs e reviews ficam).")) return;
     startUnlink(async () => {
-      await unlinkSteam();
+      const res = await unlinkSteam();
+      if (!res.ok && res.message) return alert(res.message);
       setResult(null);
     });
   }

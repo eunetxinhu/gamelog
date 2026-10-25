@@ -18,6 +18,9 @@ const TIMEOUT_MS = 10_000;
 const REQUIRED_SIGNED = ["op_endpoint", "claimed_id", "identity", "return_to", "response_nonce", "assoc_handle"];
 
 export const STEAM_STATE_COOKIE = "steam_openid_state";
+export const STEAM_MODE_COOKIE = "steam_openid_mode";
+/** link = vincular à conta logada; signin = entrar/criar conta pela Steam */
+export type SteamLoginMode = "link" | "signin";
 export const CALLBACK_PATH = "/api/steam/callback";
 
 /** URL do login oficial da Steam. `state` volta no return_to e é conferido no callback. */

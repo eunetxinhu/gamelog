@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Bell, Gamepad2, LogOut, Newspaper, Settings } from "lucide-react";
+import { Bell, Compass, Gamepad2, LogOut, Newspaper, Settings } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { unreadCount } from "@/lib/notifications";
 import { Avatar } from "@/components/avatar";
@@ -30,6 +30,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </NavLink>
             <NavLink href="/games" icon={<Gamepad2 className="size-4" aria-hidden />}>
               Jogos
+            </NavLink>
+            <NavLink href="/explore" icon={<Compass className="size-4" aria-hidden />}>
+              Explorar
             </NavLink>
           </div>
 

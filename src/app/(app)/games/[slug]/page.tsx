@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, Trophy } from "lucide-react";
@@ -12,6 +13,7 @@ import { Avatar } from "@/components/avatar";
 import { GameCover } from "@/components/game-cover";
 import { RatingStars } from "@/components/rating-stars";
 import { LogForm } from "./_components/log-form";
+import { Achievements } from "./_components/achievements";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -101,6 +103,12 @@ export default async function GamePage({ params }: Props) {
           />
         </div>
       </div>
+
+      {game.steamAppId && (
+        <Suspense fallback={<div className="mt-10 h-40 animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900/40" />}>
+          <Achievements appId={game.steamAppId} steamId={viewer?.steamId ?? null} />
+        </Suspense>
+      )}
 
       {playingNow.length > 0 && (
         <section className="mt-10">

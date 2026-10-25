@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { AuthForm } from "../_components/auth-form";
 import { safeNext } from "../_actions/types";
 
@@ -17,12 +18,13 @@ export default async function LoginPage({ searchParams }: Props) {
   const NOTICES: Record<string, string> = {
     confirm: "O link de confirmação é inválido ou expirou. Entre ou cadastre-se de novo.",
     reset: "O link para criar uma nova senha é inválido ou expirou. Peça outro em “Esqueci a senha” e abra-o neste navegador.",
+    steam: "Não conseguimos entrar com a Steam agora. Tente de novo ou entre com e-mail.",
   };
   const notice = error ? NOTICES[error] : undefined;
 
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-10">
-      <AuthForm mode="login" next={next} notice={notice} />
+      <AuthForm mode="login" next={next} notice={notice} steamLogin={hasSupabaseAdmin()} />
     </main>
   );
 }

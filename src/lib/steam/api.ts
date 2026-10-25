@@ -139,6 +139,88 @@ export async function getPlayerAchievements(steamId: string, appId: number): Pro
   }
 }
 
+// ---- Conquistas com nome, ícone e raridade ------------------------------------
+
+export type AchievementDetail = {
+  apiName: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  iconGray: string;
+  hidden: boolean;
+  /** % dos jogadores da Steam que têm essa conquista */
+  percent: number | null;
+  achieved: boolean;
+  unlockedAt: Date | null;
+};
+
+/**
+ * Lista completa das conquistas de um jogo, com a raridade global e, se `steamId`
+ * vier, o progresso da pessoa. `null` quando o jogo não tem conquistas.
+ * Lista e raridade mudam pouco (cache de 1 dia); o progresso é sempre buscado na hora.
+ */
+export async function getAchievementDetails(appId: number, steamId: string | null): Promise<AchievementDetail[] | null> {
+  const day = { next: { revalidate: 86400 }, signal: AbortSignal.timeout(TIMEOUT_MS) };
+  const schemaUrl = new URL(`${STEAM_API}/ISteamUserStats/GetSchemaForGame/v2/`);
+  schemaUrl.search = new URLSearchParams({ key: apiKey(), appid: String(appId), l: "brazilian" }).toString();
+  const globalUrl = `${STEAM_API}/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid=${appId}`;
+
+  type Schema = {
+    game?: { availableGameStats?: { achievements?: { name: string; displayName: string; description?: string; icon: string; icongray: string; hidden: number }[] } };
+  };
+  type Global = { achievementpercentages?: { achievements?: { name: string; percent: number | string }[] } };
+
+  try {
+    const [schemaRes, globalRes, mine] = await Promise.all([
+      fetch(schemaUrl, day),
+      fetch(globalUrl, day),
+      steamId ? getPlayerAchievementList(steamId, appId) : Promise.resolve(null),
+    ]);
+    if (!schemaRes.ok) return null;
+    const schema = ((await schemaRes.json()) as Schema).game?.availableGameStats?.achievements;
+    if (!schema?.length) return null;
+
+    const global = globalRes.ok ? ((await globalRes.json()) as Global).achievementpercentages?.achievements ?? [] : [];
+    const percentBy = new Map(global.map((g) => [g.name, Number(g.percent)]));
+
+    return schema.map((a) => {
+      const m = mine?.get(a.name);
+      return {
+        apiName: a.name,
+        name: a.displayName,
+        description: a.description?.trim() || null,
+        icon: a.icon,
+        iconGray: a.icongray,
+        hidden: a.hidden === 1,
+        percent: percentBy.has(a.name) ? percentBy.get(a.name)! : null,
+        achieved: m?.achieved ?? false,
+        unlockedAt: m?.unlockedAt ?? null,
+      };
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function getPlayerAchievementList(steamId: string, appId: number) {
+  const url = new URL(`${STEAM_API}/ISteamUserStats/GetPlayerAchievements/v1/`);
+  url.search = new URLSearchParams({ key: apiKey(), steamid: steamId, appid: String(appId) }).toString();
+  try {
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { playerstats?: { success?: boolean; achievements?: { apiname: string; achieved: number; unlocktime: number }[] } };
+    if (!body.playerstats?.success) return null;
+    return new Map(
+      (body.playerstats.achievements ?? []).map((a) => [
+        a.apiname,
+        { achieved: a.achieved === 1, unlockedAt: a.unlocktime ? new Date(a.unlocktime * 1000) : null },
+      ]),
+    );
+  } catch {
+    return null;
+  }
+}
+
 // ---- Imagens com o caminho real (IStoreBrowseService, sem API key) -------------
 
 export type StoreAssets = { cover: string | null; header: string | null; hero: string | null };
