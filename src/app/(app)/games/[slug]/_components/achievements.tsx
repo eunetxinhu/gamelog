@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { after } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { Gem, Lock, Trophy } from "lucide-react";
 import { getAchievementDetails, type AchievementDetail } from "@/lib/steam/api";
 import { relativeTime } from "@/lib/format";
@@ -6,15 +8,18 @@ import { relativeTime } from "@/lib/format";
 /** Abaixo disso a conquista ganha o selo de "rara". */
 const RARE_PERCENT = 5;
 
-/** `steamId` = Steam do visitante logado (null = mostra só a raridade). */
-type Props = { appId: number; steamId: string | null };
+/**
+ * `steamId` = Steam do visitante logado (null = mostra só a raridade).
+ * `owner` = quem está vendo, para guardar o progresso atualizado na biblioteca dele.
+ */
+type Props = { appId: number; steamId: string | null; owner?: { userId: string; gameId: string } | null };
 
 /**
  * Conquistas do jogo (Server Component, carregado em <Suspense> na página do jogo).
  * Com Steam vinculada: progresso, o que falta (mais fáceis primeiro) e as mais raras que você tem.
  * Sem Steam: as conquistas mais raras do jogo.
  */
-export async function Achievements({ appId, steamId }: Props) {
+export async function Achievements({ appId, steamId, owner }: Props) {
   const list = await getAchievementDetails(appId, steamId);
   if (!list) return null;
 
@@ -34,7 +39,18 @@ export async function Achievements({ appId, steamId }: Props) {
     );
   }
 
-  const pct = Math.round((unlocked.length / total) * 100);
+  // O progresso acabou de vir da Steam: atualiza a biblioteca (aba Conquistas do perfil)
+  // sem esperar a próxima sincronização. Só quem tem o jogo na biblioteca (updateMany = 0 linhas se não tiver).
+  if (owner) {
+    const counts = { achievementsUnlocked: unlocked.length, achievementsTotal: total };
+    after(() =>
+      prisma.libraryEntry
+        .updateMany({ where: { userId: owner.userId, gameId: owner.gameId }, data: counts })
+        .then(() => undefined, () => undefined),
+    );
+  }
+
+  const pct = Math.floor((unlocked.length / total) * 100);
   const missing = list.filter((a) => !a.achieved).sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0));
   const rarestMine = [...unlocked].sort(byRarity).slice(0, 4);
   const platinum = missing.length === 0;

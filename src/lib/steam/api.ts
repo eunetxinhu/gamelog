@@ -1,4 +1,5 @@
 import "server-only";
+import { parseStoreRelease } from "./dates";
 
 /**
  * Cliente mínimo da Steam Web API.
@@ -326,7 +327,11 @@ export type StoreAppDetails = {
   summary: string | null;
   genres: string[];
   platforms: string[];
+  /** Só com dia exato */
   releaseDate: Date | null;
+  /** Texto da loja quando não há dia exato ("Em breve", "Q1 2027") */
+  releaseDateText: string | null;
+  comingSoon: boolean;
   developers: string[];
   publishers: string[];
   metacritic: { score: number; url: string | null } | null;
@@ -354,7 +359,7 @@ export async function getAppDetails(appId: number): Promise<StoreAppDetails | nu
           short_description?: string;
           genres?: { description: string }[];
           platforms?: Record<string, boolean>;
-          release_date?: { date?: string };
+          release_date?: { date?: string; coming_soon?: boolean };
           developers?: string[];
           publishers?: string[];
           metacritic?: { score: number; url?: string };
@@ -372,7 +377,12 @@ export async function getAppDetails(appId: number): Promise<StoreAppDetails | nu
       summary: data.short_description?.trim() || null,
       genres: data.genres?.map((g) => g.description) ?? [],
       platforms: Object.entries(data.platforms ?? {}).flatMap(([k, on]) => (on && PLATFORM_NAMES[k] ? [PLATFORM_NAMES[k]] : [])),
-      releaseDate: parseStoreDate(data.release_date?.date),
+      ...(() => {
+        const release = parseStoreRelease(data.release_date?.date);
+        const comingSoon = Boolean(data.release_date?.coming_soon);
+        // Já lançado sem data legível: não guarda texto (não vai para o calendário)
+        return { releaseDate: release.date, releaseDateText: comingSoon ? release.text : null, comingSoon };
+      })(),
       developers: data.developers ?? [],
       publishers: data.publishers ?? [],
       metacritic: data.metacritic?.score ? { score: data.metacritic.score, url: data.metacritic.url ?? null } : null,
@@ -508,19 +518,6 @@ export async function getGameNews(appId: number, count = 4): Promise<SteamNewsIt
   } catch {
     return [];
   }
-}
-
-const PT_MONTHS: Record<string, number> = {
-  jan: 0, fev: 1, mar: 2, abr: 3, mai: 4, jun: 5, jul: 6, ago: 7, set: 8, out: 9, nov: 10, dez: 11,
-};
-
-/** A loja manda a data como texto localizado ("12 nov. 2015", "Nov 12, 2015"…). */
-function parseStoreDate(text: string | undefined): Date | null {
-  if (!text) return null;
-  const pt = text.toLowerCase().match(/(\d{1,2})\s*(?:de\s*)?([a-zç]{3})[a-zç.]*\s*(?:de\s*)?(\d{4})/);
-  if (pt && pt[2] in PT_MONTHS) return new Date(Date.UTC(Number(pt[3]), PT_MONTHS[pt[2]], Number(pt[1])));
-  const parsed = new Date(text);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 // URLs de imagem ficam em ./assets (usadas também no client)

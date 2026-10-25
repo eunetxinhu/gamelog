@@ -3,9 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { uploadMedia } from "@/app/(app)/_actions/media";
-
-/** Lado maior depois de reduzir no navegador. */
-const MAX_SIDE = 1600;
+import { shrinkImage } from "@/lib/image-shrink";
 
 /**
  * Botão "Adicionar foto": reduz a imagem no navegador, envia e devolve a URL.
@@ -33,7 +31,7 @@ export function ImageAttach({
     setError(null);
     startTransition(async () => {
       try {
-        const blob = await shrink(file);
+        const blob = await shrinkImage(file);
         const data = new FormData();
         data.set("kind", kind);
         data.set("file", new File([blob], "foto.jpg", { type: "image/jpeg" }));
@@ -80,15 +78,4 @@ export function ImageAttach({
       {error && <p className="text-xs text-red-300">{error}</p>}
     </div>
   );
-}
-
-async function shrink(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob"))), "image/jpeg", 0.85));
 }

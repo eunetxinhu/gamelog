@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import { after } from "next/server";
 import Link from "next/link";
-import { Bell, Compass, Gamepad2, LogOut, Mail, Medal, Newspaper, Settings, ShieldAlert, Users } from "lucide-react";
+import { Bell, CalendarClock, Compass, Gamepad2, LogOut, Mail, Medal, Newspaper, Settings, ShieldAlert, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { unreadCount } from "@/lib/notifications";
 import { unreadMessages } from "@/lib/dm";
@@ -10,19 +11,27 @@ import { signOut } from "../(auth)/_actions/auth";
 import { SteamAutoSync } from "./_components/steam-auto-sync";
 import { MobileNav } from "./_components/mobile-nav";
 import { HeaderMenu } from "./_components/header-menu";
+import { shouldTouchLastSeen } from "@/lib/steam/schedule";
+import { upcomingWishlistCount } from "@/lib/releases";
 
 /** Sincronização automática só quando a última tem mais que isso. */
 const AUTO_SYNC_AFTER_MS = 30 * 60 * 1000;
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
-  const [unread, unreadDms, openReports] = user
+  // Visita registrada (no máx. 1x por hora): define a frequência do sync da Steam
+  if (user && shouldTouchLastSeen(user.lastSeenAt)) {
+    const id = user.id;
+    after(() => prisma.user.update({ where: { id }, data: { lastSeenAt: new Date() } }).then(() => undefined, () => undefined));
+  }
+  const [unread, unreadDms, openReports, releasesSoon] = user
     ? await Promise.all([
         unreadCount(user.id),
         unreadMessages(user.id),
         user.isAdmin ? prisma.report.count({ where: { status: "OPEN" } }) : 0,
+        upcomingWishlistCount(user.id),
       ])
-    : [0, 0, 0];
+    : [0, 0, 0, 0];
   const needsSync =
     Boolean(user?.steamId) &&
     (!user?.steamLastSyncAt || Date.now() - user.steamLastSyncAt.getTime() > AUTO_SYNC_AFTER_MS);
@@ -77,6 +86,16 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               <IconLink href="/notifications" label={unread ? `Notificações (${unread} novas)` : "Notificações"} count={unread}>
                 <Bell className="size-5 md:size-4" aria-hidden />
               </IconLink>
+              {/* No celular fica no menu ☰ */}
+              <span className="hidden md:flex">
+                <IconLink
+                  href="/lancamentos"
+                  label={releasesSoon ? `Lançamentos (${releasesSoon} da sua wishlist nos próximos 7 dias)` : "Lançamentos da wishlist"}
+                  count={releasesSoon}
+                >
+                  <CalendarClock className="size-4" aria-hidden />
+                </IconLink>
+              </span>
               <Link
                 href="/settings/account"
                 className="hidden rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 md:block"

@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { getCompleted } from "@/lib/profile-games";
 import { RARE_PERCENT } from "@/lib/rarity";
+import { achievementStats } from "@/lib/achievement-stats";
 
 // =============================================================================
 //  Estatísticas, XP, nível e selos. Tudo calculado na hora a partir dos dados
@@ -21,10 +22,17 @@ export type UserStats = {
   familyGames: number;
   accountDays: number;
   invites: number;
+  /** Conquistas desbloqueadas (Steam) */
+  achievements: number;
+  /** Jogos com 100% das conquistas */
+  perfectGames: number;
+  /** Taxa média de conclusão (%) e em quantos jogos ela foi calculada */
+  avgCompletion: number;
+  achievementGames: number;
 };
 
 export async function getUserStats(userId: string): Promise<UserStats> {
-  const [user, library, family, completed, reviews] = await Promise.all([
+  const [user, library, family, completed, reviews, achievementRows] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { createdAt: true, _count: { select: { followers: { where: { status: "ACCEPTED" } }, following: { where: { status: "ACCEPTED" } }, invitees: true } } },
@@ -33,8 +41,10 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     prisma.libraryEntry.count({ where: { userId, source: "FAMILY" } }),
     getCompleted(userId),
     prisma.gameLog.count({ where: { userId, review: { not: null } } }),
+    prisma.libraryEntry.findMany({ where: { userId, achievementsTotal: { gt: 0 } }, select: { achievementsUnlocked: true, achievementsTotal: true } }),
   ]);
   const platinums = completed.filter((c) => c.platinum);
+  const ach = achievementStats(achievementRows.map((r) => ({ unlocked: r.achievementsUnlocked, total: r.achievementsTotal })));
   return {
     games: library._count._all,
     hours: Math.round((library._sum.playtimeMinutes ?? 0) / 60),
@@ -48,6 +58,10 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     familyGames: family,
     accountDays: Math.floor((Date.now() - user.createdAt.getTime()) / 86_400_000),
     invites: user._count.invitees,
+    achievements: ach.unlocked,
+    perfectGames: ach.perfect,
+    avgCompletion: ach.avgCompletion,
+    achievementGames: ach.started,
   };
 }
 
@@ -62,6 +76,7 @@ export const XP_RULES = [
   { label: "A cada 10 h jogadas", xp: 5, of: (s: UserStats) => Math.floor(s.hours / 10) },
   { label: "Jogo na biblioteca", xp: 1, of: (s: UserStats) => s.games },
   { label: "Seguidor", xp: 5, of: (s: UserStats) => s.followers },
+  { label: "A cada 10 conquistas", xp: 2, of: (s: UserStats) => Math.floor(s.achievements / 10) },
 ] as const;
 
 export function xpFromStats(s: UserStats) {
@@ -100,6 +115,16 @@ export const BADGES: Badge[] = [
   { id: "platinum-hunter", name: "Caçador de platinas", description: "10 platinas", emoji: "🎯", value: (s) => s.platinums, target: 10 },
   { id: "platinum-legend", name: "Lenda das platinas", description: "25 platinas", emoji: "👑", value: (s) => s.platinums, target: 25 },
   { id: "rare-platinum", name: "Platina rara", description: `Uma platina que menos de ${RARE_PERCENT}% dos jogadores têm`, emoji: "💎", value: (s) => s.rarePlatinums, target: 1 },
+  { id: "achievement-hunter", name: "Caçador de conquistas", description: "1.000 conquistas desbloqueadas", emoji: "🏅", value: (s) => s.achievements, target: 1000 },
+  { id: "perfectionist", name: "Perfeccionista", description: "10 jogos com 100% das conquistas", emoji: "💯", value: (s) => s.perfectGames, target: 10 },
+  {
+    id: "completionist",
+    name: "Completista",
+    description: "Taxa média de conclusão de 70% (em pelo menos 10 jogos)",
+    emoji: "📈",
+    value: (s) => (s.achievementGames >= 10 ? s.avgCompletion : 0),
+    target: 70,
+  },
   { id: "finisher", name: "Finalizador", description: "Finalize 10 jogos", emoji: "🏁", value: (s) => s.completed, target: 10 },
   { id: "critic", name: "Crítico", description: "Escreva 10 reviews", emoji: "✍️", value: (s) => s.reviews, target: 10 },
   { id: "marathoner", name: "Maratonista", description: "1.000 horas jogadas", emoji: "⏱️", value: (s) => s.hours, target: 1000 },

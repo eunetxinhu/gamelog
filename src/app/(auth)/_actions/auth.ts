@@ -6,6 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { appUrl } from "@/lib/app-url";
 import { safeNext, type AuthFormState } from "./types";
 import { cleanRef } from "@/lib/referral";
+import { clientIpHash, hashSubject, rateLimit } from "@/lib/rate-limit";
+import { getCurrentUser } from "@/lib/auth";
 
 const USERNAME = /^[a-z0-9_]{3,30}$/;
 
@@ -43,6 +45,11 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
   const next = safeNext(formData.get("next"));
   if (!email || !password) return { error: "Preencha e-mail e senha.", email };
 
+  const ip = await rateLimit("login:ip", await clientIpHash());
+  if (!ip.ok) return { error: ip.message, email };
+  const byEmail = await rateLimit("login:email", hashSubject(email));
+  if (!byEmail.ok) return { error: byEmail.message, email };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: authMessage(error.code, error.message), email };
@@ -61,6 +68,9 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
     return { ...keep, error: "O nome de usuário precisa ter de 3 a 30 caracteres: letras minúsculas, números ou _." };
   }
   if (!email || password.length < 6) return { ...keep, error: "Informe um e-mail e uma senha com pelo menos 6 caracteres." };
+
+  const limit = await rateLimit("signup:ip", await clientIpHash());
+  if (!limit.ok) return { ...keep, error: limit.message };
 
   const taken = await prisma.user.findUnique({ where: { username }, select: { id: true } });
   if (taken) return { ...keep, error: "Esse nome de usuário já está em uso." };
@@ -97,6 +107,11 @@ export async function requestPasswordReset(_prev: AuthFormState, formData: FormD
   const email = String(formData.get("email") ?? "").trim();
   if (!email) return { error: "Informe seu e-mail." };
 
+  // Mesmo bloqueado, a resposta não pode revelar se o e-mail existe
+  const ip = await rateLimit("reset:ip", await clientIpHash());
+  const byEmail = ip.ok ? await rateLimit("reset:email", hashSubject(email)) : ip;
+  if (!byEmail.ok) return { email, error: byEmail.message };
+
   const supabase = await createSupabaseServerClient();
   const callback = new URL("/auth/callback", appUrl());
   callback.searchParams.set("next", "/reset-password");
@@ -120,6 +135,10 @@ export async function updatePassword(_prev: AuthFormState, formData: FormData): 
   const confirm = String(formData.get("confirm") ?? "");
   if (password.length < 6) return { error: "A senha precisa ter pelo menos 6 caracteres." };
   if (password !== confirm) return { error: "As senhas não são iguais." };
+
+  const user = await getCurrentUser();
+  const limit = await rateLimit("password:user", user?.id ?? (await clientIpHash()));
+  if (!limit.ok) return { error: limit.message };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.updateUser({ password });

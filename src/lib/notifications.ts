@@ -105,6 +105,11 @@ async function deliverPush(ids: string[]) {
           MENTION: { title: `${who} mencionou você`, body: game, url: `${post}#comentarios` },
           FOLLOW_REQUEST: { title: `${who} pediu para seguir você`, body: "Aprove ou recuse nas notificações", url: "/notifications" },
           INVITE_JOINED: { title: `${who} entrou pelo seu convite 🎉`, body: "Diga oi!", url: post },
+          RELEASE: {
+            title: `${game} lançou hoje! 🎉`,
+            body: "Estava na sua wishlist. Bora jogar?",
+            url: n.game ? `/games/${n.game.slug}` : "/lancamentos",
+          },
         };
         return sendPush([n.userId], { ...map[n.type], tag: n.type === "MESSAGE" ? `dm-${n.actorId}` : n.id });
       }),

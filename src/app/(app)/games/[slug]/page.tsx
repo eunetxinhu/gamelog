@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { after } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, Trophy } from "lucide-react";
@@ -20,6 +21,8 @@ import { Achievements } from "./_components/achievements";
 import { GameMedia, type Screenshot, type Trailer } from "./_components/media";
 import { GameNews } from "./_components/news";
 import { GameReviews, parseReviewFilter } from "./_components/reviews";
+import { TimeToBeat } from "./_components/time-to-beat";
+import { ensureRawgPlaytime, getGameTimes } from "@/lib/time-to-beat";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ reviews?: string }> };
 
@@ -37,7 +40,10 @@ export default async function GamePage({ params, searchParams }: Props) {
   const [game, viewer] = await Promise.all([getOrCreateGame(slug), getCurrentUser()]);
   if (!game) notFound();
 
-  const [myLog, wishlisted, ratingGroups, platinums, playingNow, activities] = await Promise.all([
+  // Média da RAWG preenchida depois da resposta (aparece na próxima visita)
+  if (!game.rawgPlaytimeCheckedAt) after(() => ensureRawgPlaytime(game));
+
+  const [myLog, wishlisted, ratingGroups, platinums, playingNow, activities, times, myLibrary] = await Promise.all([
     viewer ? prisma.gameLog.findUnique({ where: { userId_gameId: { userId: viewer.id, gameId: game.id } } }) : null,
     viewer ? prisma.wishlistItem.findUnique({ where: { userId_gameId: { userId: viewer.id, gameId: game.id } } }).then(Boolean) : false,
     prisma.gameLog.groupBy({ by: ["rating"], where: { gameId: game.id, rating: { not: null } }, _count: { _all: true } }),
@@ -49,6 +55,13 @@ export default async function GamePage({ params, searchParams }: Props) {
       select: { user: { select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } } },
     }),
     getActivities({ where: { gameId: game.id }, viewerId: viewer?.id ?? null, take: 20 }),
+    getGameTimes(game),
+    viewer
+      ? prisma.libraryEntry.findUnique({
+          where: { userId_gameId: { userId: viewer.id, gameId: game.id } },
+          select: { playtimeMinutes: true, platinumAt: true },
+        })
+      : null,
   ]);
 
   // Distribuição das estrelas e Nota GameLog (0–100)
@@ -164,6 +177,12 @@ export default async function GamePage({ params, searchParams }: Props) {
             </dl>
           )}
 
+          <TimeToBeat
+            times={times}
+            myMinutes={myLibrary?.playtimeMinutes ?? null}
+            finished={Boolean(myLibrary?.platinumAt) || myLog?.status === "COMPLETED" || myLog?.status === "PLATINUM"}
+          />
+
           {myLog && (
             <p className="text-sm text-zinc-400">
               No seu perfil como <strong className="text-zinc-200">{STATUS_LABEL[myLog.status]}</strong>.
@@ -185,7 +204,11 @@ export default async function GamePage({ params, searchParams }: Props) {
 
       {game.steamAppId && (
         <Suspense fallback={<div className="mt-10 h-40 animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900/40" />}>
-          <Achievements appId={game.steamAppId} steamId={viewer?.steamId ?? null} />
+          <Achievements
+            appId={game.steamAppId}
+            steamId={viewer?.steamId ?? null}
+            owner={viewer?.steamId ? { userId: viewer.id, gameId: game.id } : null}
+          />
         </Suspense>
       )}
 

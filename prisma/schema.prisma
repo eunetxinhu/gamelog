@@ -62,6 +62,7 @@ enum NotificationType {
   MENTION // te mencionou com @
   FOLLOW_REQUEST // pediu para seguir seu perfil privado
   INVITE_JOINED // alguém entrou pelo seu convite
+  RELEASE // jogo da sua wishlist lançou hoje (sem actor)
 }
 
 enum FollowStatus {
@@ -137,6 +138,13 @@ model User {
   // ---- Convite ----------------------------------------------------------------
   invitedById String? @map("invited_by_id") @db.Uuid
 
+  // ---- Sincronização escalonada da Steam ----------------------------------------
+  /// Última visita ao site (gravada no máximo 1x por hora). Junto com as horas das
+  /// últimas 2 semanas, define de quanto em quanto tempo o cron sincroniza a Steam.
+  lastSeenAt      DateTime? @map("last_seen_at")
+  /// Quando o cron deve sincronizar de novo (ver src/lib/steam/schedule.ts)
+  steamNextSyncAt DateTime? @map("steam_next_sync_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -167,6 +175,10 @@ model User {
   conversationsA    Conversation[]     @relation("ConversationA")
   conversationsB    Conversation[]     @relation("ConversationB")
 
+  @@index([steamNextSyncAt])
+  // Busca tolerante a erros de digitação (pg_trgm, ver src/lib/search.ts)
+  @@index([username(ops: raw("extensions.gin_trgm_ops"))], type: Gin, map: "users_username_trgm_idx")
+  @@index([displayName(ops: raw("extensions.gin_trgm_ops"))], type: Gin, map: "users_display_name_trgm_idx")
   @@map("users")
 }
 
@@ -175,16 +187,21 @@ model User {
 // -----------------------------------------------------------------------------
 
 model Game {
-  id          String    @id @default(cuid())
+  id              String    @id @default(cuid())
   /// Slug interno da rota /games/[slug]. Jogos vindos só da Steam começam como
   /// "steam-<appid>" até serem enriquecidos com dados da RAWG.
-  slug        String    @unique
-  title       String
-  coverUrl    String?   @map("cover_url")
-  summary     String?
-  releaseDate DateTime? @map("release_date") @db.Date
-  genres      String[]  @default([])
-  platforms   String[]  @default([])
+  slug            String    @unique
+  title           String
+  coverUrl        String?   @map("cover_url")
+  summary         String?
+  /// Só quando a loja informa o dia exato (ver src/lib/steam/dates.ts)
+  releaseDate     DateTime? @map("release_date") @db.Date
+  /// Ainda não lançou (loja da Steam "coming_soon" / RAWG "tba")
+  comingSoon      Boolean   @default(false) @map("coming_soon")
+  /// Data como a loja escreve quando não há dia exato ("1º tri. 2027", "Em breve")
+  releaseDateText String?   @map("release_date_text")
+  genres          String[]  @default([])
+  platforms       String[]  @default([])
 
   // Ids externos (cada um opcional, mas único quando presente)
   rawgId     Int? @unique @map("rawg_id")
@@ -211,6 +228,11 @@ model Game {
   platinumRarity          Float?    @map("platinum_rarity")
   platinumRarityCheckedAt DateTime? @map("platinum_rarity_checked_at")
 
+  /// Média de horas jogadas na Steam segundo a RAWG (referência para "tempo para zerar"
+  /// quando a comunidade ainda não tem dados; ver src/lib/time-to-beat.ts)
+  rawgPlaytimeHours     Int?      @map("rawg_playtime_hours") @db.SmallInt
+  rawgPlaytimeCheckedAt DateTime? @map("rawg_playtime_checked_at")
+
   /// Última vez que os metadados vieram da API externa (para revalidar cache).
   syncedAt  DateTime? @map("synced_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -231,6 +253,8 @@ model Game {
   priceCheckedAt  DateTime? @map("price_checked_at")
 
   @@index([title])
+  @@index([releaseDate])
+  @@index([title(ops: raw("extensions.gin_trgm_ops"))], type: Gin, map: "games_title_trgm_idx")
   @@map("games")
 }
 
@@ -293,6 +317,7 @@ model LibraryEntry {
 
   @@id([userId, gameId])
   @@index([userId, playtimeMinutes(sort: Desc)]) // "mais jogados" no perfil
+  @@index([gameId]) // "em alta" e tempo para zerar (por jogo)
   @@map("library_entries")
 }
 
@@ -310,8 +335,10 @@ model Activity {
   rating          Int?          @db.SmallInt
   review          String?
   containsSpoiler Boolean       @default(false) @map("contains_spoiler")
-  /// Print anexado (Supabase Storage)
+  /// Primeira foto (Supabase Storage). Mantida para compatibilidade: a lista completa é `images`
   imageUrl        String?       @map("image_url")
+  /// Fotos da publicação (até 4), na ordem escolhida
+  images          String[]      @default([])
   /// Dados do tipo (ex.: conquista rara: { apiName, name, icon, percent })
   meta            Json?
   createdAt       DateTime      @default(now()) @map("created_at")
@@ -389,11 +416,13 @@ model Notification {
 // -----------------------------------------------------------------------------
 
 model WishlistItem {
-  userId        String   @map("user_id") @db.Uuid
-  gameId        String   @map("game_id")
-  createdAt     DateTime @default(now()) @map("created_at")
+  userId            String    @map("user_id") @db.Uuid
+  gameId            String    @map("game_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
   /// Preço (centavos) do último aviso de promoção; null = avisar na próxima promoção
-  notifiedPrice Int?     @map("notified_price")
+  notifiedPrice     Int?      @map("notified_price")
+  /// Já avisou que o jogo lançou
+  releaseNotifiedAt DateTime? @map("release_notified_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
@@ -578,4 +607,19 @@ model Report {
 
   @@index([status, createdAt])
   @@map("reports")
+}
+
+// -----------------------------------------------------------------------------
+//  Limite de requisições (janela fixa, ver src/lib/rate-limit.ts)
+// -----------------------------------------------------------------------------
+
+model RateLimit {
+  /// "<ação>:<janela em s>:<usuário ou IP com hash>"
+  key         String   @db.VarChar(160)
+  windowStart DateTime @map("window_start")
+  count       Int      @default(1)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+  @@map("rate_limits")
 }

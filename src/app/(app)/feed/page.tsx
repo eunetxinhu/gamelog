@@ -2,17 +2,40 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus, Search, Users } from "lucide-react";
+import { Camera, Search, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities, PAGE_SIZE } from "@/lib/activity";
 import { blockedIds } from "@/lib/privacy";
 import { ActivityCard } from "@/components/activity-card";
 import { Avatar } from "@/components/avatar";
+import { PhotoComposer } from "./_components/photo-composer";
+import type { GameOption } from "./_actions/photo-post";
 
 export const metadata: Metadata = { title: "Feed · GameLog" };
 
-type Props = { searchParams: Promise<{ tab?: string; before?: string; senha?: string }> };
+type Props = { searchParams: Promise<{ tab?: string; before?: string; senha?: string; postar?: string }> };
+
+const quickGameSelect = { slug: true, title: true, coverUrl: true, steamAppId: true, releaseDate: true } as const;
+
+/** Atalhos do seletor de jogo do post: jogando na Steam + registrados por último. */
+async function quickGamesFor(userId: string): Promise<GameOption[]> {
+  const [recent, logs] = await Promise.all([
+    prisma.libraryEntry.findMany({
+      where: { userId, playtime2WeeksMinutes: { gt: 0 } },
+      orderBy: { playtime2WeeksMinutes: "desc" },
+      take: 6,
+      select: { game: { select: quickGameSelect } },
+    }),
+    prisma.gameLog.findMany({ where: { userId }, orderBy: { updatedAt: "desc" }, take: 8, select: { game: { select: quickGameSelect } } }),
+  ]);
+  const seen = new Set<string>();
+  return [...recent, ...logs]
+    .map(({ game }) => game)
+    .filter((g) => !seen.has(g.slug) && seen.add(g.slug))
+    .slice(0, 8)
+    .map(({ releaseDate, ...g }) => ({ ...g, year: releaseDate?.getUTCFullYear() ?? null }));
+}
 
 export default async function FeedPage({ searchParams }: Props) {
   const viewer = await getCurrentUser();
@@ -28,7 +51,7 @@ export default async function FeedPage({ searchParams }: Props) {
   const tab = query.tab === "global" || (query.tab !== "following" && followingIds.length === 0) ? "global" : "following";
   const before = query.before && !Number.isNaN(Date.parse(query.before)) ? new Date(query.before) : undefined;
 
-  const [items, suggestions] = await Promise.all([
+  const [items, suggestions, quickGames] = await Promise.all([
     getActivities({
       where: tab === "following" ? { userId: { in: [...followingIds, viewer.id] } } : undefined,
       viewerId: viewer.id,
@@ -41,6 +64,7 @@ export default async function FeedPage({ searchParams }: Props) {
       take: 5,
       select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true },
     }),
+    viewer.bannedAt ? [] : quickGamesFor(viewer.id),
   ]);
 
   const olderHref =
@@ -48,20 +72,25 @@ export default async function FeedPage({ searchParams }: Props) {
 
   return (
     <main className="mx-auto grid max-w-5xl gap-8 px-4 py-4 sm:py-8 lg:grid-cols-[1fr_280px]">
-      {/* Celular: botão flutuante de compartilhar, acima da barra inferior */}
-      <Link
-        href="/games"
-        aria-label="Compartilhar um jogo"
-        className="fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-20 flex size-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg shadow-sky-900/40 transition active:scale-95 md:hidden"
-      >
-        <Plus className="size-7" aria-hidden />
-      </Link>
+      {/* Celular: botão flutuante abre o post de fotos, acima da barra inferior */}
+      {!viewer.bannedAt && (
+        <Link
+          href={`/feed?tab=${tab}&postar=1#postar`}
+          scroll={false}
+          aria-label="Compartilhar fotos de um jogo"
+          className="fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-20 flex size-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg shadow-sky-900/40 transition active:scale-95 md:hidden"
+        >
+          <Camera className="size-6" aria-hidden />
+        </Link>
+      )}
       <div className="min-w-0">
         {query.senha === "alterada" && (
           <p role="status" className="mb-5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.07] p-3 text-sm text-emerald-100">
             Senha alterada com sucesso.
           </p>
         )}
+        {!viewer.bannedAt && <PhotoComposer quickGames={quickGames} startOpen={query.postar === "1"} />}
+
         <nav className="mb-4 flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1 sm:mb-5" aria-label="Feed">
           <Tab href="/feed?tab=following" active={tab === "following"}>
             Seguindo

@@ -56,14 +56,32 @@ export default async function GamesPage({ searchParams }: Props) {
 // =============================================================================
 
 async function SearchResults({ q }: { q: string }) {
-  const results = await searchGames(q);
+  const { results, didYouMean } = await searchGames(q);
   if (results.length === 0) return <p className="text-sm text-zinc-500">Nenhum jogo encontrado para “{q}”.</p>;
   return (
-    <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
-      {results.map((r) => (
-        <CoverTile key={r.slug} slug={r.slug} title={r.title} coverUrl={r.coverUrl} steamAppId={r.steamAppId} sub={r.year ?? r.source} />
-      ))}
-    </ul>
+    <>
+      {didYouMean && (
+        <p className="mb-4 text-sm text-zinc-400">
+          Você quis dizer{" "}
+          <Link href={`/games?q=${encodeURIComponent(didYouMean)}`} className="font-medium text-sky-400 hover:underline">
+            {didYouMean}
+          </Link>
+          ?
+        </p>
+      )}
+      <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
+        {results.map((r) => (
+          <CoverTile
+            key={r.slug}
+            slug={r.slug}
+            title={r.title}
+            coverUrl={r.coverUrl}
+            steamAppId={r.steamAppId}
+            sub={r.source === "GameLog" ? (r.year ?? "No GameLog") : (r.year ?? r.source)}
+          />
+        ))}
+      </ul>
+    </>
   );
 }
 

@@ -19,6 +19,8 @@ export default async function LoginPage({ searchParams }: Props) {
     confirm: "O link de confirmação é inválido ou expirou. Entre ou cadastre-se de novo.",
     reset: "O link para criar uma nova senha é inválido ou expirou. Peça outro em “Esqueci a senha” e abra-o neste navegador.",
     steam: "Não conseguimos entrar com a Steam agora. Tente de novo ou entre com e-mail.",
+    limite: "Muitas tentativas de entrar com a Steam a partir desta rede. Aguarde um pouco e tente de novo.",
+    "conta-excluida": "Sua conta foi excluída. Obrigado por ter jogado com a gente.",
   };
   const notice = error ? NOTICES[error] : undefined;
 

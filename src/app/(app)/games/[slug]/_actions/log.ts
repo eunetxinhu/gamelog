@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { ACTIVITY_FOR_STATUS, recordActivity } from "@/lib/activity";
 import { isOurImage } from "@/lib/uploads";
 import { notifyMentions } from "@/lib/mention-notify";
+import { rateLimit } from "@/lib/rate-limit";
 import type { LogStatus } from "@/generated/prisma/enums";
 
 const STATUSES: LogStatus[] = ["PLAYING", "COMPLETED", "PLATINUM", "DROPPED", "BACKLOG"];
@@ -31,6 +32,8 @@ export async function saveGameLog(input: SaveLogInput): Promise<SaveLogResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, message: "Faça login para registrar jogos." };
   if (user.bannedAt) return { ok: false, message: "Sua conta está suspensa." };
+  const limit = await rateLimit("game-log", user.id);
+  if (!limit.ok) return { ok: false, message: limit.message };
   const imageUrl = isOurImage(input.imageUrl) ? input.imageUrl : null;
 
   if (!STATUSES.includes(input.status)) return { ok: false, message: "Status inválido." };

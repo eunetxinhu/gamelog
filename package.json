@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node scripts/migrate-production.mjs && prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "postinstall": "prisma generate"
@@ -35,6 +37,7 @@
     "dotenv": "^17",
     "prisma": "7.10.1",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.9"
+    "typescript": "^5.9",
+    "vitest": "5.0.5"
   }
 }

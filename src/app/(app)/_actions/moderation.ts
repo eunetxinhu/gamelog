@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import type { DmPolicy, ReportTarget } from "@/generated/prisma/enums";
 import { removeImage } from "@/lib/uploads";
 import { REPORT_REASONS } from "@/lib/report-reasons";
+import { rateLimit } from "@/lib/rate-limit";
 
 /** Limite de denúncias por pessoa por dia (evita uso como arma). */
 const REPORTS_PER_DAY = 20;
@@ -58,6 +59,8 @@ export async function reportContent(input: {
   const user = await getCurrentUser();
   if (!user) return { ok: false, message: "Faça login para denunciar." };
   if (!(REPORT_REASONS as readonly string[]).includes(input.reason)) return { ok: false, message: "Escolha um motivo." };
+  const limit = await rateLimit("report", user.id);
+  if (!limit.ok) return { ok: false, message: limit.message };
 
   const today = await prisma.report.count({ where: { reporterId: user.id, createdAt: { gte: new Date(Date.now() - 86_400_000) } } });
   if (today >= REPORTS_PER_DAY) return { ok: false, message: "Você já fez muitas denúncias hoje. Tente amanhã." };
@@ -133,9 +136,9 @@ async function requireAdmin() {
 /** Apaga o conteúdo denunciado (publicação, comentário, post de clube ou mensagem). */
 async function removeTarget(type: ReportTarget, id: string) {
   if (type === "ACTIVITY") {
-    const a = await prisma.activity.findUnique({ where: { id }, select: { imageUrl: true } });
+    const a = await prisma.activity.findUnique({ where: { id }, select: { imageUrl: true, images: true } });
     await prisma.activity.deleteMany({ where: { id } });
-    await removeImage(a?.imageUrl);
+    if (a) await Promise.all([...new Set([a.imageUrl, ...a.images])].map((url) => removeImage(url)));
   } else if (type === "COMMENT") await prisma.comment.deleteMany({ where: { id } });
   else if (type === "CLUB_POST") {
     const p = await prisma.clubPost.findUnique({ where: { id }, select: { imageUrl: true } });

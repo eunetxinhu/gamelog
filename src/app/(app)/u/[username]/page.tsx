@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bookmark, CalendarDays, ChevronRight, GitCompareArrows, Lock, Settings, Target, Trophy, UserPlus } from "lucide-react";
+import { Bookmark, CalendarDays, ChevronRight, GitCompareArrows, Lock, Medal, Settings, Target, Trophy, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities } from "@/lib/activity";
 import { formatPlaytime } from "@/lib/format";
-import { getNearPlatinum, getPlatinums, getPlaying } from "@/lib/profile-games";
+import { getAchievementSummary, getNearPlatinum, getPlatinums, getPlaying } from "@/lib/profile-games";
 import { formatRarity, RARE_PERCENT } from "@/lib/rarity";
 import { ActivityCard } from "@/components/activity-card";
 import { Avatar } from "@/components/avatar";
@@ -145,7 +145,7 @@ export default async function ProfilePage({ params }: Props) {
 
 /** Tudo que só aparece para quem pode ver o perfil. */
 async function loadProfileContent(profileId: string, viewerId: string | null) {
-  const [library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist] = await Promise.all([
+  const [library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements] = await Promise.all([
     prisma.libraryEntry.aggregate({ where: { userId: profileId }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
     prisma.gameLog.findMany({ where: { userId: profileId, status: "COMPLETED" }, select: { gameId: true } }),
     getPlatinums(profileId),
@@ -161,10 +161,11 @@ async function loadProfileContent(profileId: string, viewerId: string | null) {
     prisma.favoriteGame.findMany({ where: { userId: profileId }, orderBy: { position: "asc" }, select: { game: { select: gameSelect } } }),
     getProgression(profileId),
     prisma.wishlistItem.findMany({ where: { userId: profileId }, orderBy: { createdAt: "desc" }, take: 6, select: { game: { select: gameSelect } } }),
+    getAchievementSummary(profileId),
   ]);
   // Finalizados inclui as platinas (platinar implica ter terminado)
   const completedCount = new Set([...completedLogs.map((l) => l.gameId), ...platinumList.map((p) => p.game.id)]).size;
-  return { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, viewerId };
+  return { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, viewerId };
 }
 
 function LockedNotice({ text }: { text: string }) {
@@ -187,7 +188,7 @@ function ProfileContent({
   isMe: boolean;
   gamesHref: (aba: string) => string;
 }) {
-  const { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, viewerId } = data;
+  const { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, viewerId } = data;
   const earnedBadges = progression.badges.filter((b) => b.earned);
 
   return (
@@ -250,6 +251,27 @@ function ProfileContent({
         <Stat href={gamesHref("finalizados")} label="Finalizados" value={completedCount.toLocaleString("pt-BR")} />
         <Stat href={gamesHref("platinas")} label="Platinas" value={platinumList.length.toLocaleString("pt-BR")} highlight />
       </div>
+
+      {achievements.games > 0 && (
+        <Link
+          href={gamesHref("conquistas")}
+          className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-600"
+        >
+          <Medal className="size-4 text-violet-400" aria-hidden />
+          <span>
+            <strong className="text-zinc-50">{achievements.unlocked.toLocaleString("pt-BR")}</strong> conquistas
+          </span>
+          <span>
+            taxa média <strong className="text-zinc-50">{achievements.avgCompletion}%</strong>
+          </span>
+          {achievements.perfect > 0 && (
+            <span>
+              <strong className="text-violet-300">{achievements.perfect}</strong> {achievements.perfect === 1 ? "jogo" : "jogos"} 100%
+            </span>
+          )}
+          <ChevronRight className="ml-auto size-4 shrink-0 text-zinc-500" aria-hidden />
+        </Link>
+      )}
 
       <div className="mt-8 grid gap-8 sm:mt-10 sm:gap-10 lg:grid-cols-[1fr_320px]">
         {/* ---- Atividade (no celular vem depois das estantes) ---------------- */}

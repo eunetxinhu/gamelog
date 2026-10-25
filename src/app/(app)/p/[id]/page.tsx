@@ -15,7 +15,7 @@ const VERB = {
   DROPPED: "dropou",
   REVIEW: "avaliou",
   RARE_ACHIEVEMENT: "desbloqueou uma conquista rara em",
-  SCREENSHOT: "compartilhou um print de",
+  SCREENSHOT: "compartilhou fotos de",
 } as const;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

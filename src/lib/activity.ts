@@ -58,7 +58,7 @@ export async function recordActivity(tx: Prisma.TransactionClient, input: Record
           rating: input.rating ?? null,
           review: input.review ?? null,
           containsSpoiler: input.containsSpoiler ?? false,
-          ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
+          ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl, images: input.imageUrl ? [input.imageUrl] : [] } : {}),
         },
       });
       return null;
@@ -76,6 +76,7 @@ export async function recordActivity(tx: Prisma.TransactionClient, input: Record
       containsSpoiler: input.containsSpoiler ?? false,
       createdAt: input.createdAt,
       imageUrl: input.imageUrl ?? null,
+      images: input.imageUrl ? [input.imageUrl] : [],
       meta: input.meta,
     },
     select: { id: true },
@@ -97,6 +98,8 @@ export type FeedItem = {
   containsSpoiler: boolean;
   createdAt: Date;
   imageUrl: string | null;
+  /** Fotos da publicação (inclui `imageUrl`, que é a primeira) */
+  images: string[];
   meta: { apiName?: string; name?: string; description?: string; icon?: string; percent?: number } | null;
   user: { id: string; username: string; displayName: string | null; avatarUrl: string | null };
   game: { slug: string; title: string; coverUrl: string | null; steamAppId: number | null; platinumRarity: number | null };
@@ -148,6 +151,7 @@ export async function getActivities(opts: {
     containsSpoiler: r.containsSpoiler,
     createdAt: r.createdAt,
     imageUrl: r.imageUrl,
+    images: r.images.length ? r.images : r.imageUrl ? [r.imageUrl] : [],
     meta: (r.meta as FeedItem["meta"]) ?? null,
     user: {
       id: r.user.id,

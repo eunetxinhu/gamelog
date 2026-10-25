@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { isOurImage, removeImage } from "@/lib/uploads";
+import { rateLimit } from "@/lib/rate-limit";
 
 export type ClubResult = { ok: true; slug?: string } | { ok: false; message: string };
 
@@ -27,6 +28,8 @@ export async function createClub(input: { name: string; description: string; ima
 
   const name = input.name.trim().slice(0, 60);
   if (name.length < 3) return { ok: false, message: "O nome precisa ter pelo menos 3 caracteres." };
+  const limit = await rateLimit("club-create", user.id);
+  if (!limit.ok) return { ok: false, message: limit.message };
   const owned = await prisma.club.count({ where: { ownerId: user.id } });
   if (owned >= 10) return { ok: false, message: "Você já criou o máximo de 10 clubes." };
 
@@ -85,6 +88,8 @@ export async function postToClub(clubId: string, rawBody: string, rawImage: stri
   const body = rawBody.trim().slice(0, 2000);
   const imageUrl = isOurImage(rawImage) ? rawImage : null;
   if (!body && !imageUrl) return { ok: false, message: "Escreva alguma coisa." };
+  const limit = await rateLimit("club-post", user.id);
+  if (!limit.ok) return { ok: false, message: limit.message };
 
   await prisma.clubPost.create({ data: { clubId, userId: user.id, body, imageUrl } });
   revalidatePath(`/clubes/${member.club.slug}`);

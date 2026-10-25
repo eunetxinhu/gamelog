@@ -19,6 +19,8 @@ import {
   type SteamOwnedGame,
 } from "@/lib/steam/api";
 import type { SteamSyncError, SteamSyncResult } from "@/app/(app)/settings/profile/_actions/types";
+import { detectSteamPrivacy } from "@/lib/steam/privacy";
+import { nextSyncAt } from "@/lib/steam/schedule";
 
 /** Intervalo mínimo entre sincronizações do mesmo usuário. */
 const SYNC_COOLDOWN_SECONDS = 5 * 60;
@@ -99,7 +101,7 @@ function fromFetchError(e: SteamFetchError): SteamSyncResult {
   }
 }
 
-export type SyncUser = Pick<User, "id" | "username" | "steamId" | "steamLastSyncAt">;
+export type SyncUser = Pick<User, "id" | "username" | "steamId" | "steamLastSyncAt" | "lastSeenAt">;
 
 /**
  * Sincroniza a biblioteca Steam de um usuário. Usada pelo botão / sincronização
@@ -153,15 +155,16 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
     // Perfil com "Detalhes dos jogos" privados: a Steam devolve 200 OK com
     // `{ "response": {} }` → `games` é undefined. Isso NÃO é erro de rede nem
     // biblioteca vazia; é configuração de privacidade e o usuário pode resolver.
-    // (Biblioteca realmente vazia vem como `{ game_count: 0 }`.)
-    if (owned.games === undefined && owned.game_count !== 0) {
-      const profileIsPrivate = summary.communityvisibilitystate !== 3;
+    // (Biblioteca realmente vazia vem como `{ game_count: 0 }`. Ver lib/steam/privacy.ts)
+    const privacy = detectSteamPrivacy(owned, summary.communityvisibilitystate);
+    if (privacy.private) {
       return fail({
         code: "STEAM_PRIVATE",
-        privacyReason: profileIsPrivate ? "PROFILE" : "GAME_DETAILS",
-        message: profileIsPrivate
-          ? "Seu perfil Steam está privado, então não conseguimos ver seus jogos."
-          : "Seu perfil Steam é público, mas os \"Detalhes dos jogos\" estão privados.",
+        privacyReason: privacy.reason,
+        message:
+          privacy.reason === "PROFILE"
+            ? "Seu perfil Steam está privado, então não conseguimos ver seus jogos."
+            : "Seu perfil Steam é público, mas os \"Detalhes dos jogos\" estão privados.",
       });
     }
 
@@ -229,18 +232,24 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
     // Até ACHIEVEMENT_CHECKS_PER_SYNC jogos por vez: primeiro os jogados nas últimas
     // 2 semanas, depois os nunca checados. A biblioteca inteira é coberta em algumas sincronizações.
     // Jogos da família entram mesmo sem horas conhecidas (o registro no GameLog já indica que jogou).
+    // Também entra quem foi jogado depois da última checagem (ex.: ficou mais de 2 semanas sem sincronizar).
     const candidates = allGames
       .filter((g) => ((g.playtime_forever ?? 0) > 0 || familyIds.has(g.appid)) && !prevByApp.get(g.appid)?.platinumAt)
-      .map((g) => ({
-        g,
-        recent: minutes2w(g) > 0,
-        family: familyIds.has(g.appid),
-        checked: Boolean(prevByApp.get(g.appid)?.achievementsCheckedAt),
-      }))
-      .filter((c) => c.recent || !c.checked)
+      .map((g) => {
+        const checkedAt = prevByApp.get(g.appid)?.achievementsCheckedAt ?? null;
+        return {
+          g,
+          recent: minutes2w(g) > 0,
+          family: familyIds.has(g.appid),
+          checked: Boolean(checkedAt),
+          playedSinceCheck: Boolean(checkedAt && g.rtime_last_played && g.rtime_last_played * 1000 > checkedAt.getTime()),
+        };
+      })
+      .filter((c) => c.recent || !c.checked || c.playedSinceCheck)
       .sort(
         (a, b) =>
           Number(b.recent) - Number(a.recent) ||
+          Number(b.playedSinceCheck) - Number(a.playedSinceCheck) ||
           Number(b.family) - Number(a.family) ||
           b.g.playtime_forever - a.g.playtime_forever,
       )
@@ -340,7 +349,12 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
           }
         }
 
-        await tx.user.update({ where: { id: user.id }, data: { steamLastSyncAt: syncedAt } });
+        // Próxima sincronização do cron conforme a atividade (ver lib/steam/schedule.ts)
+        const minutesLast2Weeks = allGames.reduce((acc, g) => acc + minutes2w(g), 0);
+        await tx.user.update({
+          where: { id: user.id },
+          data: { steamLastSyncAt: syncedAt, steamNextSyncAt: nextSyncAt({ minutesLast2Weeks, lastSeenAt: user.lastSeenAt, now: syncedAt }) },
+        });
 
         return {
           newGames: inserted,

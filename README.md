@@ -76,6 +76,20 @@ gamelog/
 
 Convenção: `_actions` e `_components` (pastas com `_`) são privadas da rota e não viram URL. Server Actions moram ao lado da tela que as usa.
 
+### Onde fica cada funcionalidade nova
+
+| Funcionalidade | Arquivos principais |
+| --- | --- |
+| Post de fotos no feed (do aparelho, sempre com jogo) | `feed/_components/photo-composer.tsx`, `feed/_actions/photo-post.ts`, `lib/photo-post.ts`, `components/photo-grid.tsx` |
+| Tempo para zerar (jogo e backlog) | `lib/time-to-beat.ts`, `games/[slug]/_components/time-to-beat.tsx`, aba Backlog |
+| Progresso de conquistas por jogo | `lib/achievement-stats.ts`, aba `/u/<usuario>/jogos?aba=conquistas`, selos em `lib/progression.ts` |
+| Calendário de lançamentos + push no dia | `lib/releases.ts`, `lib/release-calendar.ts`, `(app)/lancamentos/page.tsx` |
+| Card do perfil para incorporar | `u/[username]/card.png/route.tsx`, Configurações → Perfil |
+| Exportar dados e excluir conta (LGPD) | `lib/account-data.ts`, `api/conta/exportar/route.ts`, `settings/dados/` |
+| Limite de requisições | `lib/rate-limit.ts` (tabela `rate_limits`), regras em `lib/rate-limit-rules.ts` |
+| Busca tolerante a erros | `lib/search.ts` (pg_trgm) |
+| Sincronização da Steam por atividade | `lib/steam/schedule.ts`, `api/cron/steam-sync`, `.github/workflows/steam-sync.yml` |
+
 ---
 
 ## 2. Setup
@@ -100,7 +114,8 @@ npm run dev
 2. Na Vercel: **Add New → Project**, importe o repositório. O build já é `prisma generate && next build`.
 3. Em **Settings → Environment Variables**, cadastre as mesmas variáveis do `.env`, trocando `APP_URL` pelo domínio da Vercel (ex.: `https://gamelog.vercel.app`, sem barra no final).
 4. No Supabase, em **Authentication → URL Configuration**: Site URL = o domínio da Vercel e, em Redirect URLs, `https://SEU-DOMINIO/auth/callback`.
-5. Migrations continuam rodando da sua máquina (`npx prisma migrate deploy`), apontando para o mesmo banco.
+5. Migrations rodam sozinhas no build de **produção** (`scripts/migrate-production.mjs` → `prisma migrate deploy`). Para isso, cadastre `DIRECT_URL` na Vercel (conexão direta do Supabase, porta 5432). Prévias de PR e o CI não mexem no banco. Se a migration falhar, o build falha e a versão anterior continua no ar.
+   - Sem acesso a uma máquina, também dá para colar o `migration.sql` no SQL Editor do Supabase, desde que a migration seja registrada em `_prisma_migrations` (senão o próximo deploy tenta aplicar de novo).
 
 O "Entrar com Steam" passa a voltar para `APP_URL/api/steam/callback` sozinho, e os cards de compartilhamento usam `APP_URL` como base.
 
@@ -108,9 +123,27 @@ O "Entrar com Steam" passa a voltar para `APP_URL/api/steam/callback` sozinho, e
 
 Precisa da chave secreta do Supabase em `SUPABASE_SECRET_KEY` (Project Settings → API Keys → Secret keys → `sb_secret_…`), no `.env` e na Vercel. Sem ela o botão "Entrar com Steam" some do login e a Steam só pode ser vinculada a uma conta de e-mail. Contas criadas pela Steam usam um e-mail interno (`steam-<id>@steam-login.gamelog.app`) e não podem desvincular a Steam (é o único login delas).
 
-### Cron diário
+### Crons
 
-`vercel.json` agenda `/api/cron/steam-sync` todo dia às 9h UTC (plano Hobby: 1x/dia). Cadastre `CRON_SECRET` na Vercel (o mesmo valor do `.env`); ela envia `Authorization: Bearer <CRON_SECRET>` sozinha.
+`vercel.json` agenda duas rotas (plano Hobby: cada uma 1x por dia). Cadastre `CRON_SECRET` na Vercel; ela envia `Authorization: Bearer <CRON_SECRET>` sozinha.
+
+- `/api/cron/daily` (9h UTC = 6h de Brasília): promoções da wishlist, datas de lançamento conferidas na loja, aviso "lançou hoje", resumo semanal, tempo para zerar (RAWG) e limpeza dos limites de requisição.
+- `/api/cron/steam-sync`: sincroniza só quem está "vencido" (`users.steam_next_sync_at`). Quem jogou nas últimas 2 semanas ou abriu o site há pouco: a cada 3 h; normal: 1x por dia; parado há um mês: a cada 3 dias (`src/lib/steam/schedule.ts`).
+
+Para o sync de 3 em 3 horas funcionar no Hobby, o workflow `.github/workflows/steam-sync.yml` chama a mesma rota de hora em hora. Cadastre no GitHub (**Settings → Secrets and variables → Actions**) os segredos `APP_URL` e `CRON_SECRET`. Sem eles o workflow só avisa e não faz nada. (O GitHub pausa workflows agendados em repositórios sem commits por 60 dias.)
+
+### Testes e CI
+
+```bash
+npm test            # vitest: regras puras (limites, datas, privacidade da Steam, calendário, fotos…)
+npm run typecheck
+```
+
+`.github/workflows/ci.yml` roda `prisma validate`, tipos, testes e `next build` em todo push e pull request.
+
+### Busca (pg_trgm)
+
+A migration `fotos_lancamentos_busca` ativa a extensão `pg_trgm` no schema `extensions` (padrão do Supabase) e cria índices GIN em `games.title`, `users.username` e `users.display_name`. A busca de jogos e de pessoas tolera erro de digitação ("zelda breth" acha Breath of the Wild) e mostra "Você quis dizer…?". Se a extensão já estava ativada no schema `public`, a migration move ela para `extensions`.
 
 ### E-mails (Resend + Supabase)
 
