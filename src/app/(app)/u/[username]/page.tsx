@@ -74,8 +74,9 @@ export default async function ProfilePage({ params }: Props) {
   return (
     <main className="mx-auto max-w-5xl px-4 py-4 sm:py-8">
       {/* ---- Cabeçalho ------------------------------------------------------ */}
-      <header className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
-        <div className="h-32 bg-gradient-to-br from-brand-900/60 via-zinc-900 to-ember-900/60 sm:h-44">
+      {/* Sem overflow-hidden aqui: o menu ⋯ abre para fora do cabeçalho. Só a capa é recortada. */}
+      <header className="relative z-10 rounded-2xl border border-zinc-800 bg-zinc-900/60">
+        <div className="h-32 overflow-hidden rounded-t-2xl bg-gradient-to-br from-brand-900/60 via-zinc-900 to-ember-900/60 sm:h-44">
           {profile.bannerUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.bannerUrl} alt="" className="size-full object-cover" />
