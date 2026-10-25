@@ -139,6 +139,23 @@ export async function getPlayerAchievements(steamId: string, appId: number): Pro
   }
 }
 
+/**
+ * SteamIDs dos amigos. `null` quando a lista de amigos é privada (a Steam responde 401)
+ * ou a Steam falhou. Cache de 1 hora.
+ */
+export async function getFriendList(steamId: string): Promise<string[] | null> {
+  try {
+    const url = new URL(`${STEAM_API}/ISteamUser/GetFriendList/v1/`);
+    url.search = new URLSearchParams({ key: apiKey(), steamid: steamId, relationship: "friend" }).toString();
+    const res = await fetch(url, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { friendslist?: { friends?: { steamid: string }[] } };
+    return body.friendslist?.friends?.map((f) => f.steamid) ?? [];
+  } catch {
+    return null;
+  }
+}
+
 // ---- Conquistas com nome, ícone e raridade ------------------------------------
 
 export type AchievementDetail = {

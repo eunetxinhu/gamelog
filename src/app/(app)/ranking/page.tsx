@@ -26,7 +26,7 @@ export default async function RankingPage({ searchParams }: Props) {
   const viewer = await getCurrentUser();
 
   const followingIds = viewer
-    ? (await prisma.follow.findMany({ where: { followerId: viewer.id }, select: { followingId: true } })).map((f) => f.followingId)
+    ? (await prisma.follow.findMany({ where: { followerId: viewer.id, status: "ACCEPTED" }, select: { followingId: true } })).map((f) => f.followingId)
     : [];
   const scope = viewer && query.escopo !== "global" ? "amigos" : "global";
 
@@ -36,6 +36,7 @@ export default async function RankingPage({ searchParams }: Props) {
       ? [viewer!.id, ...followingIds]
       : (
           await prisma.user.findMany({
+            where: { bannedAt: null, isPrivate: false },
             orderBy: [{ library: { _count: "desc" } }, { activities: { _count: "desc" } }],
             take: GLOBAL_POOL,
             select: { id: true },

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, Heart, MessageCircle, Percent, Trophy, UserPlus } from "lucide-react";
+import { AtSign, CalendarDays, Heart, Mail, MessageCircle, Percent, Trophy, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
 import { Avatar } from "@/components/avatar";
 import { GameCover } from "@/components/game-cover";
 import { MarkRead } from "./_components/mark-read";
+import { FollowRequests } from "./_components/follow-requests";
 
 export const metadata: Metadata = { title: "Notificações · GameLog" };
 
@@ -19,22 +20,34 @@ const TYPE = {
   PLATINUM: { icon: Trophy, tone: "text-amber-400", text: "platinou" },
   DEAL: { icon: Percent, tone: "text-emerald-400", text: "entrou em promoção" },
   WEEKLY: { icon: CalendarDays, tone: "text-sky-400", text: "Seu resumo da semana está pronto" },
+  MESSAGE: { icon: Mail, tone: "text-sky-400", text: "te mandou uma mensagem" },
+  MENTION: { icon: AtSign, tone: "text-violet-400", text: "mencionou você" },
+  FOLLOW_REQUEST: { icon: UserPlus, tone: "text-amber-400", text: "pediu para seguir você" },
+  INVITE_JOINED: { icon: UserPlus, tone: "text-emerald-400", text: "entrou no GameLog pelo seu convite 🎉" },
 } as const;
 
 export default async function NotificationsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/notifications");
 
-  const items = await prisma.notification.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 60,
-    include: {
-      actor: { select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } },
-      activity: { select: { id: true, game: { select: { title: true } } } },
-      game: { select: { slug: true, title: true, coverUrl: true, steamAppId: true, discountPercent: true, priceFinal: true } },
-    },
-  });
+  const [items, requests] = await Promise.all([
+    prisma.notification.findMany({
+      // Pedidos para seguir aparecem na seção própria, com os botões
+      where: { userId: user.id, type: { not: "FOLLOW_REQUEST" } },
+      orderBy: { createdAt: "desc" },
+      take: 60,
+      include: {
+        actor: { select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } },
+        activity: { select: { id: true, game: { select: { title: true } } } },
+        game: { select: { slug: true, title: true, coverUrl: true, steamAppId: true, discountPercent: true, priceFinal: true } },
+      },
+    }),
+    prisma.follow.findMany({
+      where: { followingId: user.id, status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+      select: { follower: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } } },
+    }),
+  ]);
   const hasUnread = items.some((n) => !n.readAt);
   const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -42,8 +55,11 @@ export default async function NotificationsPage() {
     <main className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-5 text-2xl font-bold text-zinc-50">Notificações</h1>
       {hasUnread && <MarkRead />}
+      <FollowRequests
+        requests={requests.map(({ follower: f }) => ({ id: f.id, username: f.username, displayName: f.displayName, avatar: f.avatarUrl ?? f.steamAvatarUrl }))}
+      />
 
-      {items.length === 0 ? (
+      {items.length === 0 && requests.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">
           Nada por aqui ainda. Quando alguém curtir, comentar ou seguir você, aparece aqui.
         </p>

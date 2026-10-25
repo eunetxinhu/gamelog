@@ -20,13 +20,14 @@ export type UserStats = {
   following: number;
   familyGames: number;
   accountDays: number;
+  invites: number;
 };
 
 export async function getUserStats(userId: string): Promise<UserStats> {
   const [user, library, family, completed, reviews] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { createdAt: true, _count: { select: { followers: true, following: true } } },
+      select: { createdAt: true, _count: { select: { followers: { where: { status: "ACCEPTED" } }, following: { where: { status: "ACCEPTED" } }, invitees: true } } },
     }),
     prisma.libraryEntry.aggregate({ where: { userId }, _count: { _all: true }, _sum: { playtimeMinutes: true, playtime2WeeksMinutes: true } }),
     prisma.libraryEntry.count({ where: { userId, source: "FAMILY" } }),
@@ -46,6 +47,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     following: user._count.following,
     familyGames: family,
     accountDays: Math.floor((Date.now() - user.createdAt.getTime()) / 86_400_000),
+    invites: user._count.invitees,
   };
 }
 
@@ -106,6 +108,7 @@ export const BADGES: Badge[] = [
   { id: "hoarder", name: "Acumulador", description: "500 jogos na biblioteca", emoji: "🗄️", value: (s) => s.games, target: 500 },
   { id: "popular", name: "Popular", description: "10 seguidores", emoji: "⭐", value: (s) => s.followers, target: 10 },
   { id: "social", name: "Social", description: "Siga 10 jogadores", emoji: "🤝", value: (s) => s.following, target: 10 },
+  { id: "recruiter", name: "Recrutador", description: "3 amigos entraram pelo seu convite", emoji: "📨", value: (s) => s.invites, target: 3 },
   { id: "family", name: "Família Steam", description: "Jogue um jogo da Família Steam", emoji: "👨‍👩‍👧", value: (s) => s.familyGames, target: 1 },
   { id: "veteran", name: "Veterano", description: "1 ano de GameLog", emoji: "🎖️", value: (s) => s.accountDays, target: 365 },
 ];

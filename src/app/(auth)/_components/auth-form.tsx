@@ -6,9 +6,9 @@ import { AlertTriangle, Loader2, MailCheck } from "lucide-react";
 import { signIn, signUp } from "../_actions/auth";
 import type { AuthFormState } from "../_actions/types";
 
-type Props = { mode: "login" | "signup"; next: string; notice?: string; steamLogin?: boolean };
+type Props = { mode: "login" | "signup"; next: string; notice?: string; steamLogin?: boolean; inviteRef?: string | null };
 
-export function AuthForm({ mode, next, notice, steamLogin }: Props) {
+export function AuthForm({ mode, next, notice, steamLogin, inviteRef }: Props) {
   const isSignup = mode === "signup";
   const [state, action, pending] = useActionState<AuthFormState, FormData>(isSignup ? signUp : signIn, {});
   const otherHref = `${isSignup ? "/login" : "/signup"}?next=${encodeURIComponent(next)}`;
@@ -31,7 +31,7 @@ export function AuthForm({ mode, next, notice, steamLogin }: Props) {
             <>
               {/* Link comum (não <Link>): a rota redireciona para o site da Steam */}
               <a
-                href="/api/steam/login"
+                href={inviteRef ? `/api/steam/login?ref=${encodeURIComponent(inviteRef)}` : "/api/steam/login"}
                 className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[#1b2838] px-3.5 py-2.5 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-[#2a475e]"
               >
                 <SteamIcon />
@@ -46,6 +46,7 @@ export function AuthForm({ mode, next, notice, steamLogin }: Props) {
           )}
           <form action={action} className={`${steamLogin ? "mt-4" : "mt-6"} space-y-4`}>
             <input type="hidden" name="next" value={next} />
+            {inviteRef && <input type="hidden" name="ref" value={inviteRef} />}
 
             {isSignup && (
               <Field label="Nome de usuário" name="username" autoComplete="username" defaultValue={state.username} placeholder="seu_nick" />

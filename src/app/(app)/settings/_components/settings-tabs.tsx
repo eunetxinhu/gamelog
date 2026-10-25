@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/settings/account", label: "Perfil" },
   { href: "/settings/profile", label: "Contas vinculadas" },
+  { href: "/settings/privacy", label: "Privacidade" },
 ];
 
 export function SettingsTabs() {

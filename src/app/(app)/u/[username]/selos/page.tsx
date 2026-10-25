@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { canSeeProfile } from "@/lib/privacy";
 import { ArrowLeft, Lock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getProgression, XP_RULES } from "@/lib/progression";
@@ -15,8 +17,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /** Nível, de onde vem o XP e todos os selos (conquistados e por conquistar). */
 export default async function BadgesPage({ params }: Props) {
   const username = decodeURIComponent((await params).username).toLowerCase();
-  const profile = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true, displayName: true } });
+  const profile = await prisma.user.findUnique({
+    where: { username },
+    select: { id: true, username: true, displayName: true, isPrivate: true, bannedAt: true },
+  });
   if (!profile) notFound();
+  if (!(await canSeeProfile((await getCurrentUser())?.id ?? null, profile))) redirect(`/u/${profile.username}`);
 
   const { stats, level, badges } = await getProgression(profile.id);
   const name = profile.displayName ?? profile.username;

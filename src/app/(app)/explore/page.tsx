@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { Flame, Search, Star, Trophy, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth";
+import { blockedIds } from "@/lib/privacy";
 import { formatPlaytime } from "@/lib/format";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
 import { GameCover } from "@/components/game-cover";
+import { SteamFriends } from "./_components/steam-friends";
 
 export const metadata: Metadata = { title: "Explorar · GameLog" };
 
@@ -49,6 +51,11 @@ export default async function ExplorePage({ searchParams }: Props) {
         </button>
       </form>
 
+      {!q && viewer?.steamId && (
+        <Suspense fallback={<div className="mb-10 h-28 animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900/40" />}>
+          <SteamFriends viewerId={viewer.id} steamId={viewer.steamId} />
+        </Suspense>
+      )}
       {q ? <PeopleResults q={q} viewerId={viewer?.id ?? null} /> : <Discover viewerId={viewer?.id ?? null} />}
     </main>
   );
@@ -61,11 +68,13 @@ export default async function ExplorePage({ searchParams }: Props) {
 async function PeopleResults({ q, viewerId }: { q: string; viewerId: string | null }) {
   const people = await prisma.user.findMany({
     where: {
+      bannedAt: null,
+      id: { notIn: await blockedIds(viewerId) },
       OR: [{ username: { contains: q, mode: "insensitive" } }, { displayName: { contains: q, mode: "insensitive" } }],
     },
     orderBy: { followers: { _count: "desc" } },
     take: 30,
-    select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, bio: true, _count: { select: { followers: true } } },
+    select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, bio: true, isPrivate: true, _count: { select: { followers: { where: { status: "ACCEPTED" } } } } },
   });
 
   if (people.length === 0) return <p className="text-sm text-zinc-500">Ninguém encontrado para “{q}”.</p>;
@@ -76,19 +85,28 @@ async function PeopleList({
   people,
   viewerId,
 }: {
-  people: { id: string; username: string; displayName: string | null; avatarUrl: string | null; steamAvatarUrl: string | null; bio: string | null; _count: { followers: number } }[];
+  people: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    steamAvatarUrl: string | null;
+    bio: string | null;
+    isPrivate: boolean;
+    _count: { followers: number };
+  }[];
   viewerId: string | null;
 }) {
-  const followingIds = viewerId
-    ? new Set(
-        (
+  const followState = new Map(
+    viewerId
+      ? (
           await prisma.follow.findMany({
             where: { followerId: viewerId, followingId: { in: people.map((p) => p.id) } },
-            select: { followingId: true },
+            select: { followingId: true, status: true },
           })
-        ).map((f) => f.followingId),
-      )
-    : new Set<string>();
+        ).map((f) => [f.followingId, f.status] as const)
+      : [],
+  );
 
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
@@ -106,7 +124,7 @@ async function PeopleList({
                 {p.bio && <span className="mt-0.5 line-clamp-1 block text-xs text-zinc-400">{p.bio}</span>}
               </span>
             </Link>
-            {viewerId && viewerId !== p.id && <FollowButton userId={p.id} following={followingIds.has(p.id)} />}
+            {viewerId && viewerId !== p.id && <FollowButton userId={p.id} state={followState.get(p.id) ?? null} isPrivate={p.isPrivate} />}
           </li>
         );
       })}
@@ -147,10 +165,10 @@ async function Discover({ viewerId }: { viewerId: string | null }) {
       take: 12,
     }),
     prisma.user.findMany({
-      where: viewerId ? { id: { not: viewerId } } : undefined,
+      where: { bannedAt: null, id: { notIn: [...(viewerId ? [viewerId] : []), ...(await blockedIds(viewerId))] } },
       orderBy: [{ followers: { _count: "desc" } }, { activities: { _count: "desc" } }],
       take: 6,
-      select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, bio: true, _count: { select: { followers: true } } },
+      select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, bio: true, isPrivate: true, _count: { select: { followers: { where: { status: "ACCEPTED" } } } } },
     }),
   ]);
 

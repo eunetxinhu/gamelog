@@ -50,7 +50,7 @@ export type SteamSyncSuccess = {
   totalHours: number;
   recentlyPlayed: { appId: number; name: string; hours2Weeks: number }[];
   /** Publicações criadas no feed por esta sincronização */
-  posted: { platinums: number; started: number };
+  posted: { platinums: number; started: number; rare: number };
   syncedAt: string; // ISO
 };
 

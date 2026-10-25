@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { canSeeProfile } from "@/lib/privacy";
 import { ArrowLeft, Flag, Heart, PenLine, Trophy, UserPlus, Zap } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
@@ -21,10 +22,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function WeeklyPage({ params }: Props) {
   const username = decodeURIComponent((await params).username).toLowerCase();
   const [profile, viewer] = await Promise.all([
-    prisma.user.findUnique({ where: { username }, select: { id: true, username: true, displayName: true } }),
+    prisma.user.findUnique({ where: { username }, select: { id: true, username: true, displayName: true, isPrivate: true, bannedAt: true } }),
     getCurrentUser(),
   ]);
   if (!profile) notFound();
+  if (!(await canSeeProfile(viewer?.id ?? null, profile))) redirect(`/u/${profile.username}`);
 
   const w = await getWeeklySummary(profile.id);
   const name = profile.displayName ?? profile.username;

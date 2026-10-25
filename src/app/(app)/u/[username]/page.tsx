@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, ChevronRight, GitCompareArrows, Settings, Target, Trophy } from "lucide-react";
+import { Bookmark, CalendarDays, ChevronRight, GitCompareArrows, Lock, Settings, Target, Trophy, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities } from "@/lib/activity";
@@ -14,6 +14,9 @@ import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
 import { LevelBadge } from "@/components/level-badge";
 import { getProgression } from "@/lib/progression";
+import { canSeeProfile } from "@/lib/privacy";
+import { canMessage } from "@/lib/dm";
+import { ProfileMenu } from "@/components/profile-menu";
 import { GameCover } from "@/components/game-cover";
 
 type Props = { params: Promise<{ username: string }> };
@@ -30,40 +33,26 @@ export default async function ProfilePage({ params }: Props) {
   const [profile, viewer] = await Promise.all([
     prisma.user.findUnique({
       where: { username },
-      include: { _count: { select: { followers: true, following: true } } },
+      include: { _count: { select: { followers: { where: { status: "ACCEPTED" } }, following: { where: { status: "ACCEPTED" } } } } },
     }),
     getCurrentUser(),
   ]);
   if (!profile) notFound();
 
   const isMe = viewer?.id === profile.id;
+  const other = Boolean(viewer && !isMe);
 
-  const [following, library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression] = await Promise.all([
-    viewer && !isMe
-      ? prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewer.id, followingId: profile.id } } })
-      : null,
-    prisma.libraryEntry.aggregate({ where: { userId: profile.id }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
-    prisma.gameLog.findMany({ where: { userId: profile.id, status: "COMPLETED" }, select: { gameId: true } }),
-    getPlatinums(profile.id),
-    getPlaying(profile.id, 6),
-    getNearPlatinum(profile.id, 6),
-    prisma.libraryEntry.findMany({
-      where: { userId: profile.id, playtimeMinutes: { gt: 0 } },
-      orderBy: { playtimeMinutes: "desc" },
-      take: 12,
-      select: { playtimeMinutes: true, achievementsUnlocked: true, achievementsTotal: true, game: { select: gameSelect } },
-    }),
-    getActivities({ where: { userId: profile.id }, viewerId: viewer?.id ?? null, take: 20 }),
-    prisma.favoriteGame.findMany({ where: { userId: profile.id }, orderBy: { position: "asc" }, select: { game: { select: gameSelect } } }),
-    getProgression(profile.id),
+  const [canSee, following, blockedByMe, dm] = await Promise.all([
+    canSeeProfile(viewer?.id ?? null, profile),
+    other ? prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewer!.id, followingId: profile.id } } }) : null,
+    other ? prisma.block.findUnique({ where: { blockerId_blockedId: { blockerId: viewer!.id, blockedId: profile.id } } }).then(Boolean) : false,
+    other ? canMessage(viewer!.id, profile) : null,
   ]);
-  const earnedBadges = progression.badges.filter((b) => b.earned);
 
-  const gamesHref = (aba: string) => `/u/${profile.username}/jogos?aba=${aba}`;
-  // Finalizados inclui as platinas (platinar implica ter terminado)
-  const completedCount = new Set([...completedLogs.map((l) => l.gameId), ...platinumList.map((p) => p.game.id)]).size;
+  // Sem acesso (privado, suspenso ou bloqueio): só o cabeçalho e um aviso
+  const data = canSee ? await loadProfileContent(profile.id, viewer?.id ?? null) : null;
   const name = profile.displayName ?? profile.username;
-
+  const gamesHref = (aba: string) => `/u/${profile.username}/jogos?aba=${aba}`;
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
       {/* ---- Cabeçalho ------------------------------------------------------ */}
@@ -81,9 +70,11 @@ export default async function ProfilePage({ params }: Props) {
           <div className="min-w-0 flex-1 space-y-1">
             <h1 className="truncate text-2xl font-bold text-zinc-50">{name}</h1>
             <p className="text-sm text-zinc-400">@{profile.username}</p>
-            <Link href={`/u/${profile.username}/selos`} className="block pt-1" title="Ver nível e selos">
-              <LevelBadge level={progression.level} />
-            </Link>
+            {data && (
+              <Link href={`/u/${profile.username}/selos`} className="block pt-1" title="Ver nível e selos">
+                <LevelBadge level={data.progression.level} />
+              </Link>
+            )}
             {profile.bio && <p className="max-w-prose pt-1 text-sm text-zinc-300">{profile.bio}</p>}
             <p className="flex gap-4 pt-2 text-sm text-zinc-400">
               <span>
@@ -96,21 +87,32 @@ export default async function ProfilePage({ params }: Props) {
           </div>
           <div className="shrink-0">
             {isMe ? (
-              <Link
-                href="/settings/account"
-                className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
-              >
-                <Settings className="size-4" aria-hidden /> Editar perfil
-              </Link>
-            ) : viewer ? (
               <div className="flex flex-wrap gap-2">
-                <FollowButton userId={profile.id} following={Boolean(following)} />
                 <Link
-                  href={`/u/${profile.username}/comparar`}
+                  href="/settings/account"
                   className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
                 >
-                  <GitCompareArrows className="size-4" aria-hidden /> Comparar
+                  <Settings className="size-4" aria-hidden /> Editar perfil
                 </Link>
+                <Link
+                  href="/settings/privacy"
+                  className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+                >
+                  <UserPlus className="size-4" aria-hidden /> Convidar
+                </Link>
+              </div>
+            ) : viewer ? (
+              <div className="flex flex-wrap gap-2">
+                {!blockedByMe && !profile.bannedAt && <FollowButton userId={profile.id} state={following?.status ?? null} isPrivate={profile.isPrivate} />}
+                {canSee && (
+                  <Link
+                    href={`/u/${profile.username}/comparar`}
+                    className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+                  >
+                    <GitCompareArrows className="size-4" aria-hidden /> Comparar
+                  </Link>
+                )}
+                <ProfileMenu userId={profile.id} username={profile.username} blocked={blockedByMe} canMessage={Boolean(dm?.ok)} />
               </div>
             ) : (
               <Link href={`/login?next=/u/${profile.username}`} className="text-sm text-sky-400 hover:underline">
@@ -120,6 +122,75 @@ export default async function ProfilePage({ params }: Props) {
           </div>
         </div>
       </header>
+
+      {!data ? (
+        <LockedNotice
+          text={
+            blockedByMe
+              ? "Você bloqueou este perfil. Para ver o conteúdo, desbloqueie no menu ⋯."
+              : profile.bannedAt
+                ? "Esta conta foi suspensa pela moderação."
+                : profile.isPrivate
+                  ? "Este perfil é privado. Siga para pedir acesso: se aprovar, você vê a atividade e os jogos."
+                  : "Este perfil não está disponível."
+          }
+        />
+      ) : (
+        <ProfileContent data={data} profile={profile} isMe={isMe} gamesHref={gamesHref} />
+      )}
+    </main>
+  );
+}
+
+/** Tudo que só aparece para quem pode ver o perfil. */
+async function loadProfileContent(profileId: string, viewerId: string | null) {
+  const [library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist] = await Promise.all([
+    prisma.libraryEntry.aggregate({ where: { userId: profileId }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
+    prisma.gameLog.findMany({ where: { userId: profileId, status: "COMPLETED" }, select: { gameId: true } }),
+    getPlatinums(profileId),
+    getPlaying(profileId, 6),
+    getNearPlatinum(profileId, 6),
+    prisma.libraryEntry.findMany({
+      where: { userId: profileId, playtimeMinutes: { gt: 0 } },
+      orderBy: { playtimeMinutes: "desc" },
+      take: 12,
+      select: { playtimeMinutes: true, achievementsUnlocked: true, achievementsTotal: true, game: { select: gameSelect } },
+    }),
+    getActivities({ where: { userId: profileId }, viewerId, take: 20 }),
+    prisma.favoriteGame.findMany({ where: { userId: profileId }, orderBy: { position: "asc" }, select: { game: { select: gameSelect } } }),
+    getProgression(profileId),
+    prisma.wishlistItem.findMany({ where: { userId: profileId }, orderBy: { createdAt: "desc" }, take: 6, select: { game: { select: gameSelect } } }),
+  ]);
+  // Finalizados inclui as platinas (platinar implica ter terminado)
+  const completedCount = new Set([...completedLogs.map((l) => l.gameId), ...platinumList.map((p) => p.game.id)]).size;
+  return { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, viewerId };
+}
+
+function LockedNotice({ text }: { text: string }) {
+  return (
+    <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-zinc-800 p-10 text-center">
+      <Lock className="size-8 text-zinc-500" aria-hidden />
+      <p className="max-w-sm text-sm text-zinc-400">{text}</p>
+    </div>
+  );
+}
+
+function ProfileContent({
+  data,
+  profile,
+  isMe,
+  gamesHref,
+}: {
+  data: NonNullable<Awaited<ReturnType<typeof loadProfileContent>>>;
+  profile: { username: string };
+  isMe: boolean;
+  gamesHref: (aba: string) => string;
+}) {
+  const { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, viewerId } = data;
+  const earnedBadges = progression.badges.filter((b) => b.earned);
+
+  return (
+    <>
 
       {/* ---- Top 4 ---------------------------------------------------------- */}
       {favorites.length > 0 && (
@@ -197,7 +268,7 @@ export default async function ProfilePage({ params }: Props) {
           ) : (
             <div className="space-y-4">
               {activities.map((a) => (
-                <ActivityCard key={a.id} item={a} viewerId={viewer?.id ?? null} />
+                <ActivityCard key={a.id} item={a} viewerId={viewerId} />
               ))}
             </div>
           )}
@@ -233,6 +304,14 @@ export default async function ProfilePage({ params }: Props) {
             </ShelfSection>
           )}
 
+          {wishlist.length > 0 && (
+            <ShelfSection title="Quero jogar" href={gamesHref("wishlist")} icon={<Bookmark className="size-4 text-emerald-400" aria-hidden />}>
+              {wishlist.map(({ game }) => (
+                <Shelf key={game.id} game={game} />
+              ))}
+            </ShelfSection>
+          )}
+
           {mostPlayed.length > 0 && (
             <ShelfSection title="Mais jogados" href={gamesHref("biblioteca")}>
               {mostPlayed.map((e) => (
@@ -251,7 +330,7 @@ export default async function ProfilePage({ params }: Props) {
           )}
         </div>
       </div>
-    </main>
+    </>
   );
 }
 

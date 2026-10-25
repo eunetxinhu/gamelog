@@ -20,7 +20,7 @@ export function SteamAutoSync() {
     if (new URLSearchParams(window.location.search).get("steam") === "linked") return;
     syncSteamLibrary()
       .then((res) => {
-        if (res.ok && (res.data.posted.platinums > 0 || res.data.posted.started > 0)) router.refresh();
+        if (res.ok && (res.data.posted.platinums > 0 || res.data.posted.started > 0 || res.data.posted.rare > 0)) router.refresh();
       })
       .catch(() => {}); // silencioso: o botão em Contas vinculadas mostra os erros
   }, [router]);

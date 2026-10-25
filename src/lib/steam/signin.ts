@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPlayerSummary } from "@/lib/steam/api";
+import { applyReferral, findInviter } from "@/lib/referral";
 
 /**
  * "Entrar com Steam" sem conta no GameLog (o Supabase não tem a Steam como provedor):
@@ -13,7 +14,7 @@ import { getPlayerSummary } from "@/lib/steam/api";
  *     valida o token aqui mesmo, o que grava os cookies de sessão.
  * Só chamar depois que o SteamID foi confirmado pela Steam (verifySteamLogin).
  */
-export async function signInWithSteam(steamId: string): Promise<{ isNew: boolean }> {
+export async function signInWithSteam(steamId: string, ref: string | null = null): Promise<{ isNew: boolean }> {
   const admin = createSupabaseAdminClient();
   const existing = await prisma.user.findUnique({ where: { steamId }, select: { id: true } });
 
@@ -42,7 +43,11 @@ export async function signInWithSteam(steamId: string): Promise<{ isNew: boolean
 
   const link = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (link.error) throw link.error;
-  if (profile) await createProfile(link.data.user.id, steamId, profile.persona, profile.avatar);
+  if (profile) {
+    const inviter = await findInviter(ref);
+    await createProfile(link.data.user.id, steamId, profile.persona, profile.avatar, inviter?.id ?? null);
+    if (inviter) await applyReferral(link.data.user.id, inviter);
+  }
   await openSession(link.data.properties.hashed_token);
   return { isNew: Boolean(profile) };
 }
@@ -65,13 +70,13 @@ async function openSession(tokenHash: string) {
   if (error) throw error;
 }
 
-async function createProfile(id: string, steamId: string, persona: string | null, avatar: string | null) {
+async function createProfile(id: string, steamId: string, persona: string | null, avatar: string | null, invitedById: string | null) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const username = await availableUsername(persona, attempt);
     try {
       await prisma.user.upsert({
         where: { id },
-        create: { id, username, displayName: persona, steamId, steamPersonaName: persona, steamAvatarUrl: avatar },
+        create: { id, username, displayName: persona, steamId, steamPersonaName: persona, steamAvatarUrl: avatar, invitedById },
         update: { steamId },
       });
       return;

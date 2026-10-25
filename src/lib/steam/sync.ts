@@ -9,6 +9,7 @@ import { resolveSteamCovers } from "@/lib/catalog";
 import { ensurePlatinumRarity } from "@/lib/rarity";
 import {
   getOwnedGames,
+  getAchievementDetails,
   getPlayerAchievements,
   getPlayerSummary,
   getRecentlyPlayedGames,
@@ -25,6 +26,12 @@ const SYNC_COOLDOWN_SECONDS = 5 * 60;
 const ACHIEVEMENT_CHECKS_PER_SYNC = 20;
 /** Jogos com menos conquistas que isso não contam como platina (ex.: CS2 tem 1). */
 export const MIN_ACHIEVEMENTS_FOR_PLATINUM = 5;
+/** Conquista abaixo disso (% de jogadores) vira publicação "conquista rara". */
+const RARE_ACHIEVEMENT_PERCENT = 1;
+/** Jogos recentes conferidos por sincronização atrás de conquistas raras (lista completa = mais chamadas). */
+const RARE_CHECKS_PER_SYNC = 5;
+/** Sem checagem anterior, olha as conquistas desbloqueadas nesse período. */
+const RARE_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
 /** Platinas mais antigas que isso entram no perfil, mas não viram publicação no feed. */
 const PLATINUM_POST_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -339,7 +346,7 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
           newGames: inserted,
           updatedGames: updated,
           removedGames: removed.count,
-          posted: { platinums, started },
+          posted: { platinums, started, rare: 0 },
           platinumGameIds,
         };
       },
@@ -356,6 +363,20 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
       });
       await ensurePlatinumRarity(rarityGames).catch((err) => console.error("[steam] raridade", err));
     }
+
+    // Conquistas raras (< 1% dos jogadores) desbloqueadas desde a última checagem
+    const rare = await postRareAchievements(
+      user.id,
+      steamId,
+      candidates.filter((c) => c.recent).slice(0, RARE_CHECKS_PER_SYNC).map((c) => ({
+        appId: c.g.appid,
+        since: prevByApp.get(c.g.appid)?.achievementsCheckedAt ?? new Date(syncedAt.getTime() - RARE_LOOKBACK_MS),
+      })),
+    ).catch((err) => {
+      console.error("[steam] conquistas raras", err);
+      return 0;
+    });
+    posted.rare = rare;
 
     // 9) Revalida as páginas que exibem estatísticas ----------------------------
     revalidatePath(`/u/${user.username}`);
@@ -390,4 +411,30 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
     console.error("[steam] sync falhou", err);
     return fail({ code: "UNKNOWN", message: "Algo deu errado ao sincronizar. Tente novamente." });
   }
+}
+
+/** Publica as conquistas raras desbloqueadas depois de `since` em cada jogo. Devolve quantas publicou. */
+async function postRareAchievements(userId: string, steamId: string, games: { appId: number; since: Date }[]) {
+  let posted = 0;
+  for (const { appId, since } of games) {
+    const list = await getAchievementDetails(appId, steamId);
+    const rare = (list ?? []).filter(
+      (a) => a.achieved && a.unlockedAt && a.unlockedAt > since && a.percent !== null && a.percent < RARE_ACHIEVEMENT_PERCENT,
+    );
+    if (rare.length === 0) continue;
+    const game = await prisma.game.findUnique({ where: { steamAppId: appId }, select: { id: true } });
+    if (!game) continue;
+    for (const a of rare) {
+      const id = await recordActivity(prisma, {
+        userId,
+        gameId: game.id,
+        type: "RARE_ACHIEVEMENT",
+        source: "STEAM",
+        createdAt: a.unlockedAt!,
+        meta: { apiName: a.apiName, name: a.name, description: a.description, icon: a.icon, percent: a.percent },
+      });
+      if (id) posted++;
+    }
+  }
+  return posted;
 }

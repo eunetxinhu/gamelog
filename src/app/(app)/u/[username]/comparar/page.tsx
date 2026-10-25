@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { formatPlaytime } from "@/lib/format";
 import { getProgression } from "@/lib/progression";
+import { canSeeProfile } from "@/lib/privacy";
 import { Avatar } from "@/components/avatar";
 import { GameCover } from "@/components/game-cover";
 
@@ -32,10 +33,11 @@ export default async function ComparePage({ params }: Props) {
 
   const other = await prisma.user.findUnique({
     where: { username },
-    select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true },
+    select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, isPrivate: true, bannedAt: true },
   });
   if (!other) notFound();
   if (other.id === viewer.id) redirect(`/u/${viewer.username}`);
+  if (!(await canSeeProfile(viewer.id, other))) redirect(`/u/${other.username}`);
 
   const [me, them, myLib, theirLib] = await Promise.all([
     getProgression(viewer.id),

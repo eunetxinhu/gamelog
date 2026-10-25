@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { notify } from "@/lib/notifications";
+import { isBlockedEitherWay } from "@/lib/privacy";
+import { notifyMentions } from "@/lib/mention-notify";
 import type { ReactionType } from "@/generated/prisma/enums";
 
 const COMMENT_MAX = 1000;
@@ -15,10 +17,11 @@ const GG_TYPES = new Set(["PLATINUM", "COMPLETED"]);
 /** Liga / desliga uma reação (curtida ou GG). Devolve o estado final. */
 export async function toggleReaction(activityId: string, type: ReactionType): Promise<{ ok: boolean; active?: boolean }> {
   const user = await getCurrentUser();
-  if (!user || (type !== "LIKE" && type !== "GG")) return { ok: false };
+  if (!user || user.bannedAt || (type !== "LIKE" && type !== "GG")) return { ok: false };
 
   const activity = await prisma.activity.findUnique({ where: { id: activityId }, select: { userId: true, type: true } });
   if (!activity || (type === "GG" && !GG_TYPES.has(activity.type))) return { ok: false };
+  if (await isBlockedEitherWay(user.id, activity.userId)) return { ok: false };
 
   const key = { activityId_userId_type: { activityId, userId: user.id, type } };
   const existing = await prisma.activityLike.findUnique({ where: key });
@@ -47,28 +50,65 @@ export async function deleteActivity(activityId: string): Promise<{ ok: boolean 
   return { ok: count > 0 };
 }
 
-/** Segue / deixa de seguir. Devolve o estado final. */
-export async function toggleFollow(targetUserId: string): Promise<{ ok: boolean; following?: boolean }> {
+export type FollowState = "ACCEPTED" | "PENDING" | null;
+
+/**
+ * Segue / deixa de seguir (ou cancela o pedido). Perfil privado vira pedido pendente,
+ * que o dono aprova nas notificações. Devolve o estado final.
+ */
+export async function toggleFollow(targetUserId: string): Promise<{ ok: boolean; state?: FollowState; message?: string }> {
   const user = await getCurrentUser();
   if (!user || user.id === targetUserId) return { ok: false };
+  if (user.bannedAt) return { ok: false, message: "Sua conta está suspensa." };
+
+  const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { username: true, isPrivate: true } });
+  if (!target) return { ok: false };
+  if (await isBlockedEitherWay(user.id, targetUserId)) return { ok: false, message: "Não é possível seguir este perfil." };
 
   const key = { followerId_followingId: { followerId: user.id, followingId: targetUserId } };
   const existing = await prisma.follow.findUnique({ where: key });
+  let state: FollowState;
   try {
-    if (existing) await prisma.follow.delete({ where: key });
-    else {
-      await prisma.follow.create({ data: { followerId: user.id, followingId: targetUserId } });
-      await notify(prisma, { userId: targetUserId, actorId: user.id, type: "FOLLOW" });
+    if (existing) {
+      await prisma.follow.delete({ where: key });
+      // Pedido cancelado: some da lista de pendências do dono
+      if (existing.status === "PENDING") {
+        await prisma.notification.deleteMany({ where: { userId: targetUserId, actorId: user.id, type: "FOLLOW_REQUEST" } });
+      }
+      state = null;
+    } else {
+      state = target.isPrivate ? "PENDING" : "ACCEPTED";
+      await prisma.follow.create({ data: { followerId: user.id, followingId: targetUserId, status: state } });
+      await notify(prisma, { userId: targetUserId, actorId: user.id, type: state === "PENDING" ? "FOLLOW_REQUEST" : "FOLLOW" });
     }
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError) return { ok: true, following: !existing };
+    if (err instanceof Prisma.PrismaClientKnownRequestError) return { ok: true, state: existing ? null : target.isPrivate ? "PENDING" : "ACCEPTED" };
     throw err;
   }
 
-  const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { username: true } });
-  if (target) revalidatePath(`/u/${target.username}`);
+  revalidatePath(`/u/${target.username}`);
   revalidatePath("/feed");
-  return { ok: true, following: !existing };
+  return { ok: true, state };
+}
+
+/** Dono do perfil privado aprova ou recusa um pedido para seguir. */
+export async function answerFollowRequest(followerId: string, accept: boolean): Promise<{ ok: boolean }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  const key = { followerId_followingId: { followerId, followingId: user.id } };
+  const req = await prisma.follow.findUnique({ where: key });
+  if (!req || req.status !== "PENDING") return { ok: false };
+
+  if (accept) {
+    await prisma.follow.update({ where: key, data: { status: "ACCEPTED" } });
+    await notify(prisma, { userId: followerId, actorId: user.id, type: "FOLLOW" });
+  } else {
+    await prisma.follow.delete({ where: key });
+  }
+  await prisma.notification.deleteMany({ where: { userId: user.id, actorId: followerId, type: "FOLLOW_REQUEST" } });
+  revalidatePath("/notifications");
+  revalidatePath(`/u/${user.username}`);
+  return { ok: true };
 }
 
 export type CommentResult =
@@ -82,6 +122,7 @@ export type CommentResult =
 export async function addComment(activityId: string, rawBody: string): Promise<CommentResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, message: "Faça login para comentar." };
+  if (user.bannedAt) return { ok: false, message: "Sua conta está suspensa." };
 
   const body = rawBody.trim();
   if (!body) return { ok: false, message: "Escreva alguma coisa." };
@@ -89,9 +130,11 @@ export async function addComment(activityId: string, rawBody: string): Promise<C
 
   const activity = await prisma.activity.findUnique({ where: { id: activityId }, select: { userId: true } });
   if (!activity) return { ok: false, message: "Essa publicação foi apagada." };
+  if (await isBlockedEitherWay(user.id, activity.userId)) return { ok: false, message: "Não é possível comentar nesta publicação." };
 
   const comment = await prisma.comment.create({ data: { activityId, userId: user.id, body } });
   await notify(prisma, { userId: activity.userId, actorId: user.id, type: "COMMENT", activityId });
+  await notifyMentions(user.id, body, activityId, [activity.userId]);
   revalidatePath(`/p/${activityId}`);
 
   return {

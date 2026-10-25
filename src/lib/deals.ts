@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { getPrices } from "@/lib/steam/api";
+import { notifyMany } from "@/lib/notifications";
 
 /**
  * Confere o preço de todo jogo que está na wishlist de alguém e avisa quem quer
@@ -44,13 +45,11 @@ export async function checkWishlistDeals() {
     });
     if (toNotify.length === 0) continue;
 
-    await prisma.$transaction([
-      prisma.notification.createMany({ data: toNotify.map((w) => ({ userId: w.userId, type: "DEAL" as const, gameId: game.id })) }),
-      prisma.wishlistItem.updateMany({
-        where: { gameId: game.id, userId: { in: toNotify.map((w) => w.userId) } },
-        data: { notifiedPrice: price.final },
-      }),
-    ]);
+    await prisma.wishlistItem.updateMany({
+      where: { gameId: game.id, userId: { in: toNotify.map((w) => w.userId) } },
+      data: { notifiedPrice: price.final },
+    });
+    await notifyMany(toNotify.map((w) => ({ userId: w.userId, type: "DEAL" as const, gameId: game.id })));
     notified += toNotify.length;
   }
 

@@ -40,6 +40,8 @@ enum ActivityType {
   PLATINUM // platinou (todas as conquistas na Steam ou marcado como "Platinado")
   DROPPED // dropou
   REVIEW // avaliou / escreveu review sem mudar de status
+  RARE_ACHIEVEMENT // desbloqueou conquista que < 1% dos jogadores têm (Steam)
+  SCREENSHOT // compartilhou um print, sem mudar de status nem avaliar
 }
 
 /// Reações numa publicação
@@ -56,6 +58,42 @@ enum NotificationType {
   PLATINUM // alguém que você segue platinou
   DEAL // jogo da sua wishlist entrou em promoção (sem actor)
   WEEKLY // seu resumo semanal está pronto (sem actor)
+  MESSAGE // mensagem direta
+  MENTION // te mencionou com @
+  FOLLOW_REQUEST // pediu para seguir seu perfil privado
+  INVITE_JOINED // alguém entrou pelo seu convite
+}
+
+enum FollowStatus {
+  ACCEPTED
+  PENDING // perfil privado: aguardando aprovação
+}
+
+/// Quem pode mandar mensagem direta
+enum DmPolicy {
+  EVERYONE
+  FOLLOWING // só quem eu sigo
+  NOBODY
+}
+
+enum ClubRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ReportTarget {
+  ACTIVITY
+  COMMENT
+  USER
+  CLUB_POST
+  MESSAGE
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED // conteúdo removido / usuário suspenso
+  DISMISSED // denúncia sem fundamento
 }
 
 enum LibrarySource {
@@ -88,6 +126,17 @@ model User {
   steamAvatarUrl   String?   @map("steam_avatar_url")
   steamLastSyncAt  DateTime? @map("steam_last_sync_at")
 
+  // ---- Privacidade e moderação ----------------------------------------------
+  /// Perfil privado: atividade e biblioteca só para seguidores aprovados
+  isPrivate Boolean   @default(false) @map("is_private")
+  dmPolicy  DmPolicy  @default(FOLLOWING) @map("dm_policy")
+  isAdmin   Boolean   @default(false) @map("is_admin")
+  /// Suspenso pela moderação: não publica, não comenta, não manda mensagem
+  bannedAt  DateTime? @map("banned_at")
+
+  // ---- Convite ----------------------------------------------------------------
+  invitedById String? @map("invited_by_id") @db.Uuid
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -100,11 +149,23 @@ model User {
   comments          Comment[]
   wishlist          WishlistItem[]
   /// Notificações recebidas
-  notifications     Notification[] @relation("NotificationRecipient")
+  notifications     Notification[]     @relation("NotificationRecipient")
   /// Notificações que eu causei (curti, comentei, segui…)
-  notificationsSent Notification[] @relation("NotificationActor")
-  followers         Follow[]       @relation("UserFollowers") // quem me segue
-  following         Follow[]       @relation("UserFollowing") // quem eu sigo
+  notificationsSent Notification[]     @relation("NotificationActor")
+  followers         Follow[]           @relation("UserFollowers") // quem me segue
+  following         Follow[]           @relation("UserFollowing") // quem eu sigo
+  invitedBy         User?              @relation("Invites", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitees          User[]             @relation("Invites")
+  pushSubscriptions PushSubscription[]
+  blocks            Block[]            @relation("Blocker")
+  blockedBy         Block[]            @relation("Blocked")
+  reports           Report[]
+  clubsOwned        Club[]
+  clubMemberships   ClubMember[]
+  clubPosts         ClubPost[]
+  messagesSent      Message[]
+  conversationsA    Conversation[]     @relation("ConversationA")
+  conversationsB    Conversation[]     @relation("ConversationB")
 
   @@map("users")
 }
@@ -249,6 +310,10 @@ model Activity {
   rating          Int?          @db.SmallInt
   review          String?
   containsSpoiler Boolean       @default(false) @map("contains_spoiler")
+  /// Print anexado (Supabase Storage)
+  imageUrl        String?       @map("image_url")
+  /// Dados do tipo (ex.: conquista rara: { apiName, name, icon, percent })
+  meta            Json?
   createdAt       DateTime      @default(now()) @map("created_at")
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -361,9 +426,10 @@ model FavoriteGame {
 // -----------------------------------------------------------------------------
 
 model Follow {
-  followerId  String   @map("follower_id") @db.Uuid
-  followingId String   @map("following_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
+  followerId  String       @map("follower_id") @db.Uuid
+  followingId String       @map("following_id") @db.Uuid
+  status      FollowStatus @default(ACCEPTED)
+  createdAt   DateTime     @default(now()) @map("created_at")
 
   follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
   following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
@@ -371,4 +437,145 @@ model Follow {
   @@id([followerId, followingId])
   @@index([followingId])
   @@map("follows")
+}
+
+// -----------------------------------------------------------------------------
+//  Notificações push (Web Push)
+// -----------------------------------------------------------------------------
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// -----------------------------------------------------------------------------
+//  Mensagens diretas
+// -----------------------------------------------------------------------------
+
+/// Conversa entre dois usuários. userAId < userBId (ordem fixa = uma conversa por par).
+model Conversation {
+  id            String    @id @default(cuid())
+  userAId       String    @map("user_a_id") @db.Uuid
+  userBId       String    @map("user_b_id") @db.Uuid
+  lastMessageAt DateTime  @default(now()) @map("last_message_at")
+  readAtA       DateTime? @map("read_at_a")
+  readAtB       DateTime? @map("read_at_b")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  userA    User      @relation("ConversationA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB    User      @relation("ConversationB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([userAId, userBId])
+  @@index([userAId, lastMessageAt(sort: Desc)])
+  @@index([userBId, lastMessageAt(sort: Desc)])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  senderId       String   @map("sender_id") @db.Uuid
+  body           String   @db.VarChar(2000)
+  imageUrl       String?  @map("image_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+// -----------------------------------------------------------------------------
+//  Clubes
+// -----------------------------------------------------------------------------
+
+model Club {
+  id          String   @id @default(cuid())
+  slug        String   @unique @db.VarChar(40)
+  name        String   @db.VarChar(60)
+  description String?  @db.VarChar(500)
+  imageUrl    String?  @map("image_url")
+  ownerId     String   @map("owner_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  owner   User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members ClubMember[]
+  posts   ClubPost[]
+
+  @@map("clubs")
+}
+
+model ClubMember {
+  clubId   String   @map("club_id")
+  userId   String   @map("user_id") @db.Uuid
+  role     ClubRole @default(MEMBER)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([clubId, userId])
+  @@index([userId])
+  @@map("club_members")
+}
+
+model ClubPost {
+  id        String   @id @default(cuid())
+  clubId    String   @map("club_id")
+  userId    String   @map("user_id") @db.Uuid
+  body      String   @db.VarChar(2000)
+  imageUrl  String?  @map("image_url")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, createdAt(sort: Desc)])
+  @@map("club_posts")
+}
+
+// -----------------------------------------------------------------------------
+//  Privacidade e moderação
+// -----------------------------------------------------------------------------
+
+model Block {
+  blockerId String   @map("blocker_id") @db.Uuid
+  blockedId String   @map("blocked_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  reporterId String       @map("reporter_id") @db.Uuid
+  targetType ReportTarget @map("target_type")
+  targetId   String       @map("target_id")
+  reason     String       @db.VarChar(40)
+  details    String?      @db.VarChar(1000)
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  resolvedAt DateTime?    @map("resolved_at")
+
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("reports")
 }

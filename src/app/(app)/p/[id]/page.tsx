@@ -8,7 +8,15 @@ import { Comments } from "./_components/comments";
 
 type Props = { params: Promise<{ id: string }> };
 
-const VERB = { STARTED_GAME: "começou a jogar", COMPLETED: "finalizou", PLATINUM: "platinou", DROPPED: "dropou", REVIEW: "avaliou" } as const;
+const VERB = {
+  STARTED_GAME: "começou a jogar",
+  COMPLETED: "finalizou",
+  PLATINUM: "platinou",
+  DROPPED: "dropou",
+  REVIEW: "avaliou",
+  RARE_ACHIEVEMENT: "desbloqueou uma conquista rara em",
+  SCREENSHOT: "compartilhou um print de",
+} as const;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;

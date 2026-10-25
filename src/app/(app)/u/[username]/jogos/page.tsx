@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { canSeeProfile } from "@/lib/privacy";
 import { ArrowLeft, Bookmark, Target, Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getShelf, getShelfCounts, parseTab, PROFILE_TABS } from "@/lib/profile-games";
@@ -31,8 +33,12 @@ const EMPTY: Record<string, string> = {
 export default async function ProfileGamesPage({ params, searchParams }: Props) {
   const [{ username: raw }, { aba }] = await Promise.all([params, searchParams]);
   const username = decodeURIComponent(raw).toLowerCase();
-  const profile = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true, displayName: true } });
+  const profile = await prisma.user.findUnique({
+    where: { username },
+    select: { id: true, username: true, displayName: true, isPrivate: true, bannedAt: true },
+  });
   if (!profile) notFound();
+  if (!(await canSeeProfile((await getCurrentUser())?.id ?? null, profile))) redirect(`/u/${profile.username}`);
 
   const tab = parseTab(aba);
   const [items, counts] = await Promise.all([getShelf(profile.id, tab), getShelfCounts(profile.id)]);

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { visibleUsersWhere } from "@/lib/privacy";
 import { relativeTime, STATUS_LABEL } from "@/lib/format";
 import { Avatar } from "@/components/avatar";
 import { RatingStars } from "@/components/rating-stars";
@@ -19,8 +20,8 @@ export function parseReviewFilter(value: string | undefined): ReviewFilter {
 }
 
 /** Reviews escritas da comunidade, com filtro por nota (estilo Metacritic). */
-export async function GameReviews({ gameId, slug, filter }: { gameId: string; slug: string; filter: ReviewFilter }) {
-  const base = { gameId, review: { not: null } };
+export async function GameReviews({ gameId, slug, filter, viewerId }: { gameId: string; slug: string; filter: ReviewFilter; viewerId: string | null }) {
+  const base = { gameId, review: { not: null }, user: await visibleUsersWhere(viewerId) };
   const [reviews, counts] = await Promise.all([
     prisma.gameLog.findMany({
       where: { ...base, ...(FILTERS[filter].ratings ? { rating: { in: [...FILTERS[filter].ratings] } } : {}) },

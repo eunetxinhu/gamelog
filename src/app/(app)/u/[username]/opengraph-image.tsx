@@ -20,11 +20,13 @@ export default async function Image({ params }: { params: Promise<{ username: st
       avatarUrl: true,
       steamAvatarUrl: true,
       bannerUrl: true,
+      isPrivate: true,
+      bannedAt: true,
       favorites: { orderBy: { position: "asc" }, select: { game: { select: { title: true, coverUrl: true, steamAppId: true } } } },
     },
   });
 
-  if (!user) {
+  if (!user || user.bannedAt) {
     return new ImageResponse(
       <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b", color: "#38bdf8", fontSize: 96, fontWeight: 800 }}>
         GameLog
@@ -33,6 +35,8 @@ export default async function Image({ params }: { params: Promise<{ username: st
     );
   }
 
+  // Perfil privado: o card mostra só nome e avatar
+  if (user.isPrivate) user.favorites = [];
   const [library, platinumLogs, steamPlatinums] = await Promise.all([
     prisma.libraryEntry.aggregate({ where: { userId: user.id }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
     prisma.gameLog.findMany({ where: { userId: user.id, status: "PLATINUM" }, select: { gameId: true } }),
@@ -76,7 +80,7 @@ export default async function Image({ params }: { params: Promise<{ username: st
             <div style={{ display: "flex", marginTop: 28, fontSize: 64, fontWeight: 800 }}>{truncate(name, 22)}</div>
             <div style={{ display: "flex", fontSize: 30, color: "#a1a1aa" }}>@{user.username}</div>
 
-            <div style={{ display: "flex", gap: 44, marginTop: 40 }}>
+            <div style={{ display: user.isPrivate ? "none" : "flex", gap: 44, marginTop: 40 }}>
               {stats.map((s) => (
                 <div key={s.label} style={{ display: "flex", flexDirection: "column" }}>
                   <span style={{ fontSize: 52, fontWeight: 800, color: s.gold ? "#fbbf24" : "#fafafa" }}>{s.value}</span>

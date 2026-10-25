@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { appUrl } from "@/lib/app-url";
 import { safeNext, type AuthFormState } from "./types";
+import { cleanRef } from "@/lib/referral";
 
 const USERNAME = /^[a-z0-9_]{3,30}$/;
 
@@ -72,7 +73,7 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
     email,
     password,
     // `username` vira o perfil público no primeiro login (src/lib/auth.ts)
-    options: { data: { username }, emailRedirectTo: callback.toString() },
+    options: { data: { username, ref: cleanRef(formData.get("ref")) }, emailRedirectTo: callback.toString() },
   });
   if (error) return { ...keep, error: authMessage(error.code, error.message) };
 

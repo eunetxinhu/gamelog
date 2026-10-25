@@ -16,6 +16,8 @@ const LABEL = {
   PLATINUM: { verb: "platinou", badge: "PLATINA CONQUISTADA", color: "#fbbf24" },
   DROPPED: { verb: "dropou", badge: "DROPADO", color: "#a1a1aa" },
   REVIEW: { verb: "avaliou", badge: "REVIEW", color: "#a78bfa" },
+  RARE_ACHIEVEMENT: { verb: "desbloqueou uma conquista rara em", badge: "CONQUISTA RARA", color: "#e879f9" },
+  SCREENSHOT: { verb: "compartilhou um print de", badge: "PRINT", color: "#38bdf8" },
 } as const;
 
 /** Card da publicação: capa do jogo, quem, o quê, nota e trecho da review. */

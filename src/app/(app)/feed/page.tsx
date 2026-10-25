@@ -6,6 +6,7 @@ import { Search, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities, PAGE_SIZE } from "@/lib/activity";
+import { blockedIds } from "@/lib/privacy";
 import { ActivityCard } from "@/components/activity-card";
 import { Avatar } from "@/components/avatar";
 
@@ -18,8 +19,9 @@ export default async function FeedPage({ searchParams }: Props) {
   if (!viewer) redirect("/login?next=/feed");
 
   const query = await searchParams;
+  const hidden = await blockedIds(viewer.id);
   const followingIds = (
-    await prisma.follow.findMany({ where: { followerId: viewer.id }, select: { followingId: true } })
+    await prisma.follow.findMany({ where: { followerId: viewer.id, status: "ACCEPTED" }, select: { followingId: true } })
   ).map((f) => f.followingId);
 
   // Quem ainda não segue ninguém cai no Global por padrão
@@ -34,7 +36,7 @@ export default async function FeedPage({ searchParams }: Props) {
     }),
     // Quem seguir: usuários com publicações recentes que você ainda não segue
     prisma.user.findMany({
-      where: { id: { notIn: [...followingIds, viewer.id] }, activities: { some: {} } },
+      where: { id: { notIn: [...followingIds, viewer.id, ...hidden] }, bannedAt: null, activities: { some: {} } },
       orderBy: { activities: { _count: "desc" } },
       take: 5,
       select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true },

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getOrCreateGame } from "@/lib/catalog";
 import { getActivities } from "@/lib/activity";
+import { visibleUsersWhere } from "@/lib/privacy";
 import { STATUS_LABEL } from "@/lib/format";
 import { communityScore, MIN_RATINGS_FOR_SCORE } from "@/lib/score";
 import { ActivityCard } from "@/components/activity-card";
@@ -42,7 +43,7 @@ export default async function GamePage({ params, searchParams }: Props) {
     prisma.gameLog.groupBy({ by: ["rating"], where: { gameId: game.id, rating: { not: null } }, _count: { _all: true } }),
     prisma.gameLog.count({ where: { gameId: game.id, status: "PLATINUM" } }),
     prisma.gameLog.findMany({
-      where: { gameId: game.id, status: "PLAYING" },
+      where: { gameId: game.id, status: "PLAYING", user: await visibleUsersWhere(viewer?.id ?? null) },
       orderBy: { updatedAt: "desc" },
       take: 12,
       select: { user: { select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } } },
@@ -190,7 +191,7 @@ export default async function GamePage({ params, searchParams }: Props) {
 
       {(trailers.length > 0 || screenshots.length > 0) && <GameMedia title={game.title} trailers={trailers} screenshots={screenshots} />}
 
-      <GameReviews gameId={game.id} slug={game.slug} filter={parseReviewFilter(reviewsParam)} />
+      <GameReviews gameId={game.id} slug={game.slug} filter={parseReviewFilter(reviewsParam)} viewerId={viewer?.id ?? null} />
 
       {game.steamAppId && (
         <Suspense fallback={null}>

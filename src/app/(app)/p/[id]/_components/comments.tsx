@@ -4,6 +4,8 @@ import { useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import { Loader2, Send, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/avatar";
+import { MentionText } from "@/components/mention-text";
+import { ReportButton } from "@/components/report-button";
 import { relativeTime } from "@/lib/format";
 import { addComment, deleteComment } from "@/app/(app)/_actions/social";
 
@@ -71,8 +73,9 @@ export function Comments({ activityId, initial, viewer, activityOwnerId }: Props
                   </Link>{" "}
                   <span className="text-xs text-zinc-500">{relativeTime(c.createdAt)}</span>
                 </p>
-                <p className="whitespace-pre-line break-words text-sm text-zinc-300">{c.body}</p>
+                <MentionText text={c.body} className="block whitespace-pre-line break-words text-sm text-zinc-300" />
               </div>
+              {viewer && viewer.id !== c.user.id && <ReportButton targetType="COMMENT" targetId={c.id} />}
               {canDelete && (
                 <button
                   type="button"
@@ -100,7 +103,7 @@ export function Comments({ activityId, initial, viewer, activityOwnerId }: Props
               }}
               rows={2}
               maxLength={1000}
-              placeholder="Escreva um comentário…"
+              placeholder="Escreva um comentário… (@usuario para mencionar)"
               aria-label="Comentário"
               className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
             />

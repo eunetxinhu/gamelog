@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { appUrl } from "@/lib/app-url";
 import { STEAM_MODE_COOKIE, STEAM_STATE_COOKIE, verifySteamLogin } from "@/lib/steam/openid";
 import { signInWithSteam } from "@/lib/steam/signin";
+import { cleanRef, REF_COOKIE } from "@/lib/referral";
 import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import type { SteamLinkErrorCode } from "@/app/(app)/settings/profile/_actions/types";
 
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
     const res = NextResponse.redirect(new URL(path, appUrl()));
     res.cookies.delete({ name: STEAM_STATE_COOKIE, path: "/api/steam" });
     res.cookies.delete({ name: STEAM_MODE_COOKIE, path: "/api/steam" });
+    res.cookies.delete({ name: REF_COOKIE, path: "/api/steam" });
     return res;
   };
   const done = (query: string) => redirectTo(`/settings/profile?${query}`);
@@ -36,7 +38,7 @@ export async function GET(req: NextRequest) {
     if (!login.ok) return redirectTo(login.reason === "CANCELLED" ? "/login" : "/login?error=steam");
     if (!hasSupabaseAdmin()) return redirectTo("/login?error=steam");
     try {
-      const { isNew } = await signInWithSteam(login.steamId);
+      const { isNew } = await signInWithSteam(login.steamId, cleanRef(req.cookies.get(REF_COOKIE)?.value));
       // Conta nova cai em Contas vinculadas, que já sincroniza a biblioteca
       return redirectTo(isNew ? "/settings/profile?steam=linked" : "/feed");
     } catch (err) {

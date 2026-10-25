@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import type { ActivityType, LibrarySource, LogStatus } from "@/generated/prisma/enums";
 import { notifyFollowers } from "@/lib/notifications";
+import { visibleUsersWhere } from "@/lib/privacy";
 
 /** Status do GameLog que viram publicação (BACKLOG não aparece no feed). */
 export const ACTIVITY_FOR_STATUS: Partial<Record<LogStatus, ActivityType>> = {
@@ -24,6 +25,8 @@ type RecordInput = {
   review?: string | null;
   containsSpoiler?: boolean;
   createdAt?: Date;
+  imageUrl?: string | null;
+  meta?: Prisma.InputJsonValue;
 };
 
 /**
@@ -36,7 +39,12 @@ export async function recordActivity(tx: Prisma.TransactionClient, input: Record
   const { userId, gameId, type, source } = input;
 
   if (source === "STEAM") {
-    const exists = await tx.activity.findFirst({ where: { userId, gameId, type }, select: { id: true } });
+    // Conquista rara: uma publicação por conquista (não por jogo)
+    const apiName = type === "RARE_ACHIEVEMENT" ? (input.meta as { apiName?: string } | undefined)?.apiName : undefined;
+    const exists = await tx.activity.findFirst({
+      where: { userId, gameId, type, ...(apiName ? { meta: { path: ["apiName"], equals: apiName } } : {}) },
+      select: { id: true },
+    });
     if (exists) return null;
   } else {
     const recent = await tx.activity.findFirst({
@@ -46,7 +54,12 @@ export async function recordActivity(tx: Prisma.TransactionClient, input: Record
     if (recent) {
       await tx.activity.update({
         where: { id: recent.id },
-        data: { rating: input.rating ?? null, review: input.review ?? null, containsSpoiler: input.containsSpoiler ?? false },
+        data: {
+          rating: input.rating ?? null,
+          review: input.review ?? null,
+          containsSpoiler: input.containsSpoiler ?? false,
+          ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
+        },
       });
       return null;
     }
@@ -62,6 +75,8 @@ export async function recordActivity(tx: Prisma.TransactionClient, input: Record
       review: input.review ?? null,
       containsSpoiler: input.containsSpoiler ?? false,
       createdAt: input.createdAt,
+      imageUrl: input.imageUrl ?? null,
+      meta: input.meta,
     },
     select: { id: true },
   });
@@ -81,6 +96,8 @@ export type FeedItem = {
   review: string | null;
   containsSpoiler: boolean;
   createdAt: Date;
+  imageUrl: string | null;
+  meta: { apiName?: string; name?: string; description?: string; icon?: string; percent?: number } | null;
   user: { id: string; username: string; displayName: string | null; avatarUrl: string | null };
   game: { slug: string; title: string; coverUrl: string | null; steamAppId: number | null; platinumRarity: number | null };
   likeCount: number;
@@ -102,8 +119,10 @@ export async function getActivities(opts: {
   before?: Date;
   take?: number;
 }): Promise<FeedItem[]> {
+  // Esconde perfis privados que eu não sigo, bloqueios (dos dois lados) e contas suspensas
+  const visible = await visibleUsersWhere(opts.viewerId);
   const rows = await prisma.activity.findMany({
-    where: { ...opts.where, ...(opts.before ? { createdAt: { lt: opts.before } } : {}) },
+    where: { AND: [opts.where ?? {}, { user: visible }, opts.before ? { createdAt: { lt: opts.before } } : {}] },
     orderBy: { createdAt: "desc" },
     take: opts.take ?? PAGE_SIZE,
     include: {
@@ -128,6 +147,8 @@ export async function getActivities(opts: {
     review: r.review,
     containsSpoiler: r.containsSpoiler,
     createdAt: r.createdAt,
+    imageUrl: r.imageUrl,
+    meta: (r.meta as FeedItem["meta"]) ?? null,
     user: {
       id: r.user.id,
       username: r.user.username,

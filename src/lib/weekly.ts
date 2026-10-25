@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { notifyMany } from "@/lib/notifications";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -20,7 +21,7 @@ export async function getWeeklySummary(userId: string, now = new Date()) {
     }),
     prisma.activityLike.count({ where: { type: "LIKE", createdAt: { gte: since }, activity: { userId } } }),
     prisma.activityLike.count({ where: { type: "GG", createdAt: { gte: since }, activity: { userId } } }),
-    prisma.follow.count({ where: { followingId: userId, createdAt: { gte: since } } }),
+    prisma.follow.count({ where: { followingId: userId, status: "ACCEPTED", createdAt: { gte: since } } }),
     prisma.libraryEntry.findMany({
       where: { userId, playtime2WeeksMinutes: { gt: 0 } },
       orderBy: { playtime2WeeksMinutes: "desc" },
@@ -67,7 +68,7 @@ export async function notifyWeeklySummaries(now = new Date()) {
       OR: [
         { activities: { some: { createdAt: { gte: since } } } },
         { library: { some: { playtime2WeeksMinutes: { gt: 0 } } } },
-        { followers: { some: { createdAt: { gte: since } } } },
+        { followers: { some: { status: "ACCEPTED", createdAt: { gte: since } } } },
       ],
       notifications: { none: { type: "WEEKLY", createdAt: { gte: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000) } } },
     },
@@ -75,6 +76,6 @@ export async function notifyWeeklySummaries(now = new Date()) {
   });
   if (active.length === 0) return { notified: 0 };
 
-  await prisma.notification.createMany({ data: active.map((u) => ({ userId: u.id, type: "WEEKLY" as const })) });
+  await notifyMany(active.map((u) => ({ userId: u.id, type: "WEEKLY" as const })));
   return { notified: active.length };
 }

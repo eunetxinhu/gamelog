@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2, Share2, Star, Trash2 } from "lucide-react";
 import type { LogStatus } from "@/generated/prisma/enums";
 import { STATUS_LABEL } from "@/lib/format";
 import { removeGameLog, saveGameLog } from "../_actions/log";
+import { ImageAttach } from "@/components/image-attach";
 
 type Props = {
   gameId: string;
@@ -30,6 +31,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const [review, setReview] = useState(initial?.review ?? "");
   const [spoiler, setSpoiler] = useState(initial?.containsSpoiler ?? false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [hasLog, setHasLog] = useState(Boolean(initial));
@@ -48,9 +50,10 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
   function onSave() {
     setMessage(null);
     startTransition(async () => {
-      const res = await saveGameLog({ gameId, status, rating, review, containsSpoiler: spoiler });
+      const res = await saveGameLog({ gameId, status, rating, review, containsSpoiler: spoiler, imageUrl });
       if (!res.ok) return setMessage({ tone: "error", text: res.message });
       setHasLog(true);
+      setImageUrl(null);
       setMessage({ tone: "ok", text: res.posted ? "Salvo e compartilhado no feed!" : "Salvo no seu perfil." });
     });
   }
@@ -123,7 +126,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
           onChange={(e) => setReview(e.target.value)}
           rows={4}
           maxLength={5000}
-          placeholder="O que achou?"
+          placeholder="O que achou? Use @usuario para mencionar alguém"
           className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
         />
         {review.trim() && (
@@ -133,6 +136,8 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
           </label>
         )}
       </div>
+
+      <ImageAttach kind="post" value={imageUrl} onChange={setImageUrl} />
 
       {message && (
         <p role="status" className={`flex items-center gap-1.5 text-sm ${message.tone === "ok" ? "text-emerald-300" : "text-red-300"}`}>

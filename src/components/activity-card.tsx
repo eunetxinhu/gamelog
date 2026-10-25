@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Flag, Gamepad2, MessageCircle, PenLine, Trophy, Zap } from "lucide-react";
+import { Camera, Flag, Gamepad2, Gem, MessageCircle, PenLine, Trophy, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import type { FeedItem } from "@/lib/activity";
 import { relativeTime } from "@/lib/format";
@@ -7,7 +7,9 @@ import { Avatar } from "./avatar";
 import { GameCover } from "./game-cover";
 import { RatingStars } from "./rating-stars";
 import { DeleteActivityButton, ReactionButton } from "./activity-actions";
+import { ReportButton } from "./report-button";
 import { formatRarity, RARE_PERCENT } from "@/lib/rarity";
+import { MentionText } from "./mention-text";
 
 const TYPE = {
   STARTED_GAME: { verb: "começou a jogar", icon: Zap, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/30" },
@@ -15,6 +17,8 @@ const TYPE = {
   PLATINUM: { verb: "platinou", icon: Trophy, tone: "text-amber-300 bg-amber-500/10 ring-amber-500/40" },
   DROPPED: { verb: "dropou", icon: Gamepad2, tone: "text-zinc-300 bg-zinc-500/10 ring-zinc-500/30" },
   REVIEW: { verb: "avaliou", icon: PenLine, tone: "text-violet-300 bg-violet-500/10 ring-violet-500/30" },
+  RARE_ACHIEVEMENT: { verb: "desbloqueou uma conquista rara em", icon: Gem, tone: "text-fuchsia-300 bg-fuchsia-500/10 ring-fuchsia-500/30" },
+  SCREENSHOT: { verb: "compartilhou um print de", icon: Camera, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/30" },
 } as const;
 
 type Props = { item: FeedItem; viewerId: string | null };
@@ -51,6 +55,7 @@ export function ActivityCard({ item, viewerId }: Props) {
           </p>
         </div>
         {viewerId === item.user.id && <DeleteActivityButton activityId={item.id} />}
+        {viewerId && viewerId !== item.user.id && <ReportButton targetType="ACTIVITY" targetId={item.id} />}
       </header>
 
       <div className="mt-4 flex gap-4">
@@ -76,7 +81,28 @@ export function ActivityCard({ item, viewerId }: Props) {
               <RatingStars value={item.rating} />
             </div>
           )}
+          {item.type === "RARE_ACHIEVEMENT" && item.meta?.name && (
+            <div className="flex items-center gap-3 rounded-xl bg-fuchsia-500/[0.07] p-2.5 ring-1 ring-fuchsia-500/30">
+              {item.meta.icon && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.meta.icon} alt="" className="size-11 shrink-0 rounded-md ring-1 ring-white/10" />
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-zinc-50">{item.meta.name}</p>
+                {item.meta.description && <p className="line-clamp-2 text-xs text-zinc-400">{item.meta.description}</p>}
+                {item.meta.percent != null && (
+                  <p className="text-xs text-fuchsia-300">💎 só {formatRarity(item.meta.percent)} dos jogadores têm</p>
+                )}
+              </div>
+            </div>
+          )}
           {item.review && <Review text={item.review} spoiler={item.containsSpoiler} />}
+          {item.imageUrl && (
+            <a href={item.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-fit">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={item.imageUrl} alt={`Print de ${item.game.title}`} loading="lazy" className="max-h-80 rounded-xl ring-1 ring-white/10" />
+            </a>
+          )}
         </div>
       </div>
 
@@ -106,11 +132,11 @@ function UserLink({ username, children }: { username: string; children: ReactNod
 }
 
 function Review({ text, spoiler }: { text: string; spoiler: boolean }) {
-  if (!spoiler) return <p className="whitespace-pre-line text-sm text-zinc-300">{text}</p>;
+  if (!spoiler) return <MentionText text={text} className="block whitespace-pre-line text-sm text-zinc-300" />;
   return (
     <details className="group text-sm">
       <summary className="cursor-pointer select-none text-amber-300/90 group-open:mb-1">Contém spoiler — clique para ver</summary>
-      <p className="whitespace-pre-line text-zinc-300">{text}</p>
+      <MentionText text={text} className="block whitespace-pre-line text-zinc-300" />
     </details>
   );
 }

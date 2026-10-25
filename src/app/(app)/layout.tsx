@@ -1,18 +1,27 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Bell, Compass, Gamepad2, LogOut, Medal, Newspaper, Settings } from "lucide-react";
+import { Bell, Compass, Gamepad2, LogOut, Mail, Medal, Newspaper, Settings, ShieldAlert, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { unreadCount } from "@/lib/notifications";
+import { unreadMessages } from "@/lib/dm";
+import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/avatar";
 import { signOut } from "../(auth)/_actions/auth";
 import { SteamAutoSync } from "./_components/steam-auto-sync";
+import { MobileNav } from "./_components/mobile-nav";
 
 /** Sincronização automática só quando a última tem mais que isso. */
 const AUTO_SYNC_AFTER_MS = 30 * 60 * 1000;
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
-  const unread = user ? await unreadCount(user.id) : 0;
+  const [unread, unreadDms, openReports] = user
+    ? await Promise.all([
+        unreadCount(user.id),
+        unreadMessages(user.id),
+        user.isAdmin ? prisma.report.count({ where: { status: "OPEN" } }) : 0,
+      ])
+    : [0, 0, 0];
   const needsSync =
     Boolean(user?.steamId) &&
     (!user?.steamLastSyncAt || Date.now() - user.steamLastSyncAt.getTime() > AUTO_SYNC_AFTER_MS);
@@ -25,18 +34,24 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link href={user ? "/feed" : "/"} className="mr-2 text-lg font-bold text-zinc-50">
               GameLog
             </Link>
-            <NavLink href="/feed" icon={<Newspaper className="size-4" aria-hidden />}>
-              Feed
-            </NavLink>
-            <NavLink href="/games" icon={<Gamepad2 className="size-4" aria-hidden />}>
-              Jogos
-            </NavLink>
-            <NavLink href="/explore" icon={<Compass className="size-4" aria-hidden />}>
-              Explorar
-            </NavLink>
-            <NavLink href="/ranking" icon={<Medal className="size-4" aria-hidden />}>
-              Ranking
-            </NavLink>
+            {/* No celular estes links ficam na barra inferior (MobileNav) */}
+            <div className="hidden items-center gap-1 md:flex lg:gap-3">
+              <NavLink href="/feed" icon={<Newspaper className="size-4" aria-hidden />}>
+                Feed
+              </NavLink>
+              <NavLink href="/games" icon={<Gamepad2 className="size-4" aria-hidden />}>
+                Jogos
+              </NavLink>
+              <NavLink href="/explore" icon={<Compass className="size-4" aria-hidden />}>
+                Explorar
+              </NavLink>
+              <NavLink href="/ranking" icon={<Medal className="size-4" aria-hidden />}>
+                Ranking
+              </NavLink>
+              <NavLink href="/clubes" icon={<Users className="size-4" aria-hidden />}>
+                Clubes
+              </NavLink>
+            </div>
           </div>
 
           {user ? (
@@ -45,6 +60,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 <Avatar name={user.displayName ?? user.username} src={user.avatarUrl ?? user.steamAvatarUrl} size="sm" />
                 <span className="hidden truncate text-sm text-zinc-300 sm:inline">@{user.username}</span>
               </Link>
+              {user.isAdmin && (
+                <IconLink href="/moderacao" label={`Moderação (${openReports} denúncias abertas)`} count={openReports}>
+                  <ShieldAlert className="size-4" aria-hidden />
+                </IconLink>
+              )}
+              <IconLink href="/mensagens" label={unreadDms ? `Mensagens (${unreadDms} novas)` : "Mensagens"} count={unreadDms}>
+                <Mail className="size-4" aria-hidden />
+              </IconLink>
               <Link
                 href="/notifications"
                 className="relative rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
@@ -74,7 +97,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </nav>
       </header>
       {needsSync && <SteamAutoSync />}
-      {children}
+      {/* Espaço para a barra inferior no celular */}
+      <div className="pb-20 md:pb-0">{children}</div>
+      <MobileNav />
     </>
   );
 }
@@ -83,7 +108,21 @@ function NavLink({ href, icon, children }: { href: string; icon: ReactNode; chil
   return (
     <Link href={href} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50">
       {icon}
-      <span className="hidden sm:inline">{children}</span>
+      <span className="hidden lg:inline">{children}</span>
+    </Link>
+  );
+}
+
+/** Ícone da barra com contador (mensagens, moderação). */
+function IconLink({ href, label, count, children }: { href: string; label: string; count: number; children: ReactNode }) {
+  return (
+    <Link href={href} className="relative rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100" aria-label={label}>
+      {children}
+      {count > 0 && (
+        <span className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold leading-4 text-white">
+          {count > 9 ? "9+" : count}
+        </span>
+      )}
     </Link>
   );
 }
