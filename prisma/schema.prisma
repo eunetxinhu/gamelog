@@ -51,6 +51,9 @@ enum NotificationType {
 
 enum LibrarySource {
   STEAM
+  /// Jogo da Família Steam (emprestado): não vem no GetOwnedGames, só nos
+  /// "jogados recentemente" ou quando o usuário registra o jogo no GameLog
+  FAMILY
   MANUAL
 }
 

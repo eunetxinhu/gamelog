@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     // Vínculo novo ou troca de conta: a biblioteca da conta anterior sai e o
     // cooldown zera, para a primeira sincronização da conta nova rodar na hora.
     await prisma.$transaction([
-      prisma.libraryEntry.deleteMany({ where: { userId: user.id, source: "STEAM" } }),
+      prisma.libraryEntry.deleteMany({ where: { userId: user.id, source: { in: ["STEAM", "FAMILY"] } } }),
       prisma.user.update({
         where: { id: user.id },
         data: { steamId, steamPersonaName: null, steamAvatarUrl: null, steamLastSyncAt: null },

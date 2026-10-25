@@ -129,6 +129,11 @@ function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnections
             Para trocar, entre com a outra conta no site da Steam. Se ela abrir já logada na conta atual, saia dela lá
             primeiro.
           </p>
+          <p className="text-xs text-zinc-500">
+            <strong className="font-medium text-zinc-400">Jogos da Família Steam:</strong> os que você jogou nas últimas 2
+            semanas entram sozinhos. Para os mais antigos, abra o jogo em Jogos e registre (Jogando, Finalizado ou
+            Platinado): na próxima sincronização conferimos suas conquistas nele.
+          </p>
         </div>
       )}
 

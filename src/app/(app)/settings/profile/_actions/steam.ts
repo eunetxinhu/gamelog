@@ -30,6 +30,41 @@ const PLATINUM_POST_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 const fail = (error: SteamSyncError): SteamSyncResult => ({ ok: false, error });
 
+/**
+ * Upsert em lote em library_entries. Para FAMILY as horas nunca diminuem: jogos
+ * registrados só pelo GameLog chegam com 0 minutos (a Steam não informa) e não podem
+ * apagar as horas vistas antes nos "jogados recentemente".
+ */
+async function upsertLibrary(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  source: "STEAM" | "FAMILY",
+  rows: { gameId: string; minutes: number; minutes2w: number; lastPlayed: string | null }[],
+) {
+  if (rows.length === 0) return [];
+  return tx.$queryRaw<{ inserted: boolean }[]>(Prisma.sql`
+    INSERT INTO library_entries
+      (user_id, game_id, source, playtime_minutes, playtime_2weeks_minutes, last_played_at, imported_at, updated_at)
+    SELECT ${userId}::uuid, t.game_id, ${source}::"LibrarySource", t.minutes, t.minutes_2w,
+           (t.last_played AT TIME ZONE 'UTC'), now(), now()
+    FROM unnest(
+      ${rows.map((r) => r.gameId)}::text[],
+      ${rows.map((r) => r.minutes)}::int[],
+      ${rows.map((r) => r.minutes2w)}::int[],
+      ${rows.map((r) => r.lastPlayed)}::timestamptz[]
+    ) AS t(game_id, minutes, minutes_2w, last_played)
+    ON CONFLICT (user_id, game_id) DO UPDATE SET
+      source                  = EXCLUDED.source,
+      playtime_minutes        = CASE WHEN EXCLUDED.source = 'FAMILY'
+                                     THEN GREATEST(library_entries.playtime_minutes, EXCLUDED.playtime_minutes)
+                                     ELSE EXCLUDED.playtime_minutes END,
+      playtime_2weeks_minutes = EXCLUDED.playtime_2weeks_minutes,
+      last_played_at          = COALESCE(EXCLUDED.last_played_at, library_entries.last_played_at),
+      updated_at              = now()
+    RETURNING (xmax = 0) AS inserted
+  `);
+}
+
 /** Atualiza o status do GameLog sem mexer em nota/review. */
 async function setLogStatus(
   tx: Prisma.TransactionClient,
@@ -139,19 +174,71 @@ export async function syncSteamLibrary(): Promise<SteamSyncResult> {
     // seriam centenas de jogos antigos de uma vez.
     const firstSync = !user.steamLastSyncAt;
     const previous = await prisma.libraryEntry.findMany({
-      where: { userId: user.id, source: "STEAM" },
-      select: { playtimeMinutes: true, platinumAt: true, achievementsCheckedAt: true, game: { select: { steamAppId: true } } },
+      where: { userId: user.id, source: { in: ["STEAM", "FAMILY"] } },
+      select: {
+        source: true,
+        playtimeMinutes: true,
+        platinumAt: true,
+        achievementsCheckedAt: true,
+        game: { select: { steamAppId: true, title: true } },
+      },
     });
     const prevByApp = new Map(previous.map((p) => [p.game.steamAppId!, p]));
+
+    // Família Steam: jogos emprestados não vêm no GetOwnedGames, e a Steam não lista
+    // a biblioteca da família para apps de terceiros. Mas as conquistas de qualquer jogo
+    // que o usuário jogou vêm normalmente. Então descobrimos esses jogos por:
+    //  - "jogados recentemente" que não são dele
+    //  - jogos que ele registrou no GameLog (página do jogo, menos Backlog) que não são dele
+    //  - os que já estavam salvos como FAMILY
+    const ownedIds = new Set(games.map((g) => g.appid));
+    const familyByApp = new Map<number, SteamOwnedGame>();
+    for (const p of previous) {
+      if (p.source === "FAMILY" && !ownedIds.has(p.game.steamAppId!)) {
+        familyByApp.set(p.game.steamAppId!, { appid: p.game.steamAppId!, name: p.game.title, playtime_forever: p.playtimeMinutes });
+      }
+    }
+    const loggedSteamGames = await prisma.gameLog.findMany({
+      // Backlog fica de fora: a pessoa ainda nem jogou
+      where: { userId: user.id, status: { not: "BACKLOG" }, game: { steamAppId: { not: null } } },
+      select: { game: { select: { steamAppId: true, title: true } } },
+    });
+    for (const { game } of loggedSteamGames) {
+      const appid = game.steamAppId!;
+      if (!ownedIds.has(appid) && !familyByApp.has(appid)) {
+        familyByApp.set(appid, { appid, name: game.title, playtime_forever: prevByApp.get(appid)?.playtimeMinutes ?? 0 });
+      }
+    }
+    if (recentRes.ok) {
+      for (const g of recentRes.data.games ?? []) {
+        if (!ownedIds.has(g.appid)) {
+          familyByApp.set(g.appid, { appid: g.appid, name: g.name, playtime_forever: g.playtime_forever, playtime_2weeks: g.playtime_2weeks });
+        }
+      }
+    }
+    const family = [...familyByApp.values()];
+    const familyIds = new Set(familyByApp.keys());
+    const allGames = [...games, ...family];
 
     // 7) Conquistas (fora da transação: são chamadas de rede) -------------------
     // Até ACHIEVEMENT_CHECKS_PER_SYNC jogos por vez: primeiro os jogados nas últimas
     // 2 semanas, depois os nunca checados. A biblioteca inteira é coberta em algumas sincronizações.
-    const candidates = games
-      .filter((g) => (g.playtime_forever ?? 0) > 0 && !prevByApp.get(g.appid)?.platinumAt)
-      .map((g) => ({ g, recent: minutes2w(g) > 0, checked: Boolean(prevByApp.get(g.appid)?.achievementsCheckedAt) }))
+    // Jogos da família entram mesmo sem horas conhecidas (o registro no GameLog já indica que jogou).
+    const candidates = allGames
+      .filter((g) => ((g.playtime_forever ?? 0) > 0 || familyIds.has(g.appid)) && !prevByApp.get(g.appid)?.platinumAt)
+      .map((g) => ({
+        g,
+        recent: minutes2w(g) > 0,
+        family: familyIds.has(g.appid),
+        checked: Boolean(prevByApp.get(g.appid)?.achievementsCheckedAt),
+      }))
       .filter((c) => c.recent || !c.checked)
-      .sort((a, b) => Number(b.recent) - Number(a.recent) || b.g.playtime_forever - a.g.playtime_forever)
+      .sort(
+        (a, b) =>
+          Number(b.recent) - Number(a.recent) ||
+          Number(b.family) - Number(a.family) ||
+          b.g.playtime_forever - a.g.playtime_forever,
+      )
       .slice(0, ACHIEVEMENT_CHECKS_PER_SYNC);
 
     const achievements = new Map<number, AchievementProgress | null>();
@@ -163,14 +250,14 @@ export async function syncSteamLibrary(): Promise<SteamSyncResult> {
 
     // 8) Persistência -----------------------------------------------------------
     const syncedAt = new Date();
-    const appIds = games.map((g) => g.appid);
+    const appIds = allGames.map((g) => g.appid);
 
     const { newGames, updatedGames, removedGames, posted } = await prisma.$transaction(
       async (tx) => {
         // 8a) Garante uma linha em `games` para cada appid (idempotente)
-        if (games.length > 0) {
+        if (allGames.length > 0) {
           await tx.game.createMany({
-            data: games.map((g) => ({
+            data: allGames.map((g) => ({
               slug: `steam-${g.appid}`,
               title: g.name?.trim() || `Steam App ${g.appid}`,
               steamAppId: g.appid,
@@ -185,43 +272,24 @@ export async function syncSteamLibrary(): Promise<SteamSyncResult> {
           : [];
         const gameIdByApp = new Map(gameRows.map((r) => [r.steamAppId!, r.id]));
 
-        // 8b) Upsert em lote da biblioteca (1 query, mesmo com milhares de jogos)
-        const rows = games
-          .filter((g) => gameIdByApp.has(g.appid))
-          .map((g) => ({
-            gameId: gameIdByApp.get(g.appid)!,
-            minutes: g.playtime_forever ?? 0,
-            minutes2w: minutes2w(g),
-            lastPlayed: g.rtime_last_played ? new Date(g.rtime_last_played * 1000).toISOString() : null,
-          }));
+        // 8b) Upsert em lote da biblioteca (1 query por origem, mesmo com milhares de jogos)
+        const toRows = (list: SteamOwnedGame[]) =>
+          list
+            .filter((g) => gameIdByApp.has(g.appid))
+            .map((g) => ({
+              gameId: gameIdByApp.get(g.appid)!,
+              minutes: g.playtime_forever ?? 0,
+              minutes2w: minutes2w(g),
+              lastPlayed: g.rtime_last_played ? new Date(g.rtime_last_played * 1000).toISOString() : null,
+            }));
+        const rows = toRows(games);
+        const ownedResult = await upsertLibrary(tx, user.id, "STEAM", rows);
+        await upsertLibrary(tx, user.id, "FAMILY", toRows(family));
+        const inserted = ownedResult.filter((r) => r.inserted).length;
+        const updated = ownedResult.length - inserted;
 
-        let inserted = 0;
-        let updated = 0;
-        if (rows.length > 0) {
-          const result = await tx.$queryRaw<{ inserted: boolean }[]>(Prisma.sql`
-            INSERT INTO library_entries
-              (user_id, game_id, source, playtime_minutes, playtime_2weeks_minutes, last_played_at, imported_at, updated_at)
-            SELECT ${user.id}::uuid, t.game_id, 'STEAM'::"LibrarySource", t.minutes, t.minutes_2w,
-                   (t.last_played AT TIME ZONE 'UTC'), now(), now()
-            FROM unnest(
-              ${rows.map((r) => r.gameId)}::text[],
-              ${rows.map((r) => r.minutes)}::int[],
-              ${rows.map((r) => r.minutes2w)}::int[],
-              ${rows.map((r) => r.lastPlayed)}::timestamptz[]
-            ) AS t(game_id, minutes, minutes_2w, last_played)
-            ON CONFLICT (user_id, game_id) DO UPDATE SET
-              source                  = 'STEAM'::"LibrarySource",
-              playtime_minutes        = EXCLUDED.playtime_minutes,
-              playtime_2weeks_minutes = EXCLUDED.playtime_2weeks_minutes,
-              last_played_at          = EXCLUDED.last_played_at,
-              updated_at              = now()
-            RETURNING (xmax = 0) AS inserted
-          `);
-          inserted = result.filter((r) => r.inserted).length;
-          updated = result.length - inserted;
-        }
-
-        // 8c) Remove o que saiu da biblioteca (reembolso, Family Sharing etc.)
+        // 8c) Remove o que saiu da biblioteca (reembolso etc.). Jogos da família ficam:
+        // sair dos "jogados recentemente" não quer dizer que a pessoa perdeu acesso.
         const removed = await tx.libraryEntry.deleteMany({
           where: { userId: user.id, source: "STEAM", gameId: { notIn: rows.map((r) => r.gameId) } },
         });
@@ -256,7 +324,7 @@ export async function syncSteamLibrary(): Promise<SteamSyncResult> {
         // 8e) Começou a jogar: o jogo passou de 0 para >0 minutos desde a última sincronização
         let started = 0;
         if (!firstSync) {
-          for (const g of games) {
+          for (const g of allGames) {
             const gameId = gameIdByApp.get(g.appid);
             const before = prevByApp.get(g.appid)?.playtimeMinutes ?? 0;
             if (!gameId || before > 0 || (g.playtime_forever ?? 0) === 0) continue;
@@ -321,7 +389,7 @@ export async function unlinkSteam(): Promise<{ ok: boolean }> {
   if (!user) return { ok: false };
 
   await prisma.$transaction([
-    prisma.libraryEntry.deleteMany({ where: { userId: user.id, source: "STEAM" } }),
+    prisma.libraryEntry.deleteMany({ where: { userId: user.id, source: { in: ["STEAM", "FAMILY"] } } }),
     prisma.user.update({
       where: { id: user.id },
       data: { steamId: null, steamPersonaName: null, steamAvatarUrl: null, steamLastSyncAt: null },
