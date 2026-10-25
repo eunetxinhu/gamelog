@@ -38,8 +38,9 @@ export default async function ConversationPage({ params }: Props) {
   const messages = (conversation?.messages ?? []).reverse().map((m) => ({ ...m, createdAt: m.createdAt.toISOString() }));
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-3.5rem)] max-w-2xl flex-col px-4 pt-4">
-      <header className="mb-3 flex items-center gap-3 border-b border-zinc-800 pb-3">
+    // Ocupa a tela toda abaixo do cabeçalho (a barra inferior some nesta página)
+    <main className="mx-auto flex h-[calc(100dvh_-_3.5rem_-_env(safe-area-inset-top))] max-w-2xl flex-col px-4 pt-3">
+      <header className="mb-2 flex items-center gap-3 border-b border-zinc-800 pb-3">
         <Link href="/mensagens" className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-800" aria-label="Voltar para as conversas">
           <ArrowLeft className="size-5" aria-hidden />
         </Link>

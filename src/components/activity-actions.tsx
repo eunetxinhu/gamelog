@@ -46,7 +46,7 @@ export function ReactionButton({
       type="button"
       onClick={onClick}
       aria-pressed={optimistic.active}
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm transition hover:bg-zinc-800 ${
+      className={`inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1 text-sm transition hover:bg-zinc-800 active:scale-95 sm:min-h-0 sm:px-2.5 ${
         optimistic.active ? r.on : "text-zinc-400"
       } ${type === "GG" && optimistic.active ? "bg-amber-400/10" : ""}`}
     >

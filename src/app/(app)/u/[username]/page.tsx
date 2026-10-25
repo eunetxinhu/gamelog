@@ -18,6 +18,7 @@ import { canSeeProfile } from "@/lib/privacy";
 import { canMessage } from "@/lib/dm";
 import { ProfileMenu } from "@/components/profile-menu";
 import { GameCover } from "@/components/game-cover";
+import { ScrollRow } from "@/components/scroll-row";
 
 type Props = { params: Promise<{ username: string }> };
 
@@ -54,7 +55,7 @@ export default async function ProfilePage({ params }: Props) {
   const name = profile.displayName ?? profile.username;
   const gamesHref = (aba: string) => `/u/${profile.username}/jogos?aba=${aba}`;
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-4 sm:py-8">
       {/* ---- Cabeçalho ------------------------------------------------------ */}
       <header className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
         <div className="h-32 bg-gradient-to-br from-sky-900/60 via-zinc-900 to-violet-900/60 sm:h-44">
@@ -63,7 +64,7 @@ export default async function ProfilePage({ params }: Props) {
             <img src={profile.bannerUrl} alt="" className="size-full object-cover" />
           )}
         </div>
-        <div className="flex flex-col gap-4 px-6 pb-6 sm:flex-row sm:items-end">
+        <div className="flex flex-col gap-4 px-4 pb-5 sm:flex-row sm:items-end sm:px-6 sm:pb-6">
           <div className="-mt-12 w-fit rounded-full ring-4 ring-zinc-950">
             <Avatar name={name} src={profile.avatarUrl ?? profile.steamAvatarUrl} size="lg" />
           </div>
@@ -211,7 +212,7 @@ function ProfileContent({
       {/* ---- Selos ---------------------------------------------------------- */}
       <Link
         href={`/u/${profile.username}/selos`}
-        className="mt-4 flex items-center gap-3 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 transition hover:border-zinc-600"
+        className="scrollbar-none mt-4 flex items-center gap-3 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 transition hover:border-zinc-600"
       >
         <span className="shrink-0 text-xs uppercase tracking-wide text-zinc-500">
           Selos {earnedBadges.length}/{progression.badges.length}
@@ -235,7 +236,10 @@ function ProfileContent({
         className="mt-2 flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-600"
       >
         <CalendarDays className="size-4 text-sky-400" aria-hidden />
-        {isMe ? "Sua semana" : "Resumo da semana"}: jogos novos, finalizados e platinas dos últimos 7 dias
+        <span className="min-w-0">
+          {isMe ? "Sua semana" : "Resumo da semana"}
+          <span className="hidden sm:inline">: jogos novos, finalizados e platinas dos últimos 7 dias</span>
+        </span>
         <ChevronRight className="ml-auto size-4 shrink-0 text-zinc-500" aria-hidden />
       </Link>
 
@@ -247,9 +251,9 @@ function ProfileContent({
         <Stat href={gamesHref("platinas")} label="Platinas" value={platinumList.length.toLocaleString("pt-BR")} highlight />
       </div>
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_320px]">
-        {/* ---- Atividade ---------------------------------------------------- */}
-        <section className="min-w-0">
+      <div className="mt-8 grid gap-8 sm:mt-10 sm:gap-10 lg:grid-cols-[1fr_320px]">
+        {/* ---- Atividade (no celular vem depois das estantes) ---------------- */}
+        <section className="order-last min-w-0 lg:order-none">
           <h2 className="mb-3 text-lg font-semibold text-zinc-50">Atividade</h2>
           {activities.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-zinc-800 p-6 text-sm text-zinc-500">
@@ -274,7 +278,7 @@ function ProfileContent({
           )}
         </section>
 
-        <div className="space-y-10">
+        <div className="min-w-0 space-y-7 lg:space-y-10">
           {playing.length > 0 && (
             <ShelfSection title="Jogando agora" href={gamesHref("jogando")}>
               {playing.map(({ game, sub }) => (
@@ -364,7 +368,10 @@ function ShelfSection({ title, href, icon, children }: { title: string; href: st
           Ver todos
         </Link>
       </div>
-      <ul className="grid grid-cols-3 gap-3">{children}</ul>
+      {/* Celular: fileira com rolagem lateral. Computador: grade na coluna lateral */}
+      <ScrollRow label={title} className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 py-1.5 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:p-0">
+        {children}
+      </ScrollRow>
     </section>
   );
 }
@@ -379,7 +386,7 @@ function Shelf({
   platinum?: boolean;
 }) {
   return (
-    <li>
+    <li className="w-[6.5rem] shrink-0 snap-start pr-1.5 lg:w-auto lg:pr-0">
       <Link href={`/games/${game.slug}`} className="group block space-y-1" title={game.title}>
         <div className="relative">
           <GameCover

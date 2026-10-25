@@ -13,7 +13,9 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "GameLog", statusBarStyle: "black-translucent" },
 };
 
-export const viewport: Viewport = { themeColor: "#09090b", colorScheme: "dark" };
+// viewportFit "cover": no app instalado (iOS) o conteúdo usa a tela toda e as
+// margens do notch / barra de gestos vêm de env(safe-area-inset-*)
+export const viewport: Viewport = { themeColor: "#09090b", colorScheme: "dark", viewportFit: "cover" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

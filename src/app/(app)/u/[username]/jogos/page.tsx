@@ -51,7 +51,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
       </Link>
       <h1 className="mb-5 text-2xl font-bold text-zinc-50">Jogos de {name}</h1>
 
-      <nav className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60 p-1" aria-label="Categorias">
+      <nav className="scrollbar-none mb-6 flex gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60 p-1" aria-label="Categorias">
         {PROFILE_TABS.map((t) => {
           const active = t.slug === tab;
           return (

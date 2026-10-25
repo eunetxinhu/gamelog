@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "/settings/account", label: "Perfil" },
-  { href: "/settings/profile", label: "Contas vinculadas" },
+  { href: "/settings/profile", label: "Contas vinculadas", short: "Contas" },
   { href: "/settings/privacy", label: "Privacidade" },
 ];
 
@@ -24,7 +24,14 @@ export function SettingsTabs() {
               active ? "bg-zinc-800 text-zinc-50" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            {t.label}
+            {t.short ? (
+              <>
+                <span className="sm:hidden">{t.short}</span>
+                <span className="hidden sm:inline">{t.label}</span>
+              </>
+            ) : (
+              t.label
+            )}
           </Link>
         );
       })}

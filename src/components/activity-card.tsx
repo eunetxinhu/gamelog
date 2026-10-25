@@ -97,23 +97,30 @@ export function ActivityCard({ item, viewerId }: Props) {
             </div>
           )}
           {item.review && <Review text={item.review} spoiler={item.containsSpoiler} />}
-          {item.imageUrl && (
-            <a href={item.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-fit">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={item.imageUrl} alt={`Print de ${item.game.title}`} loading="lazy" className="max-h-80 rounded-xl ring-1 ring-white/10" />
-            </a>
-          )}
         </div>
       </div>
 
-      <footer className="mt-3 flex items-center gap-1 border-t border-zinc-800/80 pt-2">
+      {/* Print com a largura do card (no celular a coluna ao lado da capa é estreita demais) */}
+      {item.imageUrl && (
+        <a href={item.imageUrl} target="_blank" rel="noopener noreferrer" className="mt-3 block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={item.imageUrl}
+            alt={`Print de ${item.game.title}`}
+            loading="lazy"
+            className="max-h-[28rem] w-full rounded-xl bg-black/40 object-contain ring-1 ring-white/10"
+          />
+        </a>
+      )}
+
+      <footer className="-mx-1.5 mt-3 flex items-center gap-1 border-t border-zinc-800/80 pt-2">
         <ReactionButton activityId={item.id} type="LIKE" active={item.likedByMe} count={item.likeCount} canReact={Boolean(viewerId)} />
         {(item.type === "PLATINUM" || item.type === "COMPLETED") && (
           <ReactionButton activityId={item.id} type="GG" active={item.ggByMe} count={item.ggCount} canReact={Boolean(viewerId)} />
         )}
         <Link
           href={`/p/${item.id}#comentarios`}
-          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200 sm:min-h-0 sm:px-2.5"
         >
           <MessageCircle className="size-4" aria-hidden />
           {item.commentCount > 0 ? item.commentCount : "Comentar"}

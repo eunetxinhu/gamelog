@@ -84,7 +84,7 @@ export function Thread({
               {newDay && <p className="my-3 text-center text-xs text-zinc-500">{dayFmt.format(date)}</p>}
               <div className={`group flex items-end gap-1.5 ${mine ? "justify-end" : "justify-start"}`}>
                 {mine && (
-                  <button type="button" onClick={() => onDelete(m.id)} className="rounded-full p-1 text-zinc-600 opacity-0 transition hover:text-red-300 group-hover:opacity-100" aria-label="Apagar mensagem">
+                  <button type="button" onClick={() => onDelete(m.id)} className="rounded-full p-1.5 text-zinc-600 transition hover:text-red-300 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100" aria-label="Apagar mensagem">
                     <Trash2 className="size-3.5" aria-hidden />
                   </button>
                 )}
@@ -106,9 +106,9 @@ export function Thread({
       </div>
 
       {blockedReason ? (
-        <p className="border-t border-zinc-800 py-4 text-center text-sm text-zinc-500">{blockedReason}</p>
+        <p className="border-t border-zinc-800 pt-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] text-center text-sm text-zinc-500">{blockedReason}</p>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-2 border-t border-zinc-800 py-3">
+        <form onSubmit={onSubmit} className="space-y-2 border-t border-zinc-800 pt-3 pb-[calc(0.75rem_+_env(safe-area-inset-bottom))]">
           {image && <ImageAttach kind="dm" value={image} onChange={setImage} />}
           <div className="flex items-end gap-2">
             {!image && <ImageAttach kind="dm" value={null} onChange={setImage} compact />}
@@ -116,8 +116,10 @@ export function Thread({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) onSubmit(e);
+                // No celular o Enter quebra a linha; enviar é pelo botão
+                if (e.key === "Enter" && !e.shiftKey && window.matchMedia("(hover: hover)").matches) onSubmit(e);
               }}
+              enterKeyHint="send"
               rows={1}
               maxLength={2000}
               placeholder="Escreva uma mensagem…"

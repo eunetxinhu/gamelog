@@ -9,6 +9,7 @@ import { Avatar } from "@/components/avatar";
 import { signOut } from "../(auth)/_actions/auth";
 import { SteamAutoSync } from "./_components/steam-auto-sync";
 import { MobileNav } from "./_components/mobile-nav";
+import { HeaderMenu } from "./_components/header-menu";
 
 /** Sincronização automática só quando a última tem mais que isso. */
 const AUTO_SYNC_AFTER_MS = 30 * 60 * 1000;
@@ -28,10 +29,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <header className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/85 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/85 pt-[env(safe-area-inset-top)] backdrop-blur">
         <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-1 sm:gap-4">
-            <Link href={user ? "/feed" : "/"} className="mr-2 text-lg font-bold text-zinc-50">
+            <Link href={user ? "/feed" : "/"} className="mr-2 text-xl font-bold tracking-tight text-zinc-50 md:text-lg">
               GameLog
             </Link>
             {/* No celular estes links ficam na barra inferior (MobileNav) */}
@@ -55,39 +56,40 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </div>
 
           {user ? (
-            <div className="flex min-w-0 items-center gap-1 sm:gap-2">
-              <Link href={`/u/${user.username}`} className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-1 hover:bg-zinc-800" title="Meu perfil">
+            <div className="flex min-w-0 items-center gap-0.5 sm:gap-2">
+              {/* No celular o perfil fica na barra inferior; Configurações e Sair vão para o menu */}
+              <Link
+                href={`/u/${user.username}`}
+                className="hidden min-w-0 items-center gap-2 rounded-lg px-2 py-1 hover:bg-zinc-800 md:flex"
+                title="Meu perfil"
+              >
                 <Avatar name={user.displayName ?? user.username} src={user.avatarUrl ?? user.steamAvatarUrl} size="sm" />
-                <span className="hidden truncate text-sm text-zinc-300 sm:inline">@{user.username}</span>
+                <span className="hidden truncate text-sm text-zinc-300 lg:inline">@{user.username}</span>
               </Link>
               {user.isAdmin && (
                 <IconLink href="/moderacao" label={`Moderação (${openReports} denúncias abertas)`} count={openReports}>
-                  <ShieldAlert className="size-4" aria-hidden />
+                  <ShieldAlert className="size-5 md:size-4" aria-hidden />
                 </IconLink>
               )}
               <IconLink href="/mensagens" label={unreadDms ? `Mensagens (${unreadDms} novas)` : "Mensagens"} count={unreadDms}>
-                <Mail className="size-4" aria-hidden />
+                <Mail className="size-5 md:size-4" aria-hidden />
+              </IconLink>
+              <IconLink href="/notifications" label={unread ? `Notificações (${unread} novas)` : "Notificações"} count={unread}>
+                <Bell className="size-5 md:size-4" aria-hidden />
               </IconLink>
               <Link
-                href="/notifications"
-                className="relative rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                aria-label={unread ? `Notificações (${unread} novas)` : "Notificações"}
+                href="/settings/account"
+                className="hidden rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 md:block"
+                aria-label="Configurações"
               >
-                <Bell className="size-4" aria-hidden />
-                {unread > 0 && (
-                  <span className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold leading-4 text-white">
-                    {unread > 9 ? "9+" : unread}
-                  </span>
-                )}
-              </Link>
-              <Link href="/settings/account" className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100" aria-label="Configurações">
                 <Settings className="size-4" aria-hidden />
               </Link>
-              <form action={signOut}>
+              <form action={signOut} className="hidden md:block">
                 <button type="submit" className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100" aria-label="Sair">
                   <LogOut className="size-4" aria-hidden />
                 </button>
               </form>
+              <HeaderMenu username={user.username} />
             </div>
           ) : (
             <Link href="/login" className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500">
@@ -97,9 +99,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </nav>
       </header>
       {needsSync && <SteamAutoSync />}
-      {/* Espaço para a barra inferior no celular */}
-      <div className="pb-20 md:pb-0">{children}</div>
-      <MobileNav />
+      {children}
+      <MobileNav
+        user={user ? { username: user.username, name: user.displayName ?? user.username, avatar: user.avatarUrl ?? user.steamAvatarUrl } : null}
+      />
     </>
   );
 }
@@ -119,7 +122,7 @@ function IconLink({ href, label, count, children }: { href: string; label: strin
     <Link href={href} className="relative rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100" aria-label={label}>
       {children}
       {count > 0 && (
-        <span className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold leading-4 text-white">
+        <span className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold leading-4 text-white ring-2 ring-zinc-950">
           {count > 9 ? "9+" : count}
         </span>
       )}

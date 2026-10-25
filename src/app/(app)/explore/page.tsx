@@ -10,6 +10,7 @@ import { formatPlaytime } from "@/lib/format";
 import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
 import { GameCover } from "@/components/game-cover";
+import { ScrollRow } from "@/components/scroll-row";
 import { SteamFriends } from "./_components/steam-friends";
 
 export const metadata: Metadata = { title: "Explorar · GameLog" };
@@ -27,11 +28,11 @@ export default async function ExplorePage({ searchParams }: Props) {
   const viewer = await getCurrentUser();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-5 sm:py-8">
       <h1 className="mb-1 text-2xl font-bold text-zinc-50">Explorar</h1>
-      <p className="mb-5 text-sm text-zinc-400">Encontre jogadores e veja o que a comunidade está jogando.</p>
+      <p className="mb-4 text-sm text-zinc-400 sm:mb-5">Encontre jogadores e veja o que a comunidade está jogando.</p>
 
-      <form action="/explore" className="mb-8 flex gap-2">
+      <form action="/explore" className="mb-6 flex gap-2 sm:mb-8">
         <label htmlFor="q" className="sr-only">
           Buscar pessoas
         </label>
@@ -43,7 +44,9 @@ export default async function ExplorePage({ searchParams }: Props) {
             defaultValue={q}
             placeholder="Buscar pessoas por nome ou @usuario"
             autoComplete="off"
-            className="min-w-0 flex-1 bg-transparent py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
+            type="search"
+            enterKeyHint="search"
+            className="min-w-0 flex-1 bg-transparent py-2.5 text-sm sm:py-2 text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
           />
         </div>
         <button type="submit" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500">
@@ -227,9 +230,13 @@ function Shelf({ title, icon, items }: { title: string; icon: ReactNode; items: 
   return (
     <section>
       <SectionTitle icon={icon}>{title}</SectionTitle>
-      <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
+      {/* Celular: fileira com rolagem lateral; a partir do sm, grade */}
+      <ScrollRow
+        label={title}
+        className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible sm:px-0 md:grid-cols-6"
+      >
         {items.map(({ game, sub }) => (
-          <li key={game.id}>
+          <li key={game.id} className="w-[6.5rem] shrink-0 snap-start sm:w-auto">
             <Link href={`/games/${game.slug}`} className="group block space-y-1.5">
               <GameCover title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} className="transition group-hover:ring-sky-500" />
               <p className="line-clamp-2 text-xs font-medium text-zinc-200 group-hover:text-white">{game.title}</p>
@@ -237,7 +244,7 @@ function Shelf({ title, icon, items }: { title: string; icon: ReactNode; items: 
             </Link>
           </li>
         ))}
-      </ul>
+      </ScrollRow>
     </section>
   );
 }

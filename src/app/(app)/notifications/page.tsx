@@ -52,8 +52,8 @@ export default async function NotificationsPage() {
   const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-5 text-2xl font-bold text-zinc-50">Notificações</h1>
+    <main className="mx-auto max-w-2xl px-4 py-5 sm:py-8">
+      <h1 className="mb-4 text-2xl font-bold text-zinc-50 sm:mb-5">Notificações</h1>
       {hasUnread && <MarkRead />}
       <FollowRequests
         requests={requests.map(({ follower: f }) => ({ id: f.id, username: f.username, displayName: f.displayName, avatar: f.avatarUrl ?? f.steamAvatarUrl }))}

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Search, Users } from "lucide-react";
+import { Plus, Search, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities, PAGE_SIZE } from "@/lib/activity";
@@ -47,14 +47,22 @@ export default async function FeedPage({ searchParams }: Props) {
     items.length === PAGE_SIZE ? `/feed?tab=${tab}&before=${encodeURIComponent(items[items.length - 1].createdAt.toISOString())}` : null;
 
   return (
-    <main className="mx-auto grid max-w-5xl gap-8 px-4 py-8 lg:grid-cols-[1fr_280px]">
+    <main className="mx-auto grid max-w-5xl gap-8 px-4 py-4 sm:py-8 lg:grid-cols-[1fr_280px]">
+      {/* Celular: botão flutuante de compartilhar, acima da barra inferior */}
+      <Link
+        href="/games"
+        aria-label="Compartilhar um jogo"
+        className="fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-20 flex size-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg shadow-sky-900/40 transition active:scale-95 md:hidden"
+      >
+        <Plus className="size-7" aria-hidden />
+      </Link>
       <div className="min-w-0">
         {query.senha === "alterada" && (
           <p role="status" className="mb-5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.07] p-3 text-sm text-emerald-100">
             Senha alterada com sucesso.
           </p>
         )}
-        <nav className="mb-5 flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1" aria-label="Feed">
+        <nav className="mb-4 flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 p-1 sm:mb-5" aria-label="Feed">
           <Tab href="/feed?tab=following" active={tab === "following"}>
             Seguindo
           </Tab>
@@ -85,7 +93,7 @@ export default async function FeedPage({ searchParams }: Props) {
       <aside className="space-y-6">
         <Link
           href="/games"
-          className="flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-500"
+          className="hidden items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-500 md:flex"
         >
           <Search className="size-4" aria-hidden />
           Compartilhar um jogo

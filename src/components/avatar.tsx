@@ -1,6 +1,6 @@
-type Props = { name: string; src: string | null; size?: "sm" | "md" | "lg" };
+type Props = { name: string; src: string | null; size?: "xs" | "sm" | "md" | "lg" };
 
-const SIZES = { sm: "size-9 text-sm", md: "size-12 text-base", lg: "size-24 text-3xl" };
+const SIZES = { xs: "size-7 text-xs", sm: "size-9 text-sm", md: "size-12 text-base", lg: "size-24 text-3xl" };
 
 /** Foto do usuário (perfil ou Steam) ou a inicial do nome. */
 export function Avatar({ name, src, size = "md" }: Props) {

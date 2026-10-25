@@ -72,7 +72,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
   const shown = hover ?? rating ?? 0;
 
   return (
-    <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+    <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:p-5">
       <h2 className="font-semibold text-zinc-50">{hasLog ? "Seu registro" : "Registrar e compartilhar"}</h2>
 
       <fieldset>
@@ -103,9 +103,9 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
               onClick={() => setRating(rating === n ? null : n)}
               aria-label={`${n} estrela${n > 1 ? "s" : ""}`}
               aria-pressed={rating === n}
-              className="rounded p-0.5"
+              className="rounded p-1 sm:p-0.5"
             >
-              <Star className={`size-7 transition ${n <= shown ? "fill-amber-400 text-amber-400" : "text-zinc-600"}`} aria-hidden />
+              <Star className={`size-8 transition sm:size-7 ${n <= shown ? "fill-amber-400 text-amber-400" : "text-zinc-600"}`} aria-hidden />
             </button>
           ))}
           {rating && (
@@ -151,7 +151,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
           type="button"
           onClick={onSave}
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-50 sm:flex-none sm:py-2"
         >
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Share2 className="size-4" aria-hidden />}
           {status === "BACKLOG" ? "Salvar no backlog" : "Salvar e compartilhar"}

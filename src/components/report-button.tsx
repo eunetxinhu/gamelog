@@ -38,8 +38,12 @@ function ReportDialog({ targetType, targetId, onClose }: { targetType: Target; t
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Denunciar" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-950 p-5" onClick={(e) => e.stopPropagation()}>
+    // No celular abre como folha a partir de baixo; no computador, centralizado
+    <div role="dialog" aria-modal="true" aria-label="Denunciar" className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4" onClick={onClose}>
+      <div
+        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border border-zinc-800 bg-zinc-950 p-5 pb-[calc(1.25rem_+_env(safe-area-inset-bottom))] sm:max-w-sm sm:rounded-2xl sm:pb-5"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold text-zinc-50">Denunciar</h2>
           <button type="button" onClick={onClose} className="rounded-full p-1 text-zinc-400 hover:bg-zinc-800" aria-label="Fechar">
@@ -54,7 +58,7 @@ function ReportDialog({ targetType, targetId, onClose }: { targetType: Target; t
             <fieldset className="space-y-1.5">
               <legend className="mb-2 text-sm text-zinc-400">Qual o problema?</legend>
               {REPORT_REASONS.map((r) => (
-                <label key={r} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-zinc-200 hover:bg-zinc-900">
+                <label key={r} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2.5 text-sm text-zinc-200 hover:bg-zinc-900 sm:py-1.5">
                   <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => setReason(r)} className="accent-sky-500" />
                   {r}
                 </label>

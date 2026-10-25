@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Play, X } from "lucide-react";
+import { ScrollRow } from "@/components/scroll-row";
 
 export type Screenshot = { thumb: string; full: string };
 export type Trailer = { name: string; thumb: string; hls: string };
@@ -19,13 +20,15 @@ export function GameMedia({ title, trailers, screenshots }: { title: string; tra
         <>
           <TrailerPlayer key={trailers[trailer].hls} trailer={trailers[trailer]} />
           {trailers.length > 1 && (
-            <ul className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            <div className="mt-2">
+            {/* py-1: espaço para o contorno do trailer selecionado não ser cortado */}
+            <ScrollRow label="Trailers" className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 sm:mx-0 sm:px-1">
               {trailers.map((t, i) => (
                 <li key={t.hls} className="shrink-0">
                   <button
                     type="button"
                     onClick={() => setTrailer(i)}
-                    className={`relative block w-40 overflow-hidden rounded-lg ring-2 transition ${i === trailer ? "ring-sky-500" : "ring-transparent hover:ring-zinc-600"}`}
+                    className={`relative block w-36 overflow-hidden sm:w-40 rounded-lg ring-2 transition ${i === trailer ? "ring-sky-500" : "ring-transparent hover:ring-zinc-600"}`}
                     title={t.name}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -34,7 +37,8 @@ export function GameMedia({ title, trailers, screenshots }: { title: string; tra
                   </button>
                 </li>
               ))}
-            </ul>
+            </ScrollRow>
+            </div>
           )}
         </>
       )}
@@ -109,6 +113,9 @@ function TrailerPlayer({ trailer }: { trailer: Trailer }) {
 function Lightbox({ images, index, onChange, title }: { images: Screenshot[]; index: number; onChange: (i: number | null) => void; title: string }) {
   const prev = () => onChange((index - 1 + images.length) % images.length);
   const next = () => onChange((index + 1) % images.length);
+  // Arrastar para o lado no celular troca de imagem
+  const touchX = useRef<number | null>(null);
+  const SWIPE_PX = 50;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -125,7 +132,16 @@ function Lightbox({ images, index, onChange, title }: { images: Screenshot[]; in
   }, [index, images.length, onChange]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`${title}: imagem ${index + 1} de ${images.length}`} className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" onClick={() => onChange(null)}>
+    <div role="dialog" aria-modal="true" aria-label={`${title}: imagem ${index + 1} de ${images.length}`} className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+      onClick={() => onChange(null)}
+      onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
+      onTouchEnd={(e) => {
+        if (touchX.current === null || images.length < 2) return;
+        const dx = e.changedTouches[0].clientX - touchX.current;
+        touchX.current = null;
+        if (Math.abs(dx) > SWIPE_PX) (dx > 0 ? prev : next)();
+      }}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={images[index].full} alt="" className="max-h-full max-w-full rounded-lg" onClick={(e) => e.stopPropagation()} />
       <button type="button" onClick={() => onChange(null)} className="absolute right-4 top-4 rounded-full bg-zinc-900/80 p-2 text-zinc-200 hover:bg-zinc-800" aria-label="Fechar">

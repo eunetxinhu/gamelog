@@ -80,21 +80,21 @@ export default async function GamePage({ params, searchParams }: Props) {
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
       </div>
 
-      <div className="relative grid gap-8 px-0 sm:px-6 md:grid-cols-[220px_1fr]">
-        <div className="mx-auto w-44 md:w-full">
+      <div className="relative grid gap-5 px-0 sm:gap-8 sm:px-6 md:grid-cols-[220px_1fr]">
+        <div className="mx-auto w-36 sm:w-44 md:w-full">
           <GameCover title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} className="shadow-2xl shadow-black/60" />
         </div>
 
         <div className="min-w-0 space-y-5 md:pt-24">
-          <header className="space-y-1">
-            <h1 className="text-3xl font-extrabold text-zinc-50 sm:text-4xl">{game.title}</h1>
+          <header className="space-y-1 text-center md:text-left">
+            <h1 className="text-2xl font-extrabold text-zinc-50 sm:text-4xl">{game.title}</h1>
             <p className="text-sm text-zinc-400">
               {[game.releaseDate?.getUTCFullYear(), game.developers[0], game.genres.slice(0, 3).join(", ")].filter(Boolean).join(" · ")}
             </p>
           </header>
 
           {/* ---- Notas ----------------------------------------------------- */}
-          <section className="grid gap-5 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 sm:grid-cols-[auto_auto_1fr] sm:items-center">
+          <section className="grid gap-5 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:grid-cols-[auto_auto_1fr] sm:items-center sm:p-5">
             <ScoreBadge
               score={score}
               title="Nota GameLog"

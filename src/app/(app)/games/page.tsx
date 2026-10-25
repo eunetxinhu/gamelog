@@ -8,6 +8,7 @@ import { getStoreHighlights, type StoreListItem } from "@/lib/steam/api";
 import { communityScore, MIN_RATINGS_FOR_SCORE } from "@/lib/score";
 import { GameCover } from "@/components/game-cover";
 import { ScoreBadge } from "@/components/score-badge";
+import { ScrollRow } from "@/components/scroll-row";
 
 export const metadata: Metadata = { title: "Jogos · GameLog" };
 
@@ -19,11 +20,11 @@ export default async function GamesPage({ searchParams }: Props) {
   const q = ((await searchParams).q ?? "").trim();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-5 sm:py-8">
       <h1 className="mb-1 text-2xl font-bold text-zinc-50">Jogos</h1>
-      <p className="mb-5 text-sm text-zinc-400">Busque um jogo para registrar, avaliar e compartilhar no feed.</p>
+      <p className="mb-4 text-sm text-zinc-400 sm:mb-5">Busque um jogo para registrar, avaliar e compartilhar no feed.</p>
 
-      <form action="/games" className="mb-8 flex gap-2">
+      <form action="/games" className="mb-6 flex gap-2 sm:mb-8">
         <label htmlFor="q" className="sr-only">
           Buscar jogo
         </label>
@@ -35,7 +36,9 @@ export default async function GamesPage({ searchParams }: Props) {
             defaultValue={q}
             placeholder="Elden Ring, Hades, God of War…"
             autoComplete="off"
-            className="min-w-0 flex-1 bg-transparent py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
+            type="search"
+            enterKeyHint="search"
+            className="min-w-0 flex-1 bg-transparent py-2.5 text-sm sm:py-2 text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
           />
         </div>
         <button type="submit" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500">
@@ -173,9 +176,9 @@ function StoreRow({ title, icon, items, upcoming }: { title: string; icon: React
   return (
     <section>
       <SectionTitle icon={icon}>{title}</SectionTitle>
-      <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+      <ScrollRow label={title} className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4">
         {items.map((item) => (
-          <li key={item.appId} className="w-56 shrink-0 snap-start">
+          <li key={item.appId} className="w-[68vw] max-w-56 shrink-0 snap-start sm:w-56">
             <Link href={`/games/steam-${item.appId}`} className="group block">
               <div className="relative overflow-hidden rounded-lg ring-1 ring-white/10 transition group-hover:ring-sky-500">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -204,7 +207,7 @@ function StoreRow({ title, icon, items, upcoming }: { title: string; icon: React
             </Link>
           </li>
         ))}
-      </ul>
+      </ScrollRow>
     </section>
   );
 }

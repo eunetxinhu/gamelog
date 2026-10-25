@@ -48,12 +48,12 @@ export default async function ClubPage({ params }: Props) {
   const canModerate = membership?.role === "OWNER" || membership?.role === "ADMIN" || viewer?.isAdmin;
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
+    <main className="mx-auto max-w-4xl px-4 py-5 sm:py-8">
       <Link href="/clubes" className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200">
         <ArrowLeft className="size-4" aria-hidden /> Clubes
       </Link>
 
-      <header className="mb-8 flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 sm:flex-row sm:items-center">
+      <header className="mb-6 flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:mb-8 sm:flex-row sm:items-center sm:p-5">
         {club.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={club.imageUrl} alt="" className="size-20 shrink-0 rounded-2xl object-cover" />
@@ -75,7 +75,7 @@ export default async function ClubPage({ params }: Props) {
         </div>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_240px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_240px] lg:gap-8">
         <section className="min-w-0 space-y-4">
           {membership && !viewer?.bannedAt && <ClubComposer clubId={club.id} />}
           {posts.length === 0 ? (
@@ -102,9 +102,9 @@ export default async function ClubPage({ params }: Props) {
                   </header>
                   {p.body && <MentionText text={p.body} className="block whitespace-pre-line break-words text-sm text-zinc-200" />}
                   {p.imageUrl && (
-                    <a href={p.imageUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block w-fit">
+                    <a href={p.imageUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block sm:w-fit">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.imageUrl} alt="" loading="lazy" className="max-h-96 rounded-xl ring-1 ring-white/10" />
+                      <img src={p.imageUrl} alt="" loading="lazy" className="max-h-96 w-full rounded-xl object-contain ring-1 ring-white/10 sm:w-auto" />
                     </a>
                   )}
                 </article>
@@ -113,16 +113,22 @@ export default async function ClubPage({ params }: Props) {
           )}
         </section>
 
-        <aside>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">Membros</h2>
-          <ul className="space-y-2">
+        {/* Celular: fileira de avatares acima do mural. Computador: lista na lateral */}
+        <aside className="order-first min-w-0 lg:order-none">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500 lg:mb-3">Membros</h2>
+          <ul className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:block lg:space-y-2 lg:px-0">
             {members.map(({ role, user }) => (
-              <li key={user.id}>
-                <Link href={`/u/${user.username}`} className="flex items-center gap-2 rounded-lg p-1 hover:bg-zinc-800/60">
+              <li key={user.id} className="shrink-0">
+                <Link
+                  href={`/u/${user.username}`}
+                  className="flex w-16 flex-col items-center gap-1 rounded-lg p-1 hover:bg-zinc-800/60 lg:w-auto lg:flex-row lg:gap-2"
+                >
                   <Avatar name={user.displayName ?? user.username} src={user.avatarUrl ?? user.steamAvatarUrl} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">{user.displayName ?? user.username}</span>
-                  {role === "OWNER" && <Crown className="size-3.5 text-amber-400" aria-label="Dono" />}
-                  {role === "ADMIN" && <Shield className="size-3.5 text-sky-400" aria-label="Admin" />}
+                  <span className="w-full truncate text-center text-[11px] text-zinc-200 lg:min-w-0 lg:flex-1 lg:text-left lg:text-sm">
+                    {user.displayName ?? user.username}
+                  </span>
+                  {role === "OWNER" && <Crown className="hidden size-3.5 text-amber-400 lg:block" aria-label="Dono" />}
+                  {role === "ADMIN" && <Shield className="hidden size-3.5 text-sky-400 lg:block" aria-label="Admin" />}
                 </Link>
               </li>
             ))}
