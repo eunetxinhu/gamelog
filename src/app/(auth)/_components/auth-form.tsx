@@ -17,7 +17,7 @@ export function AuthForm({ mode, next, notice, steamLogin, inviteRef }: Props) {
     <section className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-xl shadow-black/20">
       <h1 className="text-2xl font-bold text-zinc-50">{isSignup ? "Criar conta" : "Entrar"}</h1>
       <p className="mt-1 text-sm text-zinc-400">
-        {isSignup ? "Registre, avalie e acompanhe seus jogos." : "Bem-vindo de volta ao GameLog."}
+        {isSignup ? "Registre, avalie e acompanhe seus jogos." : "Bem-vindo de volta ao Poneglyph.gg."}
       </p>
 
       {state.info ? (

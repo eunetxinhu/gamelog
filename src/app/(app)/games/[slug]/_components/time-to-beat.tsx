@@ -12,7 +12,7 @@ type Props = {
 
 /**
  * "Tempo para zerar" na página do jogo. Só aparece quando há algum dado.
- * Comunidade = mediana das horas na Steam de quem finalizou/platinou no GameLog.
+ * Comunidade = mediana das horas na Steam de quem finalizou/platinou no Poneglyph.gg.
  */
 export function TimeToBeat({ times, myMinutes, finished }: Props) {
   const { community, rawgHours, estimate } = times;
@@ -29,10 +29,10 @@ export function TimeToBeat({ times, myMinutes, finished }: Props) {
       </h2>
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {finish && (
-          <Item label="Para finalizar" value={formatEstimate(finish.finishMedian!)} hint={`${finish.finishCount} jogadores do GameLog`} />
+          <Item label="Para finalizar" value={formatEstimate(finish.finishMedian!)} hint={`${finish.finishCount} jogadores do Poneglyph.gg`} />
         )}
         {platinum && (
-          <Item label="Para platinar" value={formatEstimate(platinum.platinumMedian!)} hint={`${platinum.platinumCount} platinas no GameLog`} gold />
+          <Item label="Para platinar" value={formatEstimate(platinum.platinumMedian!)} hint={`${platinum.platinumCount} platinas no Poneglyph.gg`} gold />
         )}
         {rawgHours ? <Item label="Média na Steam" value={formatEstimate(rawgHours * 60)} hint="todos os jogadores · RAWG" /> : null}
       </dl>

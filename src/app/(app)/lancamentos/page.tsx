@@ -9,7 +9,7 @@ import { getWishlistReleases, type ReleaseGame } from "@/lib/releases";
 import { monthLabel, untilLabel, type ReleaseItem } from "@/lib/release-calendar";
 import { GameCover } from "@/components/game-cover";
 
-export const metadata: Metadata = { title: "Lançamentos · GameLog" };
+export const metadata: Metadata = { title: "Lançamentos" };
 
 const monthFmt = new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" });
 const weekdayFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: "UTC" });

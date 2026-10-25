@@ -15,7 +15,7 @@ const dayFmt = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short"
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const username = decodeURIComponent((await params).username);
-  return { title: `Semana de @${username} · GameLog`, description: `O que @${username} jogou, finalizou e platinou nos últimos 7 dias.` };
+  return { title: `Semana de @${username}`, description: `O que @${username} jogou, finalizou e platinou nos últimos 7 dias.` };
 }
 
 /** Resumo dos últimos 7 dias, pronto para compartilhar (tem card de imagem próprio). */

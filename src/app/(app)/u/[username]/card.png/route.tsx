@@ -12,7 +12,7 @@ const SIZE = { width: 1200, height: 400 };
 const CACHE = { "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400" };
 
 /**
- * Card do perfil para incorporar fora do GameLog: assinatura de fórum, README do
+ * Card do perfil para incorporar fora do Poneglyph.gg: assinatura de fórum, README do
  * GitHub, bio. Imagem PNG em /u/<usuario>/card.png (Configurações → Perfil mostra
  * os códigos prontos). Perfil privado mostra só nome e avatar.
  */
@@ -114,7 +114,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
             )}
 
             <span style={{ display: "flex", marginTop: 24, fontSize: 24, fontWeight: 800, color: "#38bdf8" }}>
-              GameLog <span style={{ marginLeft: 12, fontWeight: 400, color: "#52525b" }}>{host}</span>
+              Poneglyph.gg <span style={{ marginLeft: 12, fontWeight: 400, color: "#52525b" }}>{host}</span>
             </span>
           </div>
 
@@ -146,7 +146,7 @@ function brandOnly(host: string) {
   return new ImageResponse(
     (
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b" }}>
-        <span style={{ fontSize: 96, fontWeight: 800, color: "#38bdf8" }}>GameLog</span>
+        <span style={{ fontSize: 96, fontWeight: 800, color: "#38bdf8" }}>Poneglyph.gg</span>
         <span style={{ fontSize: 28, color: "#52525b" }}>{host}</span>
       </div>
     ),

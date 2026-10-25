@@ -7,13 +7,14 @@ import { getCurrentUser } from "@/lib/auth";
 import { getProgression } from "@/lib/progression";
 import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { Avatar } from "@/components/avatar";
+import { SITE_NAME } from "@/lib/brand";
 
 type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const username = decodeURIComponent((await params).username);
   return {
-    title: `@${username} te convidou para o GameLog`,
+    title: { absolute: `@${username} te convidou para o ${SITE_NAME}` },
     description: "Conecte sua Steam, mostre suas platinas e acompanhe o que seus amigos estão jogando.",
   };
 }
@@ -41,7 +42,7 @@ export default async function InvitePage({ params }: Props) {
         <p className="mt-4 text-sm text-zinc-400">
           <strong className="text-zinc-100">{name}</strong> te convidou para o
         </p>
-        <h1 className="text-3xl font-extrabold text-zinc-50">GameLog</h1>
+        <h1 className="text-3xl font-extrabold text-zinc-50">Poneglyph.gg</h1>
         <p className="mt-2 text-sm text-zinc-400">A rede social de quem joga e caça platinas. Conecte sua Steam e seu perfil se monta sozinho.</p>
 
         <div className="mt-6 grid grid-cols-3 gap-2 text-center">

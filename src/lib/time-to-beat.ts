@@ -6,7 +6,7 @@ import { pickEstimate, sumEstimates, type CommunityTimes, type Estimate } from "
 
 /**
  * "Tempo para zerar". Duas fontes, sem raspar sites de terceiros:
- *  1. Comunidade GameLog: mediana das horas na Steam de quem finalizou ou platinou
+ *  1. Comunidade do site: mediana das horas na Steam de quem finalizou ou platinou
  *     (status do GameLog ou platina detectada). É a fonte preferida.
  *  2. RAWG: média de horas jogadas na Steam (todos os jogadores, não só quem terminou),
  *     usada enquanto a comunidade não tem amostra suficiente.

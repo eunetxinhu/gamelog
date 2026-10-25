@@ -12,7 +12,7 @@ import { Avatar } from "@/components/avatar";
 import { PhotoComposer } from "./_components/photo-composer";
 import type { GameOption } from "./_actions/photo-post";
 
-export const metadata: Metadata = { title: "Feed · GameLog" };
+export const metadata: Metadata = { title: "Feed" };
 
 type Props = { searchParams: Promise<{ tab?: string; before?: string; senha?: string; postar?: string; compartilhado?: string; texto?: string }> };
 

@@ -11,7 +11,7 @@ import { LevelBadge } from "@/components/level-badge";
 type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return { title: `Selos de @${decodeURIComponent((await params).username)} · GameLog` };
+  return { title: `Selos de @${decodeURIComponent((await params).username)}` };
 }
 
 /** Nível, de onde vem o XP e todos os selos (conquistados e por conquistar). */

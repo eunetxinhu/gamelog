@@ -24,9 +24,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     where: { id },
     select: { type: true, review: true, user: { select: { username: true, displayName: true } }, game: { select: { title: true } } },
   });
-  if (!a) return { title: "Publicação · GameLog" };
+  if (!a) return { title: "Publicação" };
   const title = `${a.user.displayName ?? a.user.username} ${VERB[a.type]} ${a.game.title}`;
-  return { title: `${title} · GameLog`, description: a.review?.slice(0, 160) ?? title, openGraph: { title } };
+  return { title, description: a.review?.slice(0, 160) ?? title, openGraph: { title } };
 }
 
 /** Uma publicação com os comentários (link das notificações e do compartilhamento). */

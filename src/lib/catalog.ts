@@ -53,7 +53,7 @@ async function rawgGet<T>(path: string, params: Record<string, string> = {}): Pr
 }
 
 /**
- * Busca em três fontes, nesta ordem: jogos já conhecidos no GameLog (tolerante a erro de
+ * Busca em três fontes, nesta ordem: jogos já conhecidos no banco (tolerante a erro de
  * digitação, ver lib/search.ts), loja da Steam e RAWG. Se a loja não achar quase nada e
  * houver um título parecido no banco, busca de novo na loja com o título certo.
  */

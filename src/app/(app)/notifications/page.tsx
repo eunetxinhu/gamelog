@@ -10,7 +10,7 @@ import { GameCover } from "@/components/game-cover";
 import { MarkRead } from "./_components/mark-read";
 import { FollowRequests } from "./_components/follow-requests";
 
-export const metadata: Metadata = { title: "Notificações · GameLog" };
+export const metadata: Metadata = { title: "Notificações" };
 
 const TYPE = {
   LIKE: { icon: Heart, tone: "text-rose-400", text: "curtiu sua publicação" },
@@ -23,7 +23,7 @@ const TYPE = {
   MESSAGE: { icon: Mail, tone: "text-sky-400", text: "te mandou uma mensagem" },
   MENTION: { icon: AtSign, tone: "text-violet-400", text: "mencionou você" },
   FOLLOW_REQUEST: { icon: UserPlus, tone: "text-amber-400", text: "pediu para seguir você" },
-  INVITE_JOINED: { icon: UserPlus, tone: "text-emerald-400", text: "entrou no GameLog pelo seu convite 🎉" },
+  INVITE_JOINED: { icon: UserPlus, tone: "text-emerald-400", text: "entrou no Poneglyph.gg pelo seu convite 🎉" },
   RELEASE: { icon: Rocket, tone: "text-fuchsia-400", text: "lançou hoje! 🎉" },
 } as const;
 

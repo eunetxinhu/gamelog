@@ -3,6 +3,7 @@
 // neste cache e manda para /feed?postar=1&compartilhado=N. O post de fotos lê daqui.
 
 /** Mesmo nome usado em public/sw.js */
+// Nome interno (do tempo em que o site se chamava GameLog); trocar esvaziaria o cache de quem já instalou.
 export const SHARE_CACHE = "gamelog-share";
 
 /** Lê os arquivos compartilhados e esvazia a caixa (cada compartilhamento é usado uma vez). */

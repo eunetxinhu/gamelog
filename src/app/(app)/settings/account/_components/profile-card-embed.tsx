@@ -18,7 +18,7 @@ export function ProfileCardEmbed({ username, origin }: { username: string; origi
   const [copied, setCopied] = useState(false);
   const profile = `${origin}/u/${username}`;
   const image = `${profile}/card.png`;
-  const alt = `GameLog de @${username}`;
+  const alt = `Poneglyph.gg de @${username}`;
 
   const code: Record<Format, string> = {
     markdown: `[![${alt}](${image})](${profile})`,

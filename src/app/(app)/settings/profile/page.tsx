@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { ProfileConnectionsForm } from "./_components/profile-connections-form";
 import { STEAM_LINK_MESSAGES, type SteamLinkErrorCode, type SteamSyncError } from "./_actions/types";
 
-export const metadata: Metadata = { title: "Contas vinculadas · GameLog" };
+export const metadata: Metadata = { title: "Contas vinculadas" };
 
 type Props = { searchParams: Promise<{ steam?: string; steam_error?: string }> };
 

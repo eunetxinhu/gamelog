@@ -11,7 +11,7 @@ import { Thread } from "../_components/thread";
 type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return { title: `Mensagens com @${decodeURIComponent((await params).username)} · GameLog` };
+  return { title: `Mensagens com @${decodeURIComponent((await params).username)}` };
 }
 
 /** Conversa com uma pessoa. */

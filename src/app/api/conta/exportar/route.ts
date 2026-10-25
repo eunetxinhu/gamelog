@@ -16,7 +16,7 @@ export async function GET() {
   return new NextResponse(JSON.stringify(data, null, 2), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Content-Disposition": `attachment; filename="gamelog-${user.username}-${date}.json"`,
+      "Content-Disposition": `attachment; filename="poneglyph-${user.username}-${date}.json"`,
       "Cache-Control": "private, no-store",
     },
   });

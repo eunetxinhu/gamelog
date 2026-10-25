@@ -11,7 +11,7 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,120}$/;
 /**
  * Botão rápido das listas: põe ou tira da wishlist sem abrir a página do jogo.
  * Recebe o estado desejado (e não "inverte"), para dois toques rápidos não se
- * desencontrarem. Jogos da loja que ainda não estão no GameLog são cadastrados aqui.
+ * desencontrarem. Jogos da loja que ainda não estão no banco são cadastrados aqui.
  */
 export async function setWishlistBySlug(slug: string, on: boolean): Promise<{ ok: boolean; wishlisted?: boolean; error?: string }> {
   const user = await getCurrentUser();

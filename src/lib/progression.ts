@@ -135,7 +135,7 @@ export const BADGES: Badge[] = [
   { id: "social", name: "Social", description: "Siga 10 jogadores", emoji: "🤝", value: (s) => s.following, target: 10 },
   { id: "recruiter", name: "Recrutador", description: "3 amigos entraram pelo seu convite", emoji: "📨", value: (s) => s.invites, target: 3 },
   { id: "family", name: "Família Steam", description: "Jogue um jogo da Família Steam", emoji: "👨‍👩‍👧", value: (s) => s.familyGames, target: 1 },
-  { id: "veteran", name: "Veterano", description: "1 ano de GameLog", emoji: "🎖️", value: (s) => s.accountDays, target: 365 },
+  { id: "veteran", name: "Veterano", description: "1 ano de Poneglyph.gg", emoji: "🎖️", value: (s) => s.accountDays, target: 365 },
 ];
 
 export function badgesFor(s: UserStats) {

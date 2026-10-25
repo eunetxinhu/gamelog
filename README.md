@@ -1,4 +1,4 @@
-# GameLog — rede social de registro e avaliação de jogos
+# Poneglyph.gg — rede social de registro e avaliação de jogos
 
 Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · Supabase (Auth + Postgres) · Prisma 7 · RAWG/IGDB · Steam Web API + Steam OpenID
 
@@ -162,7 +162,7 @@ Restaurar (num projeto Supabase novo ou no mesmo, com o banco vazio):
 ```bash
 # 1) Baixe o artefato backup-AAAA-MM-DD em Actions → Backup do banco → (execução) → Artifacts
 unzip backup-AAAA-MM-DD.zip
-gpg -d gamelog-AAAA-MM-DD.tar.gz.gpg | tar -xz        # pede a BACKUP_PASSPHRASE
+gpg -d poneglyph-AAAA-MM-DD.tar.gz.gpg | tar -xz        # pede a BACKUP_PASSPHRASE
 
 # 2) Restaura (comando da documentação do Supabase)
 psql --single-transaction --variable ON_ERROR_STOP=1 \
@@ -186,20 +186,20 @@ O SMTP padrão do Supabase manda poucos e-mails por hora; com mais usuários, ca
 2. Em API Keys, crie uma chave.
 3. No Supabase: Authentication → Emails → SMTP Settings → Enable custom SMTP:
    - Host `smtp.resend.com`, porta `465`, usuário `resend`, senha = a chave do Resend
-   - Sender email `nao-responda@SEU-DOMINIO`, sender name `GameLog`
+   - Sender email `nao-responda@SEU-DOMINIO`, sender name `Poneglyph.gg`
 4. Em Authentication → Rate Limits, aumente "Rate limit for sending emails".
 5. Em Authentication → Emails → Templates, troque os textos:
 
-**Confirm signup** — assunto: `Confirme sua conta no GameLog`
+**Confirm signup** — assunto: `Confirme sua conta no Poneglyph.gg`
 
 ```html
-<h2>Bem-vindo ao GameLog!</h2>
+<h2>Bem-vindo ao Poneglyph.gg!</h2>
 <p>Falta só um passo: confirme seu e-mail para ativar sua conta.</p>
 <p><a href="{{ .ConfirmationURL }}">Confirmar minha conta</a></p>
 <p>Se você não criou uma conta, pode ignorar este e-mail.</p>
 ```
 
-**Reset password** — assunto: `Crie uma nova senha no GameLog`
+**Reset password** — assunto: `Crie uma nova senha no Poneglyph.gg`
 
 ```html
 <h2>Esqueceu a senha?</h2>

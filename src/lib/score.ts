@@ -1,4 +1,4 @@
-// Escala de notas 0–100 (mesmas faixas da Metacritic), usada na Nota GameLog e no Metascore.
+// Escala de notas 0–100 (mesmas faixas da Metacritic), usada na Nota Poneglyph.gg e no Metascore.
 // Sem "server-only": também usada em Client Components.
 
 export type ScoreTone = "great" | "good" | "mixed" | "bad";

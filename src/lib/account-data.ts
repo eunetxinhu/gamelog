@@ -4,7 +4,7 @@ import { createSupabaseAdminClient, hasSupabaseAdmin } from "@/lib/supabase/admi
 import { removeUserFiles } from "@/lib/uploads";
 
 /**
- * Dados pessoais (LGPD, art. 18): exportar tudo o que o GameLog guarda sobre a
+ * Dados pessoais (LGPD, art. 18): exportar tudo o que o Poneglyph.gg guarda sobre a
  * pessoa e excluir a conta de verdade (perfil, publicações, mensagens e arquivos).
  */
 
@@ -50,7 +50,7 @@ export async function buildAccountExport(userId: string) {
   return {
     formato: EXPORT_VERSION,
     exportadoEm: new Date().toISOString(),
-    aviso: "Todos os dados que o GameLog guarda sobre você. Mensagens incluem as duas pessoas da conversa.",
+    aviso: "Todos os dados que o Poneglyph.gg guarda sobre você. Mensagens incluem as duas pessoas da conversa.",
     perfil: {
       usuario: user.username,
       nome: user.displayName,

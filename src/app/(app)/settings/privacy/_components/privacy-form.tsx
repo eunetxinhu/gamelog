@@ -76,7 +76,7 @@ export function PushToggle({ publicKey }: { publicKey: string | null }) {
       <div className="min-w-0">
         <p className="font-medium text-zinc-100">Notificações no celular e no computador</p>
         <p className="text-sm text-zinc-400">
-          {status === "unsupported" && "Este navegador não suporta notificações push. No iPhone, instale o GameLog na Tela de Início primeiro."}
+          {status === "unsupported" && "Este navegador não suporta notificações push. No iPhone, instale o Poneglyph.gg na Tela de Início primeiro."}
           {status === "denied" && "As notificações estão bloqueadas nas configurações do navegador para este site."}
           {(status === "off" || status === "loading") && "Platinas de amigos, GGs, comentários, mensagens e promoções, mesmo com o site fechado."}
           {status === "on" && "Ativadas neste aparelho."}

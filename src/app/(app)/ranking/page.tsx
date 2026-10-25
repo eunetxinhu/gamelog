@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getProgression } from "@/lib/progression";
 import { Avatar } from "@/components/avatar";
 
-export const metadata: Metadata = { title: "Ranking · GameLog" };
+export const metadata: Metadata = { title: "Ranking" };
 
 const BOARDS = {
   horas: { label: "Horas (2 semanas)", icon: Clock },

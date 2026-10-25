@@ -17,7 +17,7 @@ type Props = { params: Promise<{ username: string }>; searchParams: Promise<{ ab
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const [{ username }, { aba }] = await Promise.all([params, searchParams]);
   const tab = PROFILE_TABS.find((t) => t.slug === parseTab(aba))!;
-  return { title: `${tab.label} de @${decodeURIComponent(username)} · GameLog` };
+  return { title: `${tab.label} de @${decodeURIComponent(username)}` };
 }
 
 const EMPTY: Record<string, string> = {
@@ -114,7 +114,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
               "Ainda não há estimativa de tempo para os jogos deste backlog."
             )}{" "}
             <span className="text-zinc-500">
-              Estimativa pelas horas na Steam de quem finalizou no GameLog ou, sem dados suficientes, pela média da RAWG.
+              Estimativa pelas horas na Steam de quem finalizou no Poneglyph.gg ou, sem dados suficientes, pela média da RAWG.
             </span>
           </p>
         </div>

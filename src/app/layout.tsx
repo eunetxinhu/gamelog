@@ -2,15 +2,16 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { Pwa } from "@/components/pwa";
+import { SITE_NAME } from "@/lib/brand";
 
 export const metadata: Metadata = {
   // Base das URLs absolutas dos cards de compartilhamento (opengraph-image)
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
-  title: "GameLog",
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
   description: "Registre, avalie e compartilhe seus jogos, platinas e reviews.",
-  openGraph: { siteName: "GameLog", locale: "pt_BR", type: "website" },
-  applicationName: "GameLog",
-  appleWebApp: { capable: true, title: "GameLog", statusBarStyle: "black-translucent" },
+  openGraph: { siteName: SITE_NAME, locale: "pt_BR", type: "website" },
+  applicationName: SITE_NAME,
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "black-translucent" },
 };
 
 // viewportFit "cover": no app instalado (iOS) o conteúdo usa a tela toda e as

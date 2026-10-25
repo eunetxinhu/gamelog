@@ -13,6 +13,7 @@ import { MobileNav } from "./_components/mobile-nav";
 import { HeaderMenu } from "./_components/header-menu";
 import { needsAutoSync, shouldTouchLastSeen } from "@/lib/steam/schedule";
 import { upcomingWishlistCount } from "@/lib/releases";
+import { SITE_NAME } from "@/lib/brand";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -37,7 +38,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-1 sm:gap-4">
             <Link href={user ? "/feed" : "/"} className="mr-2 text-xl font-bold tracking-tight text-zinc-50 md:text-lg">
-              GameLog
+              {SITE_NAME}
             </Link>
             {/* No celular estes links ficam na barra inferior (MobileNav) */}
             <div className="hidden items-center gap-1 md:flex lg:gap-3">

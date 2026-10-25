@@ -7,7 +7,7 @@ import { appUrl } from "@/lib/app-url";
 import { BlockedList, InviteLink, NotificationPrefsForm, PrivacySettings, PushToggle } from "./_components/privacy-form";
 import { parsePrefs } from "@/lib/notification-prefs";
 
-export const metadata: Metadata = { title: "Privacidade e notificações · GameLog" };
+export const metadata: Metadata = { title: "Privacidade e notificações" };
 
 export default async function PrivacyPage() {
   const user = await getCurrentUser();

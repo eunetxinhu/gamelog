@@ -15,7 +15,7 @@ export type CommunityTimes = {
 export type Estimate = { minutes: number; source: "community" | "rawg"; sample?: number };
 
 /**
- * Prefere a comunidade do GameLog (horas reais de quem finalizou, vindas da Steam);
+ * Prefere a comunidade do site (horas reais de quem finalizou, vindas da Steam);
  * sem amostra suficiente, usa a média de horas na Steam informada pela RAWG.
  */
 export function pickEstimate(community: CommunityTimes | undefined, rawgHours: number | null | undefined): Estimate | null {

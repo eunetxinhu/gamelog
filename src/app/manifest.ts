@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { SITE_NAME } from "@/lib/brand";
 
 /** Manifesto do app instalável (PWA). */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "GameLog",
-    short_name: "GameLog",
+    name: SITE_NAME,
+    short_name: SITE_NAME,
     description: "Sua vida gamer, platina por platina: Steam, platinas, reviews e amigos.",
     start_url: "/feed",
     scope: "/",
