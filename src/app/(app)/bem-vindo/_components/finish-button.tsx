@@ -13,7 +13,7 @@ export function FinishOnboarding() {
   return (
     <div className="space-y-3">
       <label className="flex items-start gap-3 text-sm text-zinc-200">
-        <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 size-4 accent-sky-500" />
+        <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 size-4 accent-brand-500" />
         Li as regras da comunidade e concordo em segui-las.
       </label>
       <button
@@ -25,7 +25,7 @@ export function FinishOnboarding() {
             router.push("/feed");
           })
         }
-        className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-50"
       >
         {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
         Começar a jogar

@@ -74,9 +74,9 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
               }`}
             >
               {t.slug === "platinas" && <Trophy className="size-3.5 text-amber-400" aria-hidden />}
-              {t.slug === "quase" && <Target className="size-3.5 text-sky-400" aria-hidden />}
+              {t.slug === "quase" && <Target className="size-3.5 text-brand-400" aria-hidden />}
               {t.slug === "wishlist" && <Bookmark className="size-3.5 text-emerald-400" aria-hidden />}
-              {t.slug === "conquistas" && <Medal className="size-3.5 text-violet-400" aria-hidden />}
+              {t.slug === "conquistas" && <Medal className="size-3.5 text-ember-400" aria-hidden />}
               {t.label}
               <span className={`rounded-full px-1.5 text-xs tabular-nums ${active ? "bg-zinc-700 text-zinc-200" : "bg-zinc-800 text-zinc-500"}`}>
                 {counts[t.slug].toLocaleString("pt-BR")}
@@ -96,8 +96,8 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
       )}
 
       {backlog && backlog.total > 0 && (
-        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-violet-500/30 bg-violet-500/[0.06] p-4 text-sm text-zinc-300">
-          <Hourglass className="mt-0.5 size-5 shrink-0 text-violet-300" aria-hidden />
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-ember-500/30 bg-ember-500/[0.06] p-4 text-sm text-zinc-300">
+          <Hourglass className="mt-0.5 size-5 shrink-0 text-ember-300" aria-hidden />
           <p>
             {backlog.covered > 0 ? (
               <>
@@ -125,7 +125,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
           href="/lancamentos"
           className="mb-6 flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-600"
         >
-          <CalendarClock className="size-4 text-fuchsia-400" aria-hidden /> Ver o calendário de lançamentos da sua wishlist
+          <CalendarClock className="size-4 text-ember-400" aria-hidden /> Ver o calendário de lançamentos da sua wishlist
         </Link>
       )}
 
@@ -141,7 +141,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
                     title={game.title}
                     coverUrl={game.coverUrl}
                     steamAppId={game.steamAppId}
-                    className={platinum ? "ring-2 ring-amber-400/70" : "transition group-hover:ring-sky-500"}
+                    className={platinum ? "ring-2 ring-amber-400/70" : "transition group-hover:ring-brand-500"}
                   />
                   {platinum && (
                     <span className="absolute -right-1.5 -top-1.5 rounded-full bg-amber-400 p-1 text-zinc-950 shadow">
@@ -149,7 +149,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
                     </span>
                   )}
                   {!platinum && progress === 100 && (
-                    <span className="absolute -right-1.5 -top-1.5 rounded-full bg-violet-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">100%</span>
+                    <span className="absolute -right-1.5 -top-1.5 rounded-full bg-ember-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">100%</span>
                   )}
                 </div>
                 {progress !== undefined && (
@@ -162,14 +162,14 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
                     aria-label={`${progress}% das conquistas`}
                   >
                     <div
-                      className={`h-full rounded-full ${progress === 100 ? (platinum ? "bg-amber-400" : "bg-violet-500") : "bg-sky-500"}`}
+                      className={`h-full rounded-full ${progress === 100 ? (platinum ? "bg-amber-400" : "bg-ember-500") : "bg-brand-500"}`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                 )}
                 <p className="line-clamp-2 text-xs font-medium text-zinc-200 group-hover:text-white">{game.title}</p>
                 {rarity != null && rarity < RARE_PERCENT && (
-                  <span className="inline-block rounded-full bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-300">💎 RARA</span>
+                  <span className="inline-block rounded-full bg-ember-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-ember-300">💎 RARA</span>
                 )}
                 {rating && <RatingStars value={rating} />}
                 {sub && <p className="truncate text-[11px] text-zinc-500">{sub}</p>}
@@ -184,9 +184,9 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
 
 function SummaryTile({ label, value, hint, gold }: { label: string; value: string; hint?: string; gold?: boolean }) {
   return (
-    <div className={`rounded-xl border p-4 ${gold ? "border-violet-500/40 bg-violet-500/[0.06]" : "border-zinc-800 bg-zinc-900/60"}`}>
+    <div className={`rounded-xl border p-4 ${gold ? "border-ember-500/40 bg-ember-500/[0.06]" : "border-zinc-800 bg-zinc-900/60"}`}>
       <span className="block text-xs uppercase tracking-wide text-zinc-500">{label}</span>
-      <span className={`mt-1 block text-2xl font-bold ${gold ? "text-violet-300" : "text-zinc-50"}`}>{value}</span>
+      <span className={`mt-1 block text-2xl font-bold ${gold ? "text-ember-300" : "text-zinc-50"}`}>{value}</span>
       {hint && <span className="block text-[11px] text-zinc-500">{hint}</span>}
     </div>
   );

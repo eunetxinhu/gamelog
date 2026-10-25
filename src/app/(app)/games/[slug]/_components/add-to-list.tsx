@@ -59,7 +59,7 @@ export function AddToList({ slug, lists, loggedIn }: { slug: string; lists: MyLi
                       ) : has ? (
                         <Check className="size-4 text-emerald-400" aria-label="Já está na lista" />
                       ) : (
-                        <Plus className="size-4 text-sky-400" aria-hidden />
+                        <Plus className="size-4 text-brand-400" aria-hidden />
                       )}
                     </button>
                   </li>
@@ -67,7 +67,7 @@ export function AddToList({ slug, lists, loggedIn }: { slug: string; lists: MyLi
               })}
             </ul>
           )}
-          <Link href={`/listas/nova?jogo=${slug}`} className="flex items-center gap-2 border-t border-zinc-800 px-4 py-2.5 text-sm font-medium text-sky-400 hover:bg-zinc-800">
+          <Link href={`/listas/nova?jogo=${slug}`} className="flex items-center gap-2 border-t border-zinc-800 px-4 py-2.5 text-sm font-medium text-brand-400 hover:bg-zinc-800">
             <Plus className="size-4" aria-hidden /> Nova lista com este jogo
           </Link>
           {message && (

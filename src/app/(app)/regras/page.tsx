@@ -46,7 +46,7 @@ export default function RulesPage() {
       <ol className="mt-6 space-y-3">
         {RULES.map((r, i) => (
           <li key={r.title} className="flex gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-sky-500/15 text-sm font-bold text-sky-300">{i + 1}</span>
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-500/15 text-sm font-bold text-brand-300">{i + 1}</span>
             <div>
               <h2 className="font-semibold text-zinc-100">{r.title}</h2>
               <p className="mt-1 text-sm text-zinc-300">{r.body}</p>
@@ -56,7 +56,7 @@ export default function RulesPage() {
       </ol>
       <p className="mt-6 text-sm text-zinc-500">
         Quem desrespeitar as regras pode ter o conteúdo removido ou a conta suspensa. Dúvidas sobre seus dados? Veja{" "}
-        <Link href="/settings/dados" className="text-sky-400 hover:underline">
+        <Link href="/settings/dados" className="text-brand-400 hover:underline">
           Seus dados
         </Link>
         .

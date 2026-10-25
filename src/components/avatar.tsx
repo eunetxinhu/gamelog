@@ -10,7 +10,7 @@ export function Avatar({ name, src, size = "md" }: Props) {
     return <img src={src} alt="" className={`${cls} object-cover`} />;
   }
   return (
-    <span className={`${cls} flex items-center justify-center bg-gradient-to-br from-sky-600 to-violet-700 font-bold uppercase text-white`}>
+    <span className={`${cls} flex items-center justify-center bg-gradient-to-br from-brand-600 to-ember-700 font-bold uppercase text-white`}>
       {name.charAt(0)}
     </span>
   );

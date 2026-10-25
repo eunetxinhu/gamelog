@@ -73,7 +73,7 @@ export async function Achievements({ appId, steamId, owner }: Props) {
           </span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-zinc-800" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-          <div className={`h-full rounded-full ${platinum ? "bg-amber-400" : "bg-sky-500"}`} style={{ width: `${pct}%` }} />
+          <div className={`h-full rounded-full ${platinum ? "bg-amber-400" : "bg-brand-500"}`} style={{ width: `${pct}%` }} />
         </div>
       </div>
 
@@ -132,7 +132,7 @@ function List({ items, showLocked }: { items: AchievementDetail[]; showLocked: b
                   a.name
                 )}
                 {rare && (
-                  <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-300">
+                  <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-ember-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-ember-300">
                     <Gem className="size-2.5" aria-hidden /> RARA
                   </span>
                 )}

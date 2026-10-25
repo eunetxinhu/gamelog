@@ -51,7 +51,7 @@ export function MobileNav({ user }: { user: NavUser | null }) {
           <li>
             <NavItem href={profileHref} label={user ? "Perfil" : "Entrar"} active={isActive(profileHref)}>
               {user ? (
-                <span className={`rounded-full ring-2 ${isActive(profileHref) ? "ring-sky-400" : "ring-transparent"}`}>
+                <span className={`rounded-full ring-2 ${isActive(profileHref) ? "ring-brand-400" : "ring-transparent"}`}>
                   <Avatar name={user.name} src={user.avatar} size="xs" />
                 </span>
               ) : (
@@ -71,7 +71,7 @@ function NavItem({ href, label, active, children }: { href: string; label: strin
       href={href}
       aria-current={active ? "page" : undefined}
       className={`flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium transition active:scale-95 ${
-        active ? "text-sky-400" : "text-zinc-400"
+        active ? "text-brand-400" : "text-zinc-400"
       }`}
     >
       {children}

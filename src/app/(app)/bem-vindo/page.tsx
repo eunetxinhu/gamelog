@@ -39,12 +39,12 @@ export default async function WelcomePage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
-      <p className="text-sm font-medium text-sky-400">Bem-vindo ao {SITE_NAME}, {user.displayName ?? user.username}!</p>
+      <p className="text-sm font-medium text-brand-400">Bem-vindo ao {SITE_NAME}, {user.displayName ?? user.username}!</p>
       <h1 className="mt-1 text-2xl font-bold text-zinc-50 sm:text-3xl">Primeiros passos</h1>
       <p className="mt-2 text-sm text-zinc-400">Três coisas rápidas para seu perfil ganhar vida e o feed ter o que mostrar.</p>
 
       <div className="mt-5 h-2 overflow-hidden rounded-full bg-zinc-800" aria-hidden>
-        <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-violet-500 transition-all" style={{ width: `${(done / total) * 100}%` }} />
+        <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-ember-500 transition-all" style={{ width: `${(done / total) * 100}%` }} />
       </div>
       <p className="mt-1.5 text-xs text-zinc-500">
         {done} de {total} feitos
@@ -105,11 +105,11 @@ export default async function WelcomePage() {
 
       <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
         <h2 className="flex items-center gap-2 font-semibold text-zinc-50">
-          <ScrollText className="size-4 text-sky-400" aria-hidden /> Regras da comunidade
+          <ScrollText className="size-4 text-brand-400" aria-hidden /> Regras da comunidade
         </h2>
         <p className="mb-4 mt-1 text-sm text-zinc-400">
           Respeito, spoilers marcados, nada de spam e conquistas honestas.{" "}
-          <Link href="/regras" className="text-sky-400 hover:underline">
+          <Link href="/regras" className="text-brand-400 hover:underline">
             Leia as regras completas
           </Link>
           .

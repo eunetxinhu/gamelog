@@ -26,7 +26,7 @@ export default async function ListsPage({ searchParams }: Props) {
       <Shell canCreate={viewerId === author?.id}>
         <h1 className="mb-1 text-2xl font-bold text-zinc-50">Listas de {name}</h1>
         <p className="mb-6 text-sm text-zinc-400">
-          <Link href={`/u/${de}`} className="text-sky-400 hover:underline">
+          <Link href={`/u/${de}`} className="text-brand-400 hover:underline">
             Voltar ao perfil
           </Link>
         </p>
@@ -48,7 +48,7 @@ export default async function ListsPage({ searchParams }: Props) {
 
       <div className="space-y-10">
         {mine.length > 0 && (
-          <Section icon={<UserRound className="size-4 text-sky-400" aria-hidden />} title="Suas listas" more={viewer ? `/listas?de=${viewer.username}` : undefined}>
+          <Section icon={<UserRound className="size-4 text-brand-400" aria-hidden />} title="Suas listas" more={viewer ? `/listas?de=${viewer.username}` : undefined}>
             <ListGrid lists={mine} showAuthor={false} />
           </Section>
         )}
@@ -57,7 +57,7 @@ export default async function ListsPage({ searchParams }: Props) {
             <ListGrid lists={popular} />
           </Section>
         )}
-        <Section icon={<Sparkles className="size-4 text-violet-400" aria-hidden />} title="Recentes">
+        <Section icon={<Sparkles className="size-4 text-ember-400" aria-hidden />} title="Recentes">
           {recent.length ? <ListGrid lists={recent} /> : <Empty text="Ninguém criou uma lista ainda. Que tal ser a primeira pessoa?" />}
         </Section>
       </div>
@@ -71,7 +71,7 @@ function Shell({ canCreate, children }: { canCreate: boolean; children: React.Re
       {canCreate && (
         <Link
           href="/listas/nova"
-          className="float-right ml-3 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-sky-500"
+          className="float-right ml-3 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-brand-500"
         >
           <ListPlus className="size-4" aria-hidden /> Nova lista
         </Link>
@@ -88,7 +88,7 @@ function Section({ icon, title, more, children }: { icon: React.ReactNode; title
         {icon}
         {title}
         {more && (
-          <Link href={more} className="ml-auto text-sm font-normal text-sky-400 hover:underline">
+          <Link href={more} className="ml-auto text-sm font-normal text-brand-400 hover:underline">
             Ver todas
           </Link>
         )}

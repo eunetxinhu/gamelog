@@ -234,7 +234,7 @@ type Variant = "primary" | "ghost" | "danger" | "steam";
 
 function buttonClass(variant: Variant, className = "") {
   const styles = {
-    primary: "bg-sky-600 text-white hover:bg-sky-500",
+    primary: "bg-brand-600 text-white hover:bg-brand-500",
     ghost: "border border-zinc-700 text-zinc-200 hover:bg-zinc-800",
     danger: "border border-red-900/60 text-red-300 hover:bg-red-950/50",
     steam: "bg-[#1b2838] text-white ring-1 ring-white/10 hover:bg-[#2a475e]",
@@ -265,7 +265,7 @@ function Alert({ tone, icon, children }: { tone: "success" | "error" | "info"; i
   const styles = {
     success: "border-emerald-500/30 bg-emerald-500/[0.07] text-emerald-100",
     error: "border-red-500/30 bg-red-500/[0.07] text-red-100",
-    info: "border-sky-500/30 bg-sky-500/[0.07] text-sky-100",
+    info: "border-brand-500/30 bg-brand-500/[0.07] text-brand-100",
   }[tone];
   return (
     <div role={tone === "error" ? "alert" : "status"} className={`flex gap-2.5 rounded-lg border p-3 text-sm ${styles}`}>

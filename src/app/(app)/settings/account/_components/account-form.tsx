@@ -58,7 +58,7 @@ function ProfileSection({ username, profile, steamAvatarUrl, favorites, options,
     <Section title="Perfil" description="Como os outros jogadores veem você.">
       {/* Prévia */}
       <div className="relative mb-5 overflow-hidden rounded-xl border border-zinc-800">
-        <div className="h-28 bg-gradient-to-br from-sky-900/60 to-violet-900/60">
+        <div className="h-28 bg-gradient-to-br from-brand-900/60 to-ember-900/60">
           {form.bannerUrl && !bannerBroken && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={form.bannerUrl} alt="" className="size-full object-cover" onError={() => setBannerBroken(true)} />
@@ -206,7 +206,7 @@ function FavoritesSection({ initial, options }: { initial: (GameOption | null)[]
             <button
               type="button"
               onClick={() => setPicking(picking === i ? null : i)}
-              className={`block w-full rounded-lg ${picking === i ? "ring-2 ring-sky-500" : ""}`}
+              className={`block w-full rounded-lg ${picking === i ? "ring-2 ring-brand-500" : ""}`}
               aria-label={game ? `Trocar ${game.title}` : `Escolher jogo para a posição ${i + 1}`}
             >
               {game ? (
@@ -233,7 +233,7 @@ function FavoritesSection({ initial, options }: { initial: (GameOption | null)[]
 
       {picking !== null && (
         <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-          <div className="mb-2 flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-sky-500">
+          <div className="mb-2 flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-brand-500">
             <Search className="size-4 text-zinc-500" aria-hidden />
             <input
               autoFocus
@@ -372,7 +372,7 @@ function UploadButton({
 // =============================================================================
 
 const inputCls =
-  "w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30";
+  "w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
 
 function Section({ id, title, description, children }: { id?: string; title: string; description: string; children: ReactNode }) {
   return (
@@ -411,7 +411,7 @@ function SaveRow({ pending, onSave, result }: { pending: boolean; onSave: () => 
         type="button"
         onClick={onSave}
         disabled={pending}
-        className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-500 disabled:opacity-50"
       >
         {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
         Salvar

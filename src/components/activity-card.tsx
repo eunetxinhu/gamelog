@@ -15,13 +15,13 @@ import { photoVerb } from "@/lib/photo-post";
 import { UserTitle } from "./user-title";
 
 const TYPE = {
-  STARTED_GAME: { verb: "começou a jogar", icon: Zap, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/30" },
+  STARTED_GAME: { verb: "começou a jogar", icon: Zap, tone: "text-brand-300 bg-brand-500/10 ring-brand-500/30" },
   COMPLETED: { verb: "finalizou", icon: Flag, tone: "text-emerald-300 bg-emerald-500/10 ring-emerald-500/30" },
   PLATINUM: { verb: "platinou", icon: Trophy, tone: "text-amber-300 bg-amber-500/10 ring-amber-500/40" },
   DROPPED: { verb: "dropou", icon: Gamepad2, tone: "text-zinc-300 bg-zinc-500/10 ring-zinc-500/30" },
-  REVIEW: { verb: "avaliou", icon: PenLine, tone: "text-violet-300 bg-violet-500/10 ring-violet-500/30" },
-  RARE_ACHIEVEMENT: { verb: "desbloqueou uma conquista rara em", icon: Gem, tone: "text-fuchsia-300 bg-fuchsia-500/10 ring-fuchsia-500/30" },
-  SCREENSHOT: { verb: "compartilhou fotos de", icon: Camera, tone: "text-sky-300 bg-sky-500/10 ring-sky-500/30" },
+  REVIEW: { verb: "avaliou", icon: PenLine, tone: "text-ember-300 bg-ember-500/10 ring-ember-500/30" },
+  RARE_ACHIEVEMENT: { verb: "desbloqueou uma conquista rara em", icon: Gem, tone: "text-ember-300 bg-ember-500/10 ring-ember-500/30" },
+  SCREENSHOT: { verb: "compartilhou fotos de", icon: Camera, tone: "text-brand-300 bg-brand-500/10 ring-brand-500/30" },
 } as const;
 
 type Props = { item: FeedItem; viewerId: string | null };
@@ -75,7 +75,7 @@ export function ActivityCard({ item, viewerId }: Props) {
           {isPlatinum && item.game.platinumRarity !== null && (
             <p className="text-xs text-zinc-400">
               Só{" "}
-              <strong className={item.game.platinumRarity < RARE_PERCENT ? "text-fuchsia-300" : "text-amber-200"}>
+              <strong className={item.game.platinumRarity < RARE_PERCENT ? "text-ember-300" : "text-amber-200"}>
                 {formatRarity(item.game.platinumRarity)}
               </strong>{" "}
               dos jogadores têm essa platina{item.game.platinumRarity < RARE_PERCENT && " 💎"}
@@ -87,7 +87,7 @@ export function ActivityCard({ item, viewerId }: Props) {
             </div>
           )}
           {item.type === "RARE_ACHIEVEMENT" && item.meta?.name && (
-            <div className="flex items-center gap-3 rounded-xl bg-fuchsia-500/[0.07] p-2.5 ring-1 ring-fuchsia-500/30">
+            <div className="flex items-center gap-3 rounded-xl bg-ember-500/[0.07] p-2.5 ring-1 ring-ember-500/30">
               {item.meta.icon && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={item.meta.icon} alt="" className="size-11 shrink-0 rounded-md ring-1 ring-white/10" />
@@ -96,7 +96,7 @@ export function ActivityCard({ item, viewerId }: Props) {
                 <p className="truncate text-sm font-semibold text-zinc-50">{item.meta.name}</p>
                 {item.meta.description && <p className="line-clamp-2 text-xs text-zinc-400">{item.meta.description}</p>}
                 {item.meta.percent != null && (
-                  <p className="text-xs text-fuchsia-300">💎 só {formatRarity(item.meta.percent)} dos jogadores têm</p>
+                  <p className="text-xs text-ember-300">💎 só {formatRarity(item.meta.percent)} dos jogadores têm</p>
                 )}
               </div>
             </div>

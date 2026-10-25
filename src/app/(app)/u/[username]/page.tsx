@@ -61,7 +61,7 @@ export default async function ProfilePage({ params }: Props) {
     <main className="mx-auto max-w-5xl px-4 py-4 sm:py-8">
       {/* ---- Cabeçalho ------------------------------------------------------ */}
       <header className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
-        <div className="h-32 bg-gradient-to-br from-sky-900/60 via-zinc-900 to-violet-900/60 sm:h-44">
+        <div className="h-32 bg-gradient-to-br from-brand-900/60 via-zinc-900 to-ember-900/60 sm:h-44">
           {profile.bannerUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.bannerUrl} alt="" className="size-full object-cover" />
@@ -126,7 +126,7 @@ export default async function ProfilePage({ params }: Props) {
                 <ProfileMenu userId={profile.id} username={profile.username} blocked={blockedByMe} canMessage={Boolean(dm?.ok)} />
               </div>
             ) : (
-              <Link href={`/login?next=/u/${profile.username}`} className="text-sm text-sky-400 hover:underline">
+              <Link href={`/login?next=/u/${profile.username}`} className="text-sm text-brand-400 hover:underline">
                 Entre para seguir
               </Link>
             )}
@@ -210,7 +210,7 @@ function ProfileContent({
       {favorites.length === 0 && isMe && (
         <Link
           href="/settings/account#top4"
-          className="mt-6 flex items-center gap-4 rounded-2xl border border-dashed border-zinc-700 p-4 text-sm text-zinc-400 transition hover:border-sky-500/60 hover:text-zinc-200"
+          className="mt-6 flex items-center gap-4 rounded-2xl border border-dashed border-zinc-700 p-4 text-sm text-zinc-400 transition hover:border-brand-500/60 hover:text-zinc-200"
         >
           <span className="grid grid-cols-4 gap-1.5">
             {[0, 1, 2, 3].map((i) => (
@@ -230,7 +230,7 @@ function ProfileContent({
             {favorites.map(({ game }) => (
               <li key={game.id}>
                 <Link href={`/games/${game.slug}`} title={game.title} className="group block">
-                  <GameCover title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} className="transition group-hover:ring-sky-500" />
+                  <GameCover title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} className="transition group-hover:ring-brand-500" />
                 </Link>
               </li>
             ))}
@@ -264,7 +264,7 @@ function ProfileContent({
         href={`/u/${profile.username}/semana`}
         className="mt-2 flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-600"
       >
-        <CalendarDays className="size-4 text-sky-400" aria-hidden />
+        <CalendarDays className="size-4 text-brand-400" aria-hidden />
         <span className="min-w-0">
           {isMe ? "Sua semana" : "Resumo da semana"}
           <span className="hidden sm:inline">: jogos novos, finalizados e platinas dos últimos 7 dias</span>
@@ -285,7 +285,7 @@ function ProfileContent({
           href={gamesHref("conquistas")}
           className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-600"
         >
-          <Medal className="size-4 text-violet-400" aria-hidden />
+          <Medal className="size-4 text-ember-400" aria-hidden />
           <span>
             <strong className="text-zinc-50">{achievements.unlocked.toLocaleString("pt-BR")}</strong> conquistas
           </span>
@@ -294,7 +294,7 @@ function ProfileContent({
           </span>
           {achievements.perfect > 0 && (
             <span>
-              <strong className="text-violet-300">{achievements.perfect}</strong> {achievements.perfect === 1 ? "jogo" : "jogos"} 100%
+              <strong className="text-ember-300">{achievements.perfect}</strong> {achievements.perfect === 1 ? "jogo" : "jogos"} 100%
             </span>
           )}
           <ChevronRight className="ml-auto size-4 shrink-0 text-zinc-500" aria-hidden />
@@ -310,7 +310,7 @@ function ProfileContent({
             {(listCount > lists.length || isMe) && (
               <Link
                 href={listCount > lists.length ? `/listas?de=${profile.username}` : "/listas/nova"}
-                className="ml-auto text-sm font-normal text-sky-400 hover:underline"
+                className="ml-auto text-sm font-normal text-brand-400 hover:underline"
               >
                 {listCount > lists.length ? "Ver todas" : "Nova lista"}
               </Link>
@@ -321,7 +321,7 @@ function ProfileContent({
           ) : (
             <Link
               href="/listas/nova"
-              className="block rounded-2xl border border-dashed border-zinc-700 p-5 text-sm text-zinc-400 transition hover:border-sky-500/60 hover:text-zinc-200"
+              className="block rounded-2xl border border-dashed border-zinc-700 p-5 text-sm text-zinc-400 transition hover:border-brand-500/60 hover:text-zinc-200"
             >
               <strong className="block text-zinc-100">Crie sua primeira lista</strong>
               “Melhores metroidvanias”, “Jogos para jogar em dupla”… listas aparecem aqui e em Listas, para a comunidade curtir e comentar.
@@ -339,7 +339,7 @@ function ProfileContent({
               {isMe ? (
                 <>
                   Você ainda não publicou nada.{" "}
-                  <Link href="/games" className="text-sky-400 hover:underline">
+                  <Link href="/games" className="text-brand-400 hover:underline">
                     Compartilhe um jogo
                   </Link>
                   .
@@ -380,7 +380,7 @@ function ProfileContent({
           )}
 
           {nearPlatinum.length > 0 && (
-            <ShelfSection title="Quase platinando" href={gamesHref("quase")} icon={<Target className="size-4 text-sky-400" aria-hidden />}>
+            <ShelfSection title="Quase platinando" href={gamesHref("quase")} icon={<Target className="size-4 text-brand-400" aria-hidden />}>
               {nearPlatinum.map(({ game, sub }) => (
                 <Shelf key={game.id} game={game} sub={sub ?? undefined} />
               ))}
@@ -443,7 +443,7 @@ function ShelfSection({ title, href, icon, children }: { title: string; href: st
           {icon}
           {title}
         </h2>
-        <Link href={href} className="text-xs font-medium text-sky-400 hover:underline">
+        <Link href={href} className="text-xs font-medium text-brand-400 hover:underline">
           Ver todos
         </Link>
       </div>
@@ -472,7 +472,7 @@ function Shelf({
             title={game.title}
             coverUrl={game.coverUrl}
             steamAppId={game.steamAppId}
-            className={platinum ? "ring-2 ring-amber-400/70" : "transition group-hover:ring-sky-500"}
+            className={platinum ? "ring-2 ring-amber-400/70" : "transition group-hover:ring-brand-500"}
           />
           {platinum && (
             <span className="absolute -right-1.5 -top-1.5 rounded-full bg-amber-400 p-1 text-zinc-950 shadow">

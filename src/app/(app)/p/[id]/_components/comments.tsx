@@ -105,13 +105,13 @@ export function Comments({ activityId, initial, viewer, activityOwnerId }: Props
               maxLength={1000}
               placeholder="Escreva um comentário… (@usuario para mencionar)"
               aria-label="Comentário"
-              className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+              className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             />
             {error && <p className="text-sm text-red-300">{error}</p>}
             <button
               type="submit"
               disabled={pending || !body.trim()}
-              className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-brand-500 disabled:opacity-50"
             >
               {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Send className="size-4" aria-hidden />}
               Comentar
@@ -120,7 +120,7 @@ export function Comments({ activityId, initial, viewer, activityOwnerId }: Props
         </form>
       ) : (
         <p className="text-sm text-zinc-400">
-          <Link href={`/login?next=/p/${activityId}`} className="text-sky-400 hover:underline">
+          <Link href={`/login?next=/p/${activityId}`} className="text-brand-400 hover:underline">
             Entre
           </Link>{" "}
           para comentar.

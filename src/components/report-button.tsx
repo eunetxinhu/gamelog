@@ -59,7 +59,7 @@ function ReportDialog({ targetType, targetId, onClose }: { targetType: Target; t
               <legend className="mb-2 text-sm text-zinc-400">Qual o problema?</legend>
               {REPORT_REASONS.map((r) => (
                 <label key={r} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2.5 text-sm text-zinc-200 hover:bg-zinc-900 sm:py-1.5">
-                  <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => setReason(r)} className="accent-sky-500" />
+                  <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => setReason(r)} className="accent-brand-500" />
                   {r}
                 </label>
               ))}
@@ -70,7 +70,7 @@ function ReportDialog({ targetType, targetId, onClose }: { targetType: Target; t
               maxLength={1000}
               rows={3}
               placeholder="Detalhes (opcional)"
-              className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none"
+              className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none"
             />
             {result && !result.ok && <p className="mt-2 text-sm text-red-300">{result.message}</p>}
             <div className="mt-4 flex justify-end gap-2">

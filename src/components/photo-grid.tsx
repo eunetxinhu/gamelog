@@ -17,7 +17,7 @@ export function PhotoGrid({ images, title }: { images: string[]; title: string }
       key={src}
       type="button"
       onClick={() => setOpen(i)}
-      className={`group relative block overflow-hidden bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${className}`}
+      className={`group relative block overflow-hidden bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${className}`}
       aria-label={`Ver foto ${i + 1} de ${images.length} em tela cheia`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

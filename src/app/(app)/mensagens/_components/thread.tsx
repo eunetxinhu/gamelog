@@ -89,7 +89,7 @@ export function Thread({
                     <Trash2 className="size-3.5" aria-hidden />
                   </button>
                 )}
-                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "rounded-br-md bg-sky-600 text-white" : "rounded-bl-md bg-zinc-800 text-zinc-100"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "rounded-br-md bg-brand-600 text-white" : "rounded-bl-md bg-zinc-800 text-zinc-100"}`}>
                   {m.imageUrl && (
                     <a href={m.imageUrl} target="_blank" rel="noopener noreferrer">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -97,7 +97,7 @@ export function Thread({
                     </a>
                   )}
                   {m.body && <MentionText text={m.body} className="block whitespace-pre-line break-words" />}
-                  <span className={`mt-0.5 block text-right text-[10px] ${mine ? "text-sky-100/80" : "text-zinc-500"}`}>{timeFmt.format(date)}</span>
+                  <span className={`mt-0.5 block text-right text-[10px] ${mine ? "text-brand-100/80" : "text-zinc-500"}`}>{timeFmt.format(date)}</span>
                 </div>
               </div>
             </div>
@@ -125,9 +125,9 @@ export function Thread({
               maxLength={2000}
               placeholder="Escreva uma mensagem…"
               aria-label="Mensagem"
-              className="max-h-32 min-h-10 flex-1 resize-none rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none"
+              className="max-h-32 min-h-10 flex-1 resize-none rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none"
             />
-            <button type="submit" disabled={pending || (!body.trim() && !image)} className="rounded-xl bg-sky-600 p-2.5 text-white hover:bg-sky-500 disabled:opacity-50" aria-label="Enviar">
+            <button type="submit" disabled={pending || (!body.trim() && !image)} className="rounded-xl bg-brand-600 p-2.5 text-white hover:bg-brand-500 disabled:opacity-50" aria-label="Enviar">
               {pending ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <Send className="size-5" aria-hidden />}
             </button>
           </div>

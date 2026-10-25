@@ -40,7 +40,7 @@ export default async function ExplorePage({ searchParams }: Props) {
         <label htmlFor="q" className="sr-only">
           Buscar pessoas
         </label>
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/30">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30">
           <Search className="size-4 shrink-0 text-zinc-500" aria-hidden />
           <input
             id="q"
@@ -53,7 +53,7 @@ export default async function ExplorePage({ searchParams }: Props) {
             className="min-w-0 flex-1 bg-transparent py-2.5 text-sm sm:py-2 text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
           />
         </div>
-        <button type="submit" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500">
+        <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-500">
           Buscar
         </button>
       </form>
@@ -213,7 +213,7 @@ async function Discover({ viewerId }: { viewerId: string | null }) {
       )}
       {players.length > 0 && (
         <section>
-          <SectionTitle icon={<Users className="size-4 text-sky-400" aria-hidden />}>Jogadores em destaque</SectionTitle>
+          <SectionTitle icon={<Users className="size-4 text-brand-400" aria-hidden />}>Jogadores em destaque</SectionTitle>
           <PeopleList people={players} viewerId={viewerId} />
         </section>
       )}
@@ -252,7 +252,7 @@ function Shelf({
         {items.map(({ game, sub }) => (
           <li key={game.id} className="relative w-[6.5rem] shrink-0 snap-start sm:w-auto">
             <Link href={`/games/${game.slug}`} className="group block space-y-1.5">
-              <GameCover title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} className="transition group-hover:ring-sky-500" />
+              <GameCover title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} className="transition group-hover:ring-brand-500" />
               <p className="line-clamp-2 text-xs font-medium text-zinc-200 group-hover:text-white">{game.title}</p>
               <p className="text-[11px] text-zinc-500">{sub}</p>
             </Link>

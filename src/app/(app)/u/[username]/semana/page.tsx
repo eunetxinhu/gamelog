@@ -59,8 +59,8 @@ function WeeklyBody({ w }: { w: WeeklySummary }) {
   const stats = [
     { icon: <Trophy className="size-4 text-amber-400" aria-hidden />, label: "Platinas", value: w.platinums.length },
     { icon: <Flag className="size-4 text-emerald-400" aria-hidden />, label: "Finalizados", value: w.completed.length },
-    { icon: <Zap className="size-4 text-sky-400" aria-hidden />, label: "Jogos novos", value: w.started.length },
-    { icon: <PenLine className="size-4 text-violet-400" aria-hidden />, label: "Reviews", value: w.reviews.length },
+    { icon: <Zap className="size-4 text-brand-400" aria-hidden />, label: "Jogos novos", value: w.started.length },
+    { icon: <PenLine className="size-4 text-ember-400" aria-hidden />, label: "Reviews", value: w.reviews.length },
     { icon: <Heart className="size-4 text-rose-400" aria-hidden />, label: "Curtidas + GGs", value: w.likes + w.ggs },
     { icon: <UserPlus className="size-4 text-emerald-400" aria-hidden />, label: "Novos seguidores", value: w.followers },
   ];
@@ -87,7 +87,7 @@ function WeeklyBody({ w }: { w: WeeklySummary }) {
             {w.topGames.map(({ game, hours }) => (
               <li key={game.id}>
                 <Link href={`/games/${game.slug}`} className="group block space-y-1.5">
-                  <GameCover title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} className="transition group-hover:ring-sky-500" />
+                  <GameCover title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} className="transition group-hover:ring-brand-500" />
                   <p className="truncate text-xs font-medium text-zinc-200">{game.title}</p>
                   <p className="text-[11px] text-zinc-500">{hours.toLocaleString("pt-BR")} h</p>
                 </Link>
@@ -114,7 +114,7 @@ function GameList({ title, games }: { title: ReactNode; games: WeeklySummary["st
         {unique.map((g) => (
           <li key={g.id}>
             <Link href={`/games/${g.slug}`} title={g.title} className="group block">
-              <GameCover title={g.title} coverUrl={g.coverUrl} steamAppId={g.steamAppId} className="transition group-hover:ring-sky-500" />
+              <GameCover title={g.title} coverUrl={g.coverUrl} steamAppId={g.steamAppId} className="transition group-hover:ring-brand-500" />
             </Link>
           </li>
         ))}

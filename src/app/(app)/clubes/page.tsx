@@ -36,7 +36,7 @@ export default async function ClubsPage() {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-zinc-50">
-            <Users className="size-6 text-sky-400" aria-hidden /> Clubes
+            <Users className="size-6 text-brand-400" aria-hidden /> Clubes
           </h1>
           <p className="text-sm text-zinc-400">Grupos para conversar sobre um jogo, um gênero ou caça de platinas.</p>
         </div>
@@ -72,7 +72,7 @@ function ClubGrid({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={c.imageUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
                 ) : (
-                  <span className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-700 to-violet-700 text-xl font-bold text-white">
+                  <span className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-700 to-ember-700 text-xl font-bold text-white">
                     {c.name.charAt(0).toUpperCase()}
                   </span>
                 )}

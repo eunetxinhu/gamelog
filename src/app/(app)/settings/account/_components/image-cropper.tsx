@@ -173,7 +173,7 @@ export function ImageCropper({ source, aspect, outputWidth, round, title, onCanc
             onPointerCancel={onPointerUp}
             onWheel={onWheel}
             onKeyDown={onKeyDown}
-            className="relative cursor-grab touch-none select-none overflow-hidden bg-zinc-900 outline-none ring-sky-500 focus-visible:ring-2 active:cursor-grabbing"
+            className="relative cursor-grab touch-none select-none overflow-hidden bg-zinc-900 outline-none ring-brand-500 focus-visible:ring-2 active:cursor-grabbing"
             style={{ width: frameW, height: frameH }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -213,7 +213,7 @@ export function ImageCropper({ source, aspect, outputWidth, round, title, onCanc
             step={0.01}
             value={zoom}
             onChange={(e) => applyZoom(Number(e.target.value))}
-            className="flex-1 accent-sky-500"
+            className="flex-1 accent-brand-500"
             aria-label="Zoom"
           />
           <button type="button" onClick={() => applyZoom(zoom * 1.2)} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-800" aria-label="Aumentar zoom">
@@ -235,7 +235,7 @@ export function ImageCropper({ source, aspect, outputWidth, round, title, onCanc
             type="button"
             onClick={confirm}
             disabled={!natural || saving}
-            className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
           >
             {saving ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Check className="size-4" aria-hidden />}
             {saving ? "Enviando…" : "Aplicar"}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ResetPasswordForm } from "../_components/password-forms";
+import { BrandStage } from "@/components/brand-stage";
 
 export const metadata: Metadata = { title: "Criar nova senha" };
 
@@ -15,8 +16,8 @@ export default async function ResetPasswordPage() {
   if (!data.user) redirect("/login?error=reset");
 
   return (
-    <main className="flex min-h-dvh items-center justify-center px-4 py-10">
+    <BrandStage>
       <ResetPasswordForm email={data.user.email ?? null} />
-    </main>
+    </BrandStage>
   );
 }

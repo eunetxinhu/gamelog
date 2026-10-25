@@ -27,7 +27,7 @@ export function FollowButton({ userId, state: initial, isPrivate }: { userId: st
       onClick={onClick}
       title={state === "PENDING" ? "Clique para cancelar o pedido" : undefined}
       className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${
-        state ? "border border-zinc-700 text-zinc-200 hover:bg-zinc-800" : "bg-sky-600 text-white hover:bg-sky-500"
+        state ? "border border-zinc-700 text-zinc-200 hover:bg-zinc-800" : "bg-brand-600 text-white hover:bg-brand-500"
       }`}
     >
       {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Icon className="size-4" aria-hidden />}

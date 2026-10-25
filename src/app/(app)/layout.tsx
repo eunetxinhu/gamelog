@@ -14,6 +14,7 @@ import { HeaderMenu } from "./_components/header-menu";
 import { needsAutoSync, shouldTouchLastSeen } from "@/lib/steam/schedule";
 import { upcomingWishlistCount } from "@/lib/releases";
 import { SITE_NAME } from "@/lib/brand";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -34,11 +35,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <header className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/85 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-brand-900/60 bg-black/85 pt-[env(safe-area-inset-top)] backdrop-blur">
         <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-1 sm:gap-4">
-            <Link href={user ? "/feed" : "/"} className="mr-2 text-xl font-bold tracking-tight text-zinc-50 md:text-lg">
-              {SITE_NAME}
+            <Link href={user ? "/feed" : "/"} className="mr-2 shrink-0 pt-1" aria-label={`${SITE_NAME}: início`}>
+              <BrandLogo className="h-7 md:h-6" />
             </Link>
             {/* No celular estes links ficam na barra inferior (MobileNav) */}
             <div className="hidden items-center gap-1 md:flex lg:gap-3">
@@ -72,7 +73,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 title="Meu perfil"
               >
                 <Avatar name={user.displayName ?? user.username} src={user.avatarUrl ?? user.steamAvatarUrl} size="sm" />
-                <span className="hidden truncate text-sm text-zinc-300 lg:inline">@{user.username}</span>
               </Link>
               {user.isAdmin && (
                 <IconLink href="/moderacao" label={`Moderação (${openReports} denúncias abertas)`} count={openReports}>
@@ -110,7 +110,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               <HeaderMenu username={user.username} />
             </div>
           ) : (
-            <Link href="/login" className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500">
+            <Link href="/login" className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-500">
               Entrar
             </Link>
           )}
@@ -129,7 +129,7 @@ function NavLink({ href, icon, children }: { href: string; icon: ReactNode; chil
   return (
     <Link href={href} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50">
       {icon}
-      <span className="hidden lg:inline">{children}</span>
+      <span className="sr-only lg:not-sr-only">{children}</span>
     </Link>
   );
 }

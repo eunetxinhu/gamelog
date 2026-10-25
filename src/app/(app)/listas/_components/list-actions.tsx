@@ -70,13 +70,13 @@ export function ListCommentForm({ listId }: { listId: string }) {
           rows={2}
           placeholder="Comente sobre a lista…"
           aria-label="Comentário"
-          className="min-w-0 flex-1 resize-y rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none"
+          className="min-w-0 flex-1 resize-y rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none"
         />
         <button
           type="submit"
           disabled={pending || !body.trim()}
           aria-label="Enviar comentário"
-          className="grid size-10 place-items-center rounded-lg bg-sky-600 text-white transition hover:bg-sky-500 disabled:opacity-50"
+          className="grid size-10 place-items-center rounded-lg bg-brand-600 text-white transition hover:bg-brand-500 disabled:opacity-50"
         >
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Send className="size-4" aria-hidden />}
         </button>

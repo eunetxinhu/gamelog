@@ -99,7 +99,7 @@ export default async function BadgesPage({ params }: Props) {
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500">
                     <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
-                      <span className="block h-full rounded-full bg-sky-500" style={{ width: `${pct}%` }} />
+                      <span className="block h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
                     </span>
                     <span className="tabular-nums">
                       {Math.min(b.value, b.target).toLocaleString("pt-BR")}/{b.target.toLocaleString("pt-BR")}

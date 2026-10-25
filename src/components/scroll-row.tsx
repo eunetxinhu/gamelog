@@ -102,7 +102,7 @@ function Arrow({ side, hidden, onClick }: { side: "left" | "right"; hidden: bool
       onClick={onClick}
       tabIndex={-1}
       aria-hidden
-      className={`absolute top-[40%] z-10 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full border border-sky-400/40 bg-zinc-950/90 text-sky-300 shadow-[0_0_16px_rgba(56,189,248,0.35)] backdrop-blur transition hover:scale-110 hover:text-white md:flex ${
+      className={`absolute top-[40%] z-10 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full border border-brand-400/40 bg-zinc-950/90 text-brand-300 shadow-[0_0_16px_rgba(56,189,248,0.35)] backdrop-blur transition hover:scale-110 hover:text-white md:flex ${
         side === "left" ? "-left-3" : "-right-3"
       } ${hidden ? "pointer-events-none opacity-0" : "opacity-0 group-hover/row:opacity-100"}`}
     >

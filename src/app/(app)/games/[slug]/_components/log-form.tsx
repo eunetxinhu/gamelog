@@ -17,11 +17,11 @@ type Props = {
 
 const STATUS_ORDER: LogStatus[] = ["PLAYING", "COMPLETED", "PLATINUM", "DROPPED", "BACKLOG"];
 const STATUS_TONE: Record<LogStatus, string> = {
-  PLAYING: "peer-checked:bg-sky-600 peer-checked:text-white peer-checked:ring-sky-500",
+  PLAYING: "peer-checked:bg-brand-600 peer-checked:text-white peer-checked:ring-brand-500",
   COMPLETED: "peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:ring-emerald-500",
   PLATINUM: "peer-checked:bg-amber-500 peer-checked:text-zinc-950 peer-checked:ring-amber-400",
   DROPPED: "peer-checked:bg-zinc-600 peer-checked:text-white peer-checked:ring-zinc-500",
-  BACKLOG: "peer-checked:bg-violet-600 peer-checked:text-white peer-checked:ring-violet-500",
+  BACKLOG: "peer-checked:bg-ember-600 peer-checked:text-white peer-checked:ring-ember-500",
 };
 
 /** Registrar / compartilhar o jogo: status, nota e review. */
@@ -39,7 +39,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
   if (!loggedIn) {
     return (
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 text-sm text-zinc-300">
-        <Link href={`/login?next=/games/${slug}`} className="font-medium text-sky-400 hover:underline">
+        <Link href={`/login?next=/games/${slug}`} className="font-medium text-brand-400 hover:underline">
           Entre
         </Link>{" "}
         para registrar este jogo e compartilhar no feed.
@@ -82,7 +82,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
             <label key={s} className="cursor-pointer">
               <input type="radio" name="status" value={s} checked={status === s} onChange={() => setStatus(s)} className="peer sr-only" />
               <span
-                className={`inline-block rounded-full px-3 py-1.5 text-sm text-zinc-300 ring-1 ring-zinc-700 transition peer-focus-visible:ring-2 peer-focus-visible:ring-sky-400 ${STATUS_TONE[s]}`}
+                className={`inline-block rounded-full px-3 py-1.5 text-sm text-zinc-300 ring-1 ring-zinc-700 transition peer-focus-visible:ring-2 peer-focus-visible:ring-brand-400 ${STATUS_TONE[s]}`}
               >
                 {s === "PLATINUM" ? "🏆 " : ""}
                 {STATUS_LABEL[s]}
@@ -127,7 +127,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
           rows={4}
           maxLength={5000}
           placeholder="O que achou? Use @usuario para mencionar alguém"
-          className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+          className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
         />
         {review.trim() && (
           <label className="flex items-center gap-2 text-sm text-zinc-400">
@@ -151,7 +151,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
           type="button"
           onClick={onSave}
           disabled={pending}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-50 sm:flex-none sm:py-2"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-500 disabled:opacity-50 sm:flex-none sm:py-2"
         >
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Share2 className="size-4" aria-hidden />}
           {status === "BACKLOG" ? "Salvar no backlog" : "Salvar e compartilhar"}

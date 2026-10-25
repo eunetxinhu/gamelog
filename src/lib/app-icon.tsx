@@ -15,7 +15,7 @@ export function appIcon(size: number, { maskable = false, rounded = true } = {})
           height: "100%",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0284c7, #7c3aed)",
+          background: "linear-gradient(135deg, #d41b26, #43040a)",
           borderRadius: rounded && !maskable ? size * 0.22 : 0,
         }}
       >

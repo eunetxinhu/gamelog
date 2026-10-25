@@ -5,6 +5,7 @@ import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { AuthForm } from "../_components/auth-form";
 import { safeNext } from "../_actions/types";
 import { cleanRef } from "@/lib/referral";
+import { BrandStage } from "@/components/brand-stage";
 
 export const metadata: Metadata = { title: "Criar conta" };
 
@@ -17,8 +18,8 @@ export default async function SignupPage({ searchParams }: Props) {
   if (await getCurrentUser()) redirect(next);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center px-4 py-10">
+    <BrandStage>
       <AuthForm mode="signup" next={next} steamLogin={hasSupabaseAdmin()} inviteRef={cleanRef(query.ref)} />
-    </main>
+    </BrandStage>
   );
 }

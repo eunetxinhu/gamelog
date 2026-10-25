@@ -25,7 +25,7 @@ export function TimeToBeat({ times, myMinutes, finished }: Props) {
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:p-5" aria-labelledby="ttb-title">
       <h2 id="ttb-title" className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-200">
-        <Hourglass className="size-4 text-violet-300" aria-hidden /> Tempo para zerar
+        <Hourglass className="size-4 text-ember-300" aria-hidden /> Tempo para zerar
       </h2>
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {finish && (

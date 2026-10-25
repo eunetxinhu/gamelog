@@ -84,7 +84,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
             // eslint-disable-next-line @next/next/no-img-element
             <img src={avatar} alt="" width={168} height={168} style={{ borderRadius: 999, border: "6px solid #27272a", flexShrink: 0 }} />
           ) : (
-            <div style={{ display: "flex", width: 168, height: 168, borderRadius: 999, background: "#0284c7", alignItems: "center", justifyContent: "center", fontSize: 80, fontWeight: 700, flexShrink: 0 }}>
+            <div style={{ display: "flex", width: 168, height: 168, borderRadius: 999, background: "#d41b26", alignItems: "center", justifyContent: "center", fontSize: 80, fontWeight: 700, flexShrink: 0 }}>
               {name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -93,7 +93,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
             <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
               <span style={{ fontSize: 56, fontWeight: 800 }}>{truncate(name, 18)}</span>
               {level !== null && (
-                <span style={{ display: "flex", fontSize: 26, fontWeight: 800, color: "#09090b", background: "#38bdf8", borderRadius: 999, padding: "4px 16px" }}>
+                <span style={{ display: "flex", fontSize: 26, fontWeight: 800, color: "#09090b", background: "#ef3340", borderRadius: 999, padding: "4px 16px" }}>
                   Nv. {level}
                 </span>
               )}
@@ -113,7 +113,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
               </div>
             )}
 
-            <span style={{ display: "flex", marginTop: 24, fontSize: 24, fontWeight: 800, color: "#38bdf8" }}>
+            <span style={{ display: "flex", marginTop: 24, fontSize: 24, fontWeight: 800, color: "#ef3340" }}>
               Poneglyph.gg <span style={{ marginLeft: 12, fontWeight: 400, color: "#52525b" }}>{host}</span>
             </span>
           </div>
@@ -146,7 +146,7 @@ function brandOnly(host: string) {
   return new ImageResponse(
     (
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b" }}>
-        <span style={{ fontSize: 96, fontWeight: 800, color: "#38bdf8" }}>Poneglyph.gg</span>
+        <span style={{ fontSize: 96, fontWeight: 800, color: "#ef3340" }}>Poneglyph.gg</span>
         <span style={{ fontSize: 28, color: "#52525b" }}>{host}</span>
       </div>
     ),

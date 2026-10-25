@@ -8,6 +8,7 @@ import { getProgression } from "@/lib/progression";
 import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { Avatar } from "@/components/avatar";
 import { SITE_NAME } from "@/lib/brand";
+import { BrandLogo } from "@/components/brand-logo";
 
 type Props = { params: Promise<{ username: string }> };
 
@@ -42,7 +43,9 @@ export default async function InvitePage({ params }: Props) {
         <p className="mt-4 text-sm text-zinc-400">
           <strong className="text-zinc-100">{name}</strong> te convidou para o
         </p>
-        <h1 className="text-3xl font-extrabold text-zinc-50">Poneglyph.gg</h1>
+        <h1 className="mt-3">
+          <BrandLogo full className="mx-auto h-16" />
+        </h1>
         <p className="mt-2 text-sm text-zinc-400">A rede social de quem joga e caça platinas. Conecte sua Steam e seu perfil se monta sozinho.</p>
 
         <div className="mt-6 grid grid-cols-3 gap-2 text-center">
@@ -68,7 +71,7 @@ export default async function InvitePage({ params }: Props) {
               Criar conta com Steam
             </a>
           )}
-          <Link href={`/signup?ref=${ref}`} className="block rounded-lg bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-500">
+          <Link href={`/signup?ref=${ref}`} className="block rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-500">
             Criar conta com e-mail
           </Link>
           <p className="pt-2 text-xs text-zinc-500">Você já começa seguindo @{inviter.username}.</p>

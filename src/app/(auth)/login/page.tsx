@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { AuthForm } from "../_components/auth-form";
 import { safeNext } from "../_actions/types";
+import { BrandStage } from "@/components/brand-stage";
 
 export const metadata: Metadata = { title: "Entrar" };
 
@@ -25,8 +26,8 @@ export default async function LoginPage({ searchParams }: Props) {
   const notice = error ? NOTICES[error] : undefined;
 
   return (
-    <main className="flex min-h-dvh items-center justify-center px-4 py-10">
+    <BrandStage>
       <AuthForm mode="login" next={next} notice={notice} steamLogin={hasSupabaseAdmin()} />
-    </main>
+    </BrandStage>
   );
 }

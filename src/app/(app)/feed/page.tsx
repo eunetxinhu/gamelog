@@ -102,7 +102,7 @@ export default async function FeedPage({ searchParams }: Props) {
           href={`/feed?tab=${tab}&postar=1#postar`}
           scroll={false}
           aria-label="Compartilhar fotos de um jogo"
-          className="fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-20 flex size-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg shadow-sky-900/40 transition active:scale-95 md:hidden"
+          className="fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-20 flex size-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-900/40 transition active:scale-95 md:hidden"
         >
           <Camera className="size-6" aria-hidden />
         </Link>
@@ -114,14 +114,14 @@ export default async function FeedPage({ searchParams }: Props) {
           </p>
         )}
         {onboarding && (
-          <div className="mb-5 flex items-center gap-3 rounded-2xl border border-sky-500/30 bg-gradient-to-r from-sky-500/[0.08] to-violet-500/[0.08] p-4">
+          <div className="mb-5 flex items-center gap-3 rounded-2xl border border-brand-500/30 bg-gradient-to-r from-brand-500/[0.08] to-ember-500/[0.08] p-4">
             <Link href="/bem-vindo" className="min-w-0 flex-1">
               <span className="block font-semibold text-zinc-50">Primeiros passos</span>
               <span className="block text-sm text-zinc-400">
                 {onboarding.done} de {onboarding.total} feitos · vincule a Steam, escolha seu Top 4 e siga outros jogadores
               </span>
             </Link>
-            <Link href="/bem-vindo" className="shrink-0 rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500">
+            <Link href="/bem-vindo" className="shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-500">
               Continuar
             </Link>
             <DismissOnboarding />
@@ -157,7 +157,7 @@ export default async function FeedPage({ searchParams }: Props) {
 
         {olderHref && (
           <div className="mt-6 text-center">
-            <Link href={olderHref} className="text-sm font-medium text-sky-400 hover:underline">
+            <Link href={olderHref} className="text-sm font-medium text-brand-400 hover:underline">
               {tab === "foryou" ? "Ver mais" : "Mais antigas"}
             </Link>
           </div>
@@ -167,7 +167,7 @@ export default async function FeedPage({ searchParams }: Props) {
       <aside className="space-y-6">
         <Link
           href="/games"
-          className="hidden items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-500 md:flex"
+          className="hidden items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-500 md:flex"
         >
           <Search className="size-4" aria-hidden />
           Compartilhar um jogo
@@ -218,7 +218,7 @@ function EmptyFeed({ tab }: { tab: FeedTab }) {
       {tab === "foryou" ? (
         <>
           Nada em alta nesta semana ainda.{" "}
-          <Link href="/feed?tab=global" className="text-sky-400 hover:underline">
+          <Link href="/feed?tab=global" className="text-brand-400 hover:underline">
             Veja tudo no Global
           </Link>
           .
@@ -226,7 +226,7 @@ function EmptyFeed({ tab }: { tab: FeedTab }) {
       ) : tab === "following" ? (
         <>
           Ninguém que você segue publicou ainda.{" "}
-          <Link href="/feed?tab=global" className="text-sky-400 hover:underline">
+          <Link href="/feed?tab=global" className="text-brand-400 hover:underline">
             Veja o feed global
           </Link>{" "}
           e siga outros jogadores.
@@ -234,11 +234,11 @@ function EmptyFeed({ tab }: { tab: FeedTab }) {
       ) : (
         <>
           O feed está vazio.{" "}
-          <Link href="/games" className="text-sky-400 hover:underline">
+          <Link href="/games" className="text-brand-400 hover:underline">
             Compartilhe o primeiro jogo
           </Link>{" "}
           ou vincule sua Steam em{" "}
-          <Link href="/settings/profile" className="text-sky-400 hover:underline">
+          <Link href="/settings/profile" className="text-brand-400 hover:underline">
             Contas vinculadas
           </Link>
           .

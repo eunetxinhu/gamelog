@@ -12,7 +12,7 @@ export default function OfflinePage() {
       <h1 className="text-xl font-bold text-zinc-50">Sem conexão</h1>
       <p className="max-w-xs text-sm text-zinc-400">Parece que você está offline. Assim que a internet voltar, é só tentar de novo.</p>
       {/* Link comum: força uma nova navegação (o SW tenta a rede de novo) */}
-      <a href="/feed" className="mt-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500">
+      <a href="/feed" className="mt-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500">
         Tentar de novo
       </a>
     </main>

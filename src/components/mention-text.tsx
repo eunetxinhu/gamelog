@@ -9,7 +9,7 @@ export function MentionText({ text, className }: { text: string; className?: str
         p.type === "text" ? (
           <span key={i}>{p.value}</span>
         ) : (
-          <Link key={i} href={`/u/${p.username}`} className="font-medium text-sky-400 hover:underline">
+          <Link key={i} href={`/u/${p.username}`} className="font-medium text-brand-400 hover:underline">
             @{p.username}
           </Link>
         ),
