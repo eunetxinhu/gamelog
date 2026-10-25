@@ -138,10 +138,11 @@ export const BADGES: Badge[] = [
   { id: "veteran", name: "Veterano", description: "1 ano de Poneglyph.gg", emoji: "🎖️", value: (s) => s.accountDays, target: 365 },
 ];
 
-export function badgesFor(s: UserStats) {
+/** `unlockAll`: administradores têm todos os selos liberados (o progresso real continua em `value`). */
+export function badgesFor(s: UserStats, { unlockAll = false } = {}) {
   return BADGES.map((b) => {
     const value = b.value(s);
-    return { id: b.id, name: b.name, description: b.description, emoji: b.emoji, target: b.target, value, earned: value >= b.target };
+    return { id: b.id, name: b.name, description: b.description, emoji: b.emoji, target: b.target, value, earned: unlockAll || value >= b.target };
   });
 }
 
@@ -149,7 +150,7 @@ export type BadgeState = ReturnType<typeof badgesFor>[number];
 
 /** Tudo de uma vez (perfil, página de selos, comparação). */
 export async function getProgression(userId: string) {
-  const stats = await getUserStats(userId);
+  const [stats, user] = await Promise.all([getUserStats(userId), prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } })]);
   const xp = xpFromStats(stats);
-  return { stats, level: levelFromXp(xp), badges: badgesFor(stats) };
+  return { stats, level: levelFromXp(xp), badges: badgesFor(stats, { unlockAll: Boolean(user?.isAdmin) }) };
 }
