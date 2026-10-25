@@ -11,13 +11,13 @@ export const revalidate = 600;
 const STAR = "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z";
 
 const LABEL = {
-  STARTED_GAME: { verb: "começou a jogar", badge: "JOGANDO AGORA", color: "#38bdf8" },
+  STARTED_GAME: { verb: "começou a jogar", badge: "JOGANDO AGORA", color: "#ef3340" },
   COMPLETED: { verb: "finalizou", badge: "FINALIZADO", color: "#34d399" },
   PLATINUM: { verb: "platinou", badge: "PLATINA CONQUISTADA", color: "#fbbf24" },
   DROPPED: { verb: "dropou", badge: "DROPADO", color: "#a1a1aa" },
-  REVIEW: { verb: "avaliou", badge: "REVIEW", color: "#a78bfa" },
-  RARE_ACHIEVEMENT: { verb: "desbloqueou uma conquista rara em", badge: "CONQUISTA RARA", color: "#e879f9" },
-  SCREENSHOT: { verb: "compartilhou fotos de", badge: "FOTOS", color: "#38bdf8" },
+  REVIEW: { verb: "avaliou", badge: "REVIEW", color: "#e0a2a4" },
+  RARE_ACHIEVEMENT: { verb: "desbloqueou uma conquista rara em", badge: "CONQUISTA RARA", color: "#f8717a" },
+  SCREENSHOT: { verb: "compartilhou fotos de", badge: "FOTOS", color: "#ef3340" },
 } as const;
 
 /** Card da publicação: capa do jogo, quem, o quê, nota e trecho da review. */
@@ -75,7 +75,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             {avatar ? (
               <img src={avatar} alt="" width={80} height={80} style={{ borderRadius: 999 }} />
             ) : (
-              <div style={{ display: "flex", width: 80, height: 80, borderRadius: 999, background: "#0284c7", alignItems: "center", justifyContent: "center", fontSize: 40, fontWeight: 700 }}>
+              <div style={{ display: "flex", width: 80, height: 80, borderRadius: 999, background: "#d41b26", alignItems: "center", justifyContent: "center", fontSize: 40, fontWeight: 700 }}>
                 {name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -117,7 +117,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
 
           {review && <div style={{ display: "flex", marginTop: 20, fontSize: 28, color: "#d4d4d8", lineHeight: 1.35 }}>“{review}”</div>}
 
-          <div style={{ display: "flex", marginTop: "auto", fontSize: 30, fontWeight: 800, color: "#38bdf8" }}>Poneglyph.gg</div>
+          <div style={{ display: "flex", marginTop: "auto", fontSize: 30, fontWeight: 800, color: "#ef3340" }}>Poneglyph.gg</div>
         </div>
       </div>
     ),
@@ -128,7 +128,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
 function fallback() {
   return new ImageResponse(
     (
-      <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b", color: "#38bdf8", fontSize: 96, fontWeight: 800 }}>
+      <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b", color: "#ef3340", fontSize: 96, fontWeight: 800 }}>
         Poneglyph.gg
       </div>
     ),

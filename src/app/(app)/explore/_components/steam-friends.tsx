@@ -20,7 +20,7 @@ export async function SteamFriends({ viewerId, steamId }: { viewerId: string; st
           Sua lista de amigos da Steam está privada, então não conseguimos ver quem já está aqui. Em{" "}
           <strong className="text-zinc-200">Configurações de privacidade → Lista de amigos</strong>, escolha <strong className="text-zinc-200">Pública</strong>.
         </p>
-        <a href={STEAM_PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm text-sky-400 hover:underline">
+        <a href={STEAM_PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm text-brand-400 hover:underline">
           Abrir privacidade da Steam <ExternalLink className="size-3.5" aria-hidden />
         </a>
       </Box>

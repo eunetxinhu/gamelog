@@ -35,7 +35,7 @@ export function FollowRequests({ requests }: { requests: Request[] }) {
                   <span className="block truncate text-xs text-zinc-500">@{r.username}</span>
                 </span>
               </Link>
-              <button type="button" disabled={pending} onClick={() => answer(r.id, true)} className="inline-flex items-center gap-1 rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50">
+              <button type="button" disabled={pending} onClick={() => answer(r.id, true)} className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50">
                 <Check className="size-4" aria-hidden /> Aprovar
               </button>
               <button type="button" disabled={pending} onClick={() => answer(r.id, false)} className="rounded-lg border border-zinc-700 p-1.5 text-zinc-300 hover:bg-zinc-800 disabled:opacity-50" aria-label={`Recusar ${name}`}>

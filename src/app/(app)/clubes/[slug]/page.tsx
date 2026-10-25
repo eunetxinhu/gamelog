@@ -59,7 +59,7 @@ export default async function ClubPage({ params }: Props) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={club.imageUrl} alt="" className="size-20 shrink-0 rounded-2xl object-cover" />
         ) : (
-          <span className="flex size-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-700 to-violet-700 text-3xl font-bold text-white">
+          <span className="flex size-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-700 to-ember-700 text-3xl font-bold text-white">
             {club.name.charAt(0).toUpperCase()}
           </span>
         )}
@@ -129,7 +129,7 @@ export default async function ClubPage({ params }: Props) {
                     {user.displayName ?? user.username}
                   </span>
                   {role === "OWNER" && <Crown className="hidden size-3.5 text-amber-400 lg:block" aria-label="Dono" />}
-                  {role === "ADMIN" && <Shield className="hidden size-3.5 text-sky-400 lg:block" aria-label="Admin" />}
+                  {role === "ADMIN" && <Shield className="hidden size-3.5 text-brand-400 lg:block" aria-label="Admin" />}
                 </Link>
               </li>
             ))}

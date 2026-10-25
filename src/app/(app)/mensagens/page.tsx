@@ -46,18 +46,18 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-5 flex items-center gap-2 text-2xl font-bold text-zinc-50">
-        <Mail className="size-6 text-sky-400" aria-hidden /> Mensagens
+        <Mail className="size-6 text-brand-400" aria-hidden /> Mensagens
       </h1>
 
       <form action="/mensagens" className="mb-6 flex gap-2">
         <label htmlFor="para" className="sr-only">
           Nova mensagem para
         </label>
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-sky-500">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-brand-500">
           <Search className="size-4 text-zinc-500" aria-hidden />
           <input id="para" name="para" placeholder="Nova mensagem para @usuario" autoComplete="off" className="min-w-0 flex-1 bg-transparent py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none" />
         </div>
-        <button type="submit" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500">
+        <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500">
           Abrir
         </button>
       </form>
@@ -72,7 +72,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
             const name = other.displayName ?? other.username;
             return (
               <li key={id}>
-                <Link href={`/mensagens/${other.username}`} className={`flex items-center gap-3 px-4 py-3 transition hover:bg-zinc-800/60 ${unread ? "bg-sky-500/[0.06]" : ""}`}>
+                <Link href={`/mensagens/${other.username}`} className={`flex items-center gap-3 px-4 py-3 transition hover:bg-zinc-800/60 ${unread ? "bg-brand-500/[0.06]" : ""}`}>
                   <Avatar name={name} src={other.avatarUrl ?? other.steamAvatarUrl} size="md" />
                   <span className="min-w-0 flex-1">
                     <span className={`block truncate ${unread ? "font-bold text-zinc-50" : "font-medium text-zinc-100"}`}>{name}</span>
@@ -82,7 +82,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                     </span>
                   </span>
                   <span className="shrink-0 text-xs text-zinc-500">{relativeTime(last!.createdAt)}</span>
-                  {unread && <span className="size-2.5 shrink-0 rounded-full bg-sky-400" aria-label="Não lida" />}
+                  {unread && <span className="size-2.5 shrink-0 rounded-full bg-brand-400" aria-label="Não lida" />}
                 </Link>
               </li>
             );

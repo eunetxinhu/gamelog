@@ -29,7 +29,7 @@ export function GameMedia({ title, trailers, screenshots }: { title: string; tra
                   <button
                     type="button"
                     onClick={() => setTrailer(i)}
-                    className={`relative block w-36 overflow-hidden sm:w-40 rounded-lg ring-2 transition ${i === trailer ? "ring-sky-500" : "ring-transparent hover:ring-zinc-600"}`}
+                    className={`relative block w-36 overflow-hidden sm:w-40 rounded-lg ring-2 transition ${i === trailer ? "ring-brand-500" : "ring-transparent hover:ring-zinc-600"}`}
                     title={t.name}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -48,7 +48,7 @@ export function GameMedia({ title, trailers, screenshots }: { title: string; tra
         <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {screenshots.map((s, i) => (
             <li key={s.full}>
-              <button type="button" onClick={() => setViewer(i)} className="block w-full overflow-hidden rounded-lg ring-1 ring-white/10 transition hover:ring-sky-500">
+              <button type="button" onClick={() => setViewer(i)} className="block w-full overflow-hidden rounded-lg ring-1 ring-white/10 transition hover:ring-brand-500">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={s.thumb} alt={`${title}: imagem ${i + 1}`} className="aspect-video w-full object-cover" loading="lazy" />
               </button>
@@ -100,7 +100,7 @@ function TrailerPlayer({ trailer }: { trailer: Trailer }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={trailer.thumb.replace(/movie\.\d+x\d+\.jpg/, "movie_max.jpg")} alt="" className="size-full object-cover opacity-80 transition group-hover:opacity-100" onError={(e) => (e.currentTarget.src = trailer.thumb)} />
           <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex size-16 items-center justify-center rounded-full bg-sky-600/90 text-white shadow-xl transition group-hover:scale-110">
+            <span className="flex size-16 items-center justify-center rounded-full bg-brand-600/90 text-white shadow-xl transition group-hover:scale-110">
               <Play className="ml-1 size-7 fill-white" aria-hidden />
             </span>
           </span>

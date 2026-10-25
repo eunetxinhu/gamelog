@@ -7,7 +7,7 @@ import { ImageAttach } from "@/components/image-attach";
 import { createClub, deleteClub, deleteClubPost, postToClub, toggleMembership } from "../_actions/clubs";
 
 const inputCls =
-  "w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30";
+  "w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
 
 /** Criar clube. */
 export function CreateClubForm() {
@@ -21,7 +21,7 @@ export function CreateClubForm() {
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500">
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500">
         <Plus className="size-4" aria-hidden /> Criar clube
       </button>
     );
@@ -48,7 +48,7 @@ export function CreateClubForm() {
         <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800">
           Cancelar
         </button>
-        <button type="submit" disabled={pending} className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50">
+        <button type="submit" disabled={pending} className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50">
           {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} Criar
         </button>
       </div>
@@ -82,7 +82,7 @@ export function MembershipButton({ clubId, member: initial, loggedIn }: { clubId
       onClick={onClick}
       disabled={pending}
       className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${
-        member ? "border border-zinc-700 text-zinc-200 hover:bg-zinc-800" : "bg-sky-600 text-white hover:bg-sky-500"
+        member ? "border border-zinc-700 text-zinc-200 hover:bg-zinc-800" : "bg-brand-600 text-white hover:bg-brand-500"
       }`}
     >
       {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : member ? <LogOut className="size-4" aria-hidden /> : <LogIn className="size-4" aria-hidden />}
@@ -116,7 +116,7 @@ export function ClubComposer({ clubId }: { clubId: string }) {
       <textarea value={body} onChange={(e) => setBody(e.target.value)} maxLength={2000} rows={3} placeholder="Compartilhe com o clube… (@usuario para mencionar)" aria-label="Nova publicação no clube" className={inputCls} />
       <div className="flex items-start justify-between gap-2">
         <ImageAttach kind="club" value={image} onChange={setImage} />
-        <button type="submit" disabled={pending || (!body.trim() && !image)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50">
+        <button type="submit" disabled={pending || (!body.trim() && !image)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50">
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Send className="size-4" aria-hidden />} Publicar
         </button>
       </div>

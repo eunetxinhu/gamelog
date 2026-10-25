@@ -55,7 +55,7 @@ export function WishlistQuickButton({
         aria-label={label}
         title={error ?? (on ? "Na sua wishlist" : "Adicionar à wishlist")}
         data-pending={pending || undefined}
-        className={`absolute z-10 grid size-8 place-items-center rounded-full shadow-md ring-1 backdrop-blur transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 active:scale-90 data-[pending]:opacity-80 ${
+        className={`absolute z-10 grid size-8 place-items-center rounded-full shadow-md ring-1 backdrop-blur transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 active:scale-90 data-[pending]:opacity-80 ${
           on ? "bg-emerald-500 text-zinc-950 ring-emerald-300/50 hover:bg-emerald-400" : "bg-zinc-950/70 text-zinc-100 ring-white/15 hover:bg-zinc-900"
         } ${error ? "ring-2 ring-rose-500" : ""} ${className}`}
       >

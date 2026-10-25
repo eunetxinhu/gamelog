@@ -18,7 +18,7 @@ export default async function Image({ params }: { params: Promise<{ username: st
   });
   if (!user) {
     return new ImageResponse(
-      <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b", color: "#38bdf8", fontSize: 96, fontWeight: 800 }}>
+      <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b", color: "#ef3340", fontSize: 96, fontWeight: 800 }}>
         Poneglyph.gg
       </div>,
       size,
@@ -36,19 +36,19 @@ export default async function Image({ params }: { params: Promise<{ username: st
   const stats = [
     { label: "platinas", value: w.platinums.length, color: "#fbbf24" },
     { label: "finalizados", value: w.completed.length, color: "#34d399" },
-    { label: "jogos novos", value: w.started.length, color: "#38bdf8" },
+    { label: "jogos novos", value: w.started.length, color: "#ef3340" },
     { label: "h em 2 semanas", value: w.hours2Weeks, color: "#fafafa" },
   ];
 
   return new ImageResponse(
     (
-      <div style={{ display: "flex", width: "100%", height: "100%", background: "linear-gradient(135deg, #0c1a2e, #09090b 55%, #1e1033)", color: "#fafafa", padding: 64, gap: 48 }}>
+      <div style={{ display: "flex", width: "100%", height: "100%", background: "linear-gradient(135deg, #2a0508, #09090b 55%, #1a0306)", color: "#fafafa", padding: 64, gap: 48 }}>
         <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             {avatar ? (
               <img src={avatar} alt="" width={88} height={88} style={{ borderRadius: 999 }} />
             ) : (
-              <div style={{ display: "flex", width: 88, height: 88, borderRadius: 999, background: "#0284c7", alignItems: "center", justifyContent: "center", fontSize: 44 }}>
+              <div style={{ display: "flex", width: 88, height: 88, borderRadius: 999, background: "#d41b26", alignItems: "center", justifyContent: "center", fontSize: 44 }}>
                 {name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -67,7 +67,7 @@ export default async function Image({ params }: { params: Promise<{ username: st
             ))}
           </div>
 
-          <div style={{ display: "flex", marginTop: "auto", fontSize: 30, fontWeight: 800, color: "#38bdf8" }}>Poneglyph.gg</div>
+          <div style={{ display: "flex", marginTop: "auto", fontSize: 30, fontWeight: 800, color: "#ef3340" }}>Poneglyph.gg</div>
         </div>
 
         {covers.length > 0 && (

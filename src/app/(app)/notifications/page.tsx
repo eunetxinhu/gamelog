@@ -15,18 +15,18 @@ export const metadata: Metadata = { title: "Notificações" };
 const TYPE = {
   LIKE: { icon: Heart, tone: "text-rose-400", text: "curtiu sua publicação" },
   GG: { icon: Trophy, tone: "text-amber-400", text: "mandou GG 🏆 pra você" },
-  COMMENT: { icon: MessageCircle, tone: "text-sky-400", text: "comentou na sua publicação" },
+  COMMENT: { icon: MessageCircle, tone: "text-brand-400", text: "comentou na sua publicação" },
   FOLLOW: { icon: UserPlus, tone: "text-emerald-400", text: "começou a seguir você" },
   PLATINUM: { icon: Trophy, tone: "text-amber-400", text: "platinou" },
   DEAL: { icon: Percent, tone: "text-emerald-400", text: "entrou em promoção" },
-  WEEKLY: { icon: CalendarDays, tone: "text-sky-400", text: "Seu resumo da semana está pronto" },
-  MESSAGE: { icon: Mail, tone: "text-sky-400", text: "te mandou uma mensagem" },
-  MENTION: { icon: AtSign, tone: "text-violet-400", text: "mencionou você" },
+  WEEKLY: { icon: CalendarDays, tone: "text-brand-400", text: "Seu resumo da semana está pronto" },
+  MESSAGE: { icon: Mail, tone: "text-brand-400", text: "te mandou uma mensagem" },
+  MENTION: { icon: AtSign, tone: "text-ember-400", text: "mencionou você" },
   FOLLOW_REQUEST: { icon: UserPlus, tone: "text-amber-400", text: "pediu para seguir você" },
   INVITE_JOINED: { icon: UserPlus, tone: "text-emerald-400", text: "entrou no Poneglyph.gg pelo seu convite 🎉" },
-  RELEASE: { icon: Rocket, tone: "text-fuchsia-400", text: "lançou hoje! 🎉" },
+  RELEASE: { icon: Rocket, tone: "text-ember-400", text: "lançou hoje! 🎉" },
   LIST_LIKE: { icon: ListOrdered, tone: "text-rose-400", text: "curtiu sua lista" },
-  LIST_COMMENT: { icon: MessageCircle, tone: "text-sky-400", text: "comentou na sua lista" },
+  LIST_COMMENT: { icon: MessageCircle, tone: "text-brand-400", text: "comentou na sua lista" },
 } as const;
 
 export default async function NotificationsPage() {
@@ -83,7 +83,7 @@ export default async function NotificationsPage() {
 
             return (
               <li key={n.id}>
-                <Link href={href} className={`flex items-center gap-3 px-4 py-3 transition hover:bg-zinc-800/60 ${n.readAt ? "" : "bg-sky-500/[0.06]"}`}>
+                <Link href={href} className={`flex items-center gap-3 px-4 py-3 transition hover:bg-zinc-800/60 ${n.readAt ? "" : "bg-brand-500/[0.06]"}`}>
                   <div className="relative shrink-0">
                     {n.actor ? (
                       <Avatar name={actorName!} src={n.actor.avatarUrl ?? n.actor.steamAvatarUrl} size="sm" />
@@ -129,7 +129,7 @@ export default async function NotificationsPage() {
                     )}
                   </p>
                   <span className="shrink-0 text-xs text-zinc-500">{relativeTime(n.createdAt)}</span>
-                  {!n.readAt && <span className="size-2 shrink-0 rounded-full bg-sky-400" aria-label="Não lida" />}
+                  {!n.readAt && <span className="size-2 shrink-0 rounded-full bg-brand-400" aria-label="Não lida" />}
                 </Link>
               </li>
             );

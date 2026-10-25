@@ -80,7 +80,7 @@ export default async function ListPage({ params }: Props) {
               {list.ranked && <span className="w-8 shrink-0 pt-2 text-right text-xl font-extrabold tabular-nums text-zinc-500">{i + 1}</span>}
               <div className="relative w-20 shrink-0 sm:w-24">
                 <Link href={`/games/${it.game.slug}`} className="group block">
-                  <GameCover title={it.game.title} coverUrl={it.game.coverUrl} steamAppId={it.game.steamAppId} className="transition group-hover:ring-sky-500" />
+                  <GameCover title={it.game.title} coverUrl={it.game.coverUrl} steamAppId={it.game.steamAppId} className="transition group-hover:ring-brand-500" />
                 </Link>
                 <WishlistQuickButton slug={it.game.slug} title={it.game.title} initial={inWishlist(wish, it.game)} loggedIn={Boolean(viewer)} className="right-1 top-1" />
               </div>
@@ -99,7 +99,7 @@ export default async function ListPage({ params }: Props) {
           {list.items.map((it) => (
             <li key={it.game.id} className="relative">
               <Link href={`/games/${it.game.slug}`} className="group block space-y-1.5" title={it.game.title}>
-                <GameCover title={it.game.title} coverUrl={it.game.coverUrl} steamAppId={it.game.steamAppId} className="transition group-hover:ring-sky-500" />
+                <GameCover title={it.game.title} coverUrl={it.game.coverUrl} steamAppId={it.game.steamAppId} className="transition group-hover:ring-brand-500" />
                 <p className="line-clamp-2 text-xs font-medium text-zinc-300 group-hover:text-white">{it.game.title}</p>
               </Link>
               <WishlistQuickButton slug={it.game.slug} title={it.game.title} initial={inWishlist(wish, it.game)} loggedIn={Boolean(viewer)} className="right-1 top-1" />
@@ -143,7 +143,7 @@ export default async function ListPage({ params }: Props) {
         {viewer && !viewer.bannedAt ? (
           <ListCommentForm listId={list.id} />
         ) : !viewer ? (
-          <Link href={`/login?next=/listas/${list.id}`} className="text-sm text-sky-400 hover:underline">
+          <Link href={`/login?next=/listas/${list.id}`} className="text-sm text-brand-400 hover:underline">
             Entre para comentar
           </Link>
         ) : null}

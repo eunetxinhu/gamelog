@@ -65,7 +65,7 @@ export function ListEditor({ list, initialItems }: Props) {
             onChange={(e) => setTitle(e.target.value)}
             maxLength={LIST_LIMITS.title}
             placeholder="Ex.: Metroidvanias para zerar num fim de semana"
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none"
           />
         </label>
         <label className="block">
@@ -75,11 +75,11 @@ export function ListEditor({ list, initialItems }: Props) {
             onChange={(e) => setDescription(e.target.value)}
             maxLength={LIST_LIMITS.description}
             rows={3}
-            className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none"
+            className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-brand-500 focus:outline-none"
           />
         </label>
         <label className="flex items-center gap-3 text-sm text-zinc-200">
-          <input type="checkbox" checked={ranked} onChange={(e) => setRanked(e.target.checked)} className="size-4 accent-sky-500" />
+          <input type="checkbox" checked={ranked} onChange={(e) => setRanked(e.target.checked)} className="size-4 accent-brand-500" />
           Lista numerada (ranking: a ordem importa)
         </label>
       </section>
@@ -108,7 +108,7 @@ export function ListEditor({ list, initialItems }: Props) {
                     maxLength={LIST_LIMITS.note}
                     placeholder="Comentário (opcional)"
                     aria-label={`Comentário sobre ${it.title}`}
-                    className="w-full rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none"
+                    className="w-full rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none"
                   />
                 </div>
                 <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
@@ -133,7 +133,7 @@ export function ListEditor({ list, initialItems }: Props) {
           type="button"
           onClick={onSave}
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-60"
         >
           {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
           {list ? "Salvar alterações" : "Criar lista"}
@@ -199,7 +199,7 @@ function GameSearch({ onPick, disabled, taken }: { onPick: (g: GameOption) => vo
   const visible = q.trim().length >= 2 ? results : [];
   return (
     <div className="relative">
-      <div className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950 px-3 focus-within:border-sky-500">
+      <div className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950 px-3 focus-within:border-brand-500">
         {loading ? <Loader2 className="size-4 animate-spin text-zinc-500" aria-hidden /> : <Search className="size-4 text-zinc-500" aria-hidden />}
         <input
           value={q}
@@ -229,7 +229,7 @@ function GameSearch({ onPick, disabled, taken }: { onPick: (g: GameOption) => vo
                 </span>
                 <span className="min-w-0 flex-1 truncate">{g.title}</span>
                 {g.year && <span className="text-xs text-zinc-500">{g.year}</span>}
-                {taken.has(g.slug) ? <span className="text-xs text-zinc-500">na lista</span> : <Plus className="size-4 text-sky-400" aria-hidden />}
+                {taken.has(g.slug) ? <span className="text-xs text-zinc-500">na lista</span> : <Plus className="size-4 text-brand-400" aria-hidden />}
               </button>
             </li>
           ))}

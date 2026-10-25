@@ -100,7 +100,7 @@ export default async function GamePage({ params, searchParams }: Props) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={game.heroUrl} alt="" className="size-full object-cover opacity-60" />
         ) : (
-          <div className="size-full bg-gradient-to-br from-sky-900/50 via-zinc-900 to-violet-900/50" />
+          <div className="size-full bg-gradient-to-br from-brand-900/50 via-zinc-900 to-ember-900/50" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
       </div>
@@ -172,7 +172,7 @@ export default async function GamePage({ params, searchParams }: Props) {
                 href={`https://store.steampowered.com/app/${game.steamAppId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sky-400 hover:underline"
+                className="inline-flex items-center gap-1 text-brand-400 hover:underline"
               >
                 Ver na Steam <ExternalLink className="size-3.5" aria-hidden />
               </a>

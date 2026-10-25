@@ -103,11 +103,11 @@ export default async function RankingPage({ searchParams }: Props) {
       {scope === "amigos" && followingIds.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">
           Você ainda não segue ninguém.{" "}
-          <Link href="/explore" className="text-sky-400 hover:underline">
+          <Link href="/explore" className="text-brand-400 hover:underline">
             Encontre jogadores no Explorar
           </Link>{" "}
           ou veja o{" "}
-          <Link href={href({ escopo: "global" })} className="text-sky-400 hover:underline">
+          <Link href={href({ escopo: "global" })} className="text-brand-400 hover:underline">
             ranking global
           </Link>
           .
@@ -121,14 +121,14 @@ export default async function RankingPage({ searchParams }: Props) {
             const me = user.id === viewer?.id;
             return (
               <li key={user.id}>
-                <Link href={`/u/${user.username}`} className={`flex items-center gap-3 px-4 py-3 transition hover:bg-zinc-800/60 ${me ? "bg-sky-500/[0.07]" : ""}`}>
+                <Link href={`/u/${user.username}`} className={`flex items-center gap-3 px-4 py-3 transition hover:bg-zinc-800/60 ${me ? "bg-brand-500/[0.07]" : ""}`}>
                   <span className={`w-7 text-center text-sm font-bold tabular-nums ${i < 3 ? ["text-amber-300", "text-zinc-300", "text-orange-400"][i] : "text-zinc-500"}`}>
                     {i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}
                   </span>
                   <Avatar name={name} src={user.avatarUrl ?? user.steamAvatarUrl} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-zinc-100">
-                      {name} {me && <span className="text-xs text-sky-400">(você)</span>}
+                      {name} {me && <span className="text-xs text-brand-400">(você)</span>}
                     </span>
                     <span className="block truncate text-xs text-zinc-500">@{user.username}</span>
                   </span>

@@ -29,7 +29,7 @@ export default async function ReleasesPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-5 sm:py-8">
       <h1 className="mb-1 flex items-center gap-2 text-2xl font-bold text-zinc-50">
-        <CalendarClock className="size-6 text-fuchsia-400" aria-hidden /> Lançamentos
+        <CalendarClock className="size-6 text-ember-400" aria-hidden /> Lançamentos
       </h1>
       <p className="mb-5 text-sm text-zinc-400">
         Os jogos da sua wishlist que ainda vão sair. No dia do lançamento você recebe um aviso
@@ -39,7 +39,7 @@ export default async function ReleasesPage() {
       {pushDevices === 0 && !empty && (
         <Link
           href="/settings/privacy"
-          className="mb-6 flex items-center gap-3 rounded-xl border border-sky-500/30 bg-sky-500/[0.07] px-4 py-3 text-sm text-sky-100 transition hover:border-sky-400/60"
+          className="mb-6 flex items-center gap-3 rounded-xl border border-brand-500/30 bg-brand-500/[0.07] px-4 py-3 text-sm text-brand-100 transition hover:border-brand-400/60"
         >
           <BellRing className="size-4 shrink-0" aria-hidden />
           Ative as notificações push para ser avisado no celular no dia em que o jogo sair.
@@ -50,7 +50,7 @@ export default async function ReleasesPage() {
         <div className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-400">
           {total === 0 ? "Sua wishlist está vazia." : "Nenhum jogo da sua wishlist tem lançamento marcado."}{" "}
           Na página de um jogo que ainda vai sair, toque em “Quero jogar”. Veja os que estão{" "}
-          <Link href="/games" className="text-sky-400 hover:underline">
+          <Link href="/games" className="text-brand-400 hover:underline">
             chegando em breve
           </Link>
           .
@@ -58,7 +58,7 @@ export default async function ReleasesPage() {
       ) : (
         <div className="space-y-8">
           {calendar.today.length > 0 && (
-            <Group title="Lança hoje" icon={<PartyPopper className="size-4 text-fuchsia-300" aria-hidden />}>
+            <Group title="Lança hoje" icon={<PartyPopper className="size-4 text-ember-300" aria-hidden />}>
               {calendar.today.map((item) => (
                 <Row key={item.game.id} item={item} today={today} highlight />
               ))}
@@ -66,7 +66,7 @@ export default async function ReleasesPage() {
           )}
 
           {calendar.upcoming.map(({ month, items }) => (
-            <Group key={month} title={monthLabel(month)} icon={<Sparkles className="size-4 text-sky-400" aria-hidden />}>
+            <Group key={month} title={monthLabel(month)} icon={<Sparkles className="size-4 text-brand-400" aria-hidden />}>
               {items.map((item) => (
                 <Row key={item.game.id} item={item} today={today} />
               ))}
@@ -116,7 +116,7 @@ function Row({ item, today, highlight }: { item: ReleaseItem<ReleaseGame>; today
     <li>
       <Link
         href={`/games/${item.game.slug}`}
-        className={`flex items-center gap-4 px-4 py-3 transition hover:bg-zinc-800/60 ${highlight ? "bg-fuchsia-500/[0.07]" : ""}`}
+        className={`flex items-center gap-4 px-4 py-3 transition hover:bg-zinc-800/60 ${highlight ? "bg-ember-500/[0.07]" : ""}`}
       >
         <span className="w-12 shrink-0 text-center">
           {date ? (
@@ -134,7 +134,7 @@ function Row({ item, today, highlight }: { item: ReleaseItem<ReleaseGame>; today
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium text-zinc-100">{item.game.title}</span>
-          <span className={`text-xs ${highlight ? "text-fuchsia-300" : "text-zinc-500"}`}>
+          <span className={`text-xs ${highlight ? "text-ember-300" : "text-zinc-500"}`}>
             {item.day ? untilLabel(today, item.day) : (item.text ?? "Em breve")}
           </span>
         </span>

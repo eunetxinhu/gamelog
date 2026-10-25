@@ -28,7 +28,7 @@ export default async function Image({ params }: { params: Promise<{ username: st
 
   if (!user || user.bannedAt) {
     return new ImageResponse(
-      <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b", color: "#38bdf8", fontSize: 96, fontWeight: 800 }}>
+      <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#09090b", color: "#ef3340", fontSize: 96, fontWeight: 800 }}>
         Poneglyph.gg
       </div>,
       size,
@@ -71,7 +71,7 @@ export default async function Image({ params }: { params: Promise<{ username: st
             {avatar ? (
               <img src={avatar} alt="" width={150} height={150} style={{ borderRadius: 999, border: "6px solid #18181b" }} />
             ) : (
-              <div style={{ display: "flex", width: 150, height: 150, borderRadius: 999, background: "#0284c7", alignItems: "center", justifyContent: "center", fontSize: 72, fontWeight: 700 }}>
+              <div style={{ display: "flex", width: 150, height: 150, borderRadius: 999, background: "#d41b26", alignItems: "center", justifyContent: "center", fontSize: 72, fontWeight: 700 }}>
                 {name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -87,7 +87,7 @@ export default async function Image({ params }: { params: Promise<{ username: st
               ))}
             </div>
 
-            <div style={{ display: "flex", marginTop: "auto", fontSize: 30, fontWeight: 800, color: "#38bdf8" }}>Poneglyph.gg</div>
+            <div style={{ display: "flex", marginTop: "auto", fontSize: 30, fontWeight: 800, color: "#ef3340" }}>Poneglyph.gg</div>
           </div>
 
           {covers.length > 0 && (

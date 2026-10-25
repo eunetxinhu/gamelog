@@ -173,7 +173,7 @@ export function PhotoComposer({ quickGames, startOpen = false, shared = null }: 
           }}
           className="flex w-full items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-left text-sm text-zinc-400 transition hover:border-zinc-600 hover:text-zinc-200"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-600/20 text-sky-300">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-600/20 text-brand-300">
             <Camera className="size-5" aria-hidden />
           </span>
           Compartilhe fotos de um jogo…
@@ -192,11 +192,11 @@ export function PhotoComposer({ quickGames, startOpen = false, shared = null }: 
       ref={section}
       id="postar"
       aria-label="Compartilhar fotos"
-      className="mb-4 scroll-mt-20 space-y-4 rounded-2xl border border-sky-500/30 bg-zinc-900/80 p-4 sm:p-5"
+      className="mb-4 scroll-mt-20 space-y-4 rounded-2xl border border-brand-500/30 bg-zinc-900/80 p-4 sm:p-5"
     >
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-semibold text-zinc-50">
-          <Camera className="size-5 text-sky-400" aria-hidden /> Compartilhar fotos
+          <Camera className="size-5 text-brand-400" aria-hidden /> Compartilhar fotos
         </h2>
         <button type="button" onClick={cancel} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100" aria-label="Cancelar">
           <X className="size-5" aria-hidden />
@@ -232,7 +232,7 @@ export function PhotoComposer({ quickGames, startOpen = false, shared = null }: 
             <button
               type="button"
               onClick={() => fileInput.current?.click()}
-              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-600 text-xs text-zinc-400 transition hover:border-sky-500 hover:text-sky-300"
+              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-600 text-xs text-zinc-400 transition hover:border-brand-500 hover:text-brand-300"
             >
               <ImagePlus className="size-6" aria-hidden />
               {photos.length === 0 ? "Escolher fotos" : "Mais"}
@@ -267,7 +267,7 @@ export function PhotoComposer({ quickGames, startOpen = false, shared = null }: 
           rows={2}
           maxLength={CAPTION_MAX}
           placeholder="Conte o que está rolando. Use @usuario para marcar alguém"
-          className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+          className="w-full resize-y rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
         />
         {caption.trim() && (
           <label className="flex items-center gap-2 text-sm text-zinc-400">
@@ -289,7 +289,7 @@ export function PhotoComposer({ quickGames, startOpen = false, shared = null }: 
           type="button"
           onClick={onPost}
           disabled={!canPost}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none sm:py-2"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none sm:py-2"
         >
           {posting || uploading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Camera className="size-4" aria-hidden />}
           {posting ? "Publicando…" : uploading ? "Enviando fotos…" : "Publicar"}
@@ -336,7 +336,7 @@ function GamePicker({ value, onChange, quickGames }: { value: GameOption | null;
             <GameCover title={value.title} coverUrl={value.coverUrl} steamAppId={value.steamAppId} />
           </span>
           <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-100">{value.title}</span>
-          <button type="button" onClick={() => onChange(null)} className="inline-flex items-center gap-1 text-xs text-sky-400 hover:underline">
+          <button type="button" onClick={() => onChange(null)} className="inline-flex items-center gap-1 text-xs text-brand-400 hover:underline">
             <RefreshCw className="size-3" aria-hidden /> Trocar
           </button>
         </div>
@@ -351,7 +351,7 @@ function GamePicker({ value, onChange, quickGames }: { value: GameOption | null;
       <label htmlFor={inputId} className="mb-1.5 flex items-center gap-1.5 text-sm text-zinc-400">
         <Gamepad2 className="size-4" aria-hidden /> De qual jogo? <span className="text-amber-300">(obrigatório)</span>
       </label>
-      <div className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/30">
+      <div className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30">
         {searching ? <Loader2 className="size-4 shrink-0 animate-spin text-zinc-500" aria-hidden /> : <Search className="size-4 shrink-0 text-zinc-500" aria-hidden />}
         <input
           id={inputId}

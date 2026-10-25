@@ -36,7 +36,7 @@ export default async function GamesPage({ searchParams }: Props) {
         <label htmlFor="q" className="sr-only">
           Buscar jogo
         </label>
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/30">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-3 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30">
           <Search className="size-4 shrink-0 text-zinc-500" aria-hidden />
           <input
             id="q"
@@ -49,7 +49,7 @@ export default async function GamesPage({ searchParams }: Props) {
             className="min-w-0 flex-1 bg-transparent py-2.5 text-sm sm:py-2 text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
           />
         </div>
-        <button type="submit" className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500">
+        <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-500">
           Buscar
         </button>
       </form>
@@ -72,7 +72,7 @@ async function SearchResults({ q, viewerId }: { q: string; viewerId: string | nu
       {didYouMean && (
         <p className="mb-4 text-sm text-zinc-400">
           Você quis dizer{" "}
-          <Link href={`/games?q=${encodeURIComponent(didYouMean)}`} className="font-medium text-sky-400 hover:underline">
+          <Link href={`/games?q=${encodeURIComponent(didYouMean)}`} className="font-medium text-brand-400 hover:underline">
             {didYouMean}
           </Link>
           ?
@@ -174,10 +174,10 @@ async function Hub({ viewerId }: { viewerId: string | null }) {
       )}
 
       {store && store.newReleases.length > 0 && (
-        <StoreRow title="Novos lançamentos" icon={<Sparkles className="size-4 text-sky-400" aria-hidden />} items={store.newReleases} wish={wish} />
+        <StoreRow title="Novos lançamentos" icon={<Sparkles className="size-4 text-brand-400" aria-hidden />} items={store.newReleases} wish={wish} />
       )}
       {store && store.comingSoon.length > 0 && (
-        <StoreRow title="Em breve" icon={<CalendarClock className="size-4 text-violet-400" aria-hidden />} items={store.comingSoon} wish={wish} upcoming />
+        <StoreRow title="Em breve" icon={<CalendarClock className="size-4 text-ember-400" aria-hidden />} items={store.comingSoon} wish={wish} upcoming />
       )}
       {store && store.specials.length > 0 && (
         <StoreRow title="Promoções na Steam" icon={<Percent className="size-4 text-emerald-400" aria-hidden />} items={store.specials} wish={wish} />
@@ -185,7 +185,7 @@ async function Hub({ viewerId }: { viewerId: string | null }) {
 
       {popular.length > 0 && (
         <section>
-          <SectionTitle icon={<Users className="size-4 text-sky-400" aria-hidden />}>Mais registrados no Poneglyph.gg</SectionTitle>
+          <SectionTitle icon={<Users className="size-4 text-brand-400" aria-hidden />}>Mais registrados no Poneglyph.gg</SectionTitle>
           <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
             {popular.map((g) => (
               <CoverTile key={g.slug} {...g} wish={wish} sub={`${g._count.logs} ${g._count.logs === 1 ? "registro" : "registros"}`} />
@@ -229,7 +229,7 @@ function StoreRow({
         {items.map((item) => (
           <li key={item.appId} className="relative w-[68vw] max-w-56 shrink-0 snap-start sm:w-56">
             <Link href={`/games/steam-${item.appId}`} className="group block">
-              <div className="relative overflow-hidden rounded-lg ring-1 ring-white/10 transition group-hover:ring-sky-500">
+              <div className="relative overflow-hidden rounded-lg ring-1 ring-white/10 transition group-hover:ring-brand-500">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={item.image} alt="" loading="lazy" className="aspect-[460/215] w-full object-cover" />
                 {item.discountPercent > 0 && (
@@ -279,7 +279,7 @@ function CoverTile(props: {
   return (
     <li className="relative">
       <Link href={`/games/${props.slug}`} className="group block space-y-1.5">
-        <GameCover title={props.title} coverUrl={props.coverUrl} steamAppId={props.steamAppId} className="transition group-hover:ring-sky-500" />
+        <GameCover title={props.title} coverUrl={props.coverUrl} steamAppId={props.steamAppId} className="transition group-hover:ring-brand-500" />
         <p className="line-clamp-2 text-xs font-medium text-zinc-200 group-hover:text-white">{props.title}</p>
         {props.sub && <p className="text-[11px] text-zinc-500">{props.sub}</p>}
       </Link>

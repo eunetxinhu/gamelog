@@ -91,7 +91,7 @@ export function PushToggle({ publicKey }: { publicKey: string | null }) {
           type="button"
           onClick={enable}
           disabled={pending || status === "unsupported" || status === "denied" || status === "loading"}
-          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
         >
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Bell className="size-4" aria-hidden />} Ativar
         </button>
@@ -141,7 +141,7 @@ export function NotificationPrefsForm({ initial }: { initial: NotificationPrefs 
                     aria-checked={on}
                     onClick={() => set(c.id, l.value)}
                     className={`flex-1 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium transition sm:flex-none ${
-                      on ? (l.value === "off" ? "bg-zinc-700 text-zinc-100" : "bg-sky-600 text-white") : "text-zinc-400 hover:text-zinc-200"
+                      on ? (l.value === "off" ? "bg-zinc-700 text-zinc-100" : "bg-brand-600 text-white") : "text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
                     {l.label}
@@ -162,7 +162,7 @@ export function NotificationPrefsForm({ initial }: { initial: NotificationPrefs 
           type="button"
           onClick={save}
           disabled={pending || !dirty}
-          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-40"
         >
           {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} Salvar
         </button>
@@ -201,7 +201,7 @@ export function PrivacySettings({ initial }: { initial: { isPrivate: boolean; dm
             Só seguidores aprovados por você veem sua atividade, biblioteca e listas. Novos seguidores viram pedidos.
           </span>
         </span>
-        <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="mt-1 size-5 shrink-0 accent-sky-500" />
+        <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="mt-1 size-5 shrink-0 accent-brand-500" />
       </label>
 
       <fieldset>
@@ -216,7 +216,7 @@ export function PrivacySettings({ initial }: { initial: { isPrivate: boolean; dm
           ).map(([value, label]) => (
             <label key={value} className="cursor-pointer">
               <input type="radio" name="dm" value={value} checked={dmPolicy === value} onChange={() => setDmPolicy(value)} className="peer sr-only" />
-              <span className="inline-block rounded-full px-3 py-1.5 text-sm text-zinc-300 ring-1 ring-zinc-700 transition peer-checked:bg-sky-600 peer-checked:text-white peer-checked:ring-sky-500 peer-focus-visible:ring-2">
+              <span className="inline-block rounded-full px-3 py-1.5 text-sm text-zinc-300 ring-1 ring-zinc-700 transition peer-checked:bg-brand-600 peer-checked:text-white peer-checked:ring-brand-500 peer-focus-visible:ring-2">
                 {label}
               </span>
             </label>
@@ -231,7 +231,7 @@ export function PrivacySettings({ initial }: { initial: { isPrivate: boolean; dm
             <Check className="size-4" aria-hidden /> Salvo
           </span>
         )}
-        <button type="button" onClick={save} disabled={!dirty || pending} className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50">
+        <button type="button" onClick={save} disabled={!dirty || pending} className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50">
           {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} Salvar
         </button>
       </div>
@@ -258,7 +258,7 @@ export function InviteLink({ url, invites }: { url: string; invites: number }) {
     <div>
       <div className="flex gap-2">
         <input readOnly value={url} onFocus={(e) => e.target.select()} aria-label="Seu link de convite" className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300" />
-        <button type="button" onClick={copy} className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-500">
+        <button type="button" onClick={copy} className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-500">
           {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
           {copied ? "Copiado" : "Copiar"}
         </button>

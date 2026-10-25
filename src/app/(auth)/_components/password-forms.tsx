@@ -24,7 +24,7 @@ export function ForgotPasswordForm() {
       )}
       <p className="mt-6 text-center text-sm text-zinc-400">
         Lembrou?{" "}
-        <Link href="/login" className="font-medium text-sky-400 hover:underline">
+        <Link href="/login" className="font-medium text-brand-400 hover:underline">
           Voltar para o login
         </Link>
       </p>
@@ -53,7 +53,7 @@ export function ResetPasswordForm({ email }: { email: string | null }) {
 
 function Shell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <section className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-xl shadow-black/20">
+    <section className="brand-stage-box rounded-2xl border border-white/10 bg-black/45 p-4 sm:p-5 shadow-2xl shadow-black/50 ring-1 ring-brand-500/15 backdrop-blur-[6px]">
       <h1 className="text-2xl font-bold text-zinc-50">{title}</h1>
       <p className="mt-1 text-sm text-zinc-400">{subtitle}</p>
       {children}
@@ -81,7 +81,7 @@ function Submit({ pending, children }: { pending: boolean; children: ReactNode }
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {children}
     </button>

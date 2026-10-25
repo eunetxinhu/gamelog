@@ -93,7 +93,7 @@ export default async function ModerationPage() {
                   {p.author && <span className="text-zinc-500">@{p.author}: </span>}
                   <span className="whitespace-pre-line break-words">{p.text}</span>
                   {p.href && (
-                    <Link href={p.href} className="ml-2 text-sky-400 hover:underline">
+                    <Link href={p.href} className="ml-2 text-brand-400 hover:underline">
                       ver
                     </Link>
                   )}

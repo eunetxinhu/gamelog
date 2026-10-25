@@ -9,6 +9,7 @@ import { getActivities } from "@/lib/activity";
 import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { ActivityCard } from "@/components/activity-card";
 import { SITE_NAME } from "@/lib/brand";
+import { BrandLogo } from "@/components/brand-logo";
 
 export const metadata: Metadata = {
   title: { absolute: `${SITE_NAME} · Sua vida gamer, platina por platina` },
@@ -31,12 +32,12 @@ export default async function Home() {
   return (
     <div className="min-h-dvh">
       <header className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        <span className="text-xl font-bold text-zinc-50">Poneglyph.gg</span>
+        <BrandLogo className="h-8" />
         <nav className="flex items-center gap-2">
           <Link href="/login" className="rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50">
             Entrar
           </Link>
-          <Link href="/signup" className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-500">
+          <Link href="/signup" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-500">
             Criar conta
           </Link>
         </nav>
@@ -52,7 +53,7 @@ export default async function Home() {
             <h1 className="text-4xl font-extrabold leading-tight text-zinc-50 sm:text-5xl">
               Sua vida gamer,
               <br />
-              <span className="bg-gradient-to-r from-sky-400 to-violet-400 bg-clip-text text-transparent">platina por platina.</span>
+              <span className="bg-gradient-to-r from-brand-400 to-ember-400 bg-clip-text text-transparent">platina por platina.</span>
             </h1>
             <p className="mt-4 max-w-md text-zinc-400">
               Conecte sua Steam e o Poneglyph.gg mostra sozinho os jogos que você começou, as platinas que conquistou e as horas
@@ -69,7 +70,7 @@ export default async function Home() {
               )}
               <Link
                 href="/signup"
-                className="inline-flex items-center rounded-lg bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-500"
+                className="inline-flex items-center rounded-lg bg-brand-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-500"
               >
                 Criar conta com e-mail
               </Link>
@@ -97,13 +98,13 @@ export default async function Home() {
           <Feature icon={<Trophy className="size-5 text-amber-400" aria-hidden />} title="Platinas automáticas">
             Ao completar 100% das conquistas na Steam, a platina aparece no seu perfil e no feed, com a raridade.
           </Feature>
-          <Feature icon={<Target className="size-5 text-sky-400" aria-hidden />} title="Quase platinando">
+          <Feature icon={<Target className="size-5 text-brand-400" aria-hidden />} title="Quase platinando">
             Veja os jogos em que falta pouco e as conquistas mais fáceis que ainda faltam.
           </Feature>
           <Feature icon={<Newspaper className="size-5 text-emerald-400" aria-hidden />} title="Feed dos amigos">
             Siga jogadores, mande GG nas platinas, curta e comente reviews.
           </Feature>
-          <Feature icon={<Share2 className="size-5 text-violet-400" aria-hidden />} title="Compartilhe">
+          <Feature icon={<Share2 className="size-5 text-ember-400" aria-hidden />} title="Compartilhe">
             Cada perfil e publicação vira um card bonito no WhatsApp, Discord e X.
           </Feature>
         </section>
