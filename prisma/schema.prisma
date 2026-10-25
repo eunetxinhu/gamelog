@@ -65,6 +65,7 @@ enum NotificationType {
   RELEASE // jogo da sua wishlist lançou hoje (sem actor)
   LIST_LIKE // curtiu sua lista
   LIST_COMMENT // comentou na sua lista
+  AWARD // a moderação deu um título ou selo exclusivo
 }
 
 enum FollowStatus {
@@ -143,6 +144,9 @@ model User {
   bannedAt          DateTime? @map("banned_at")
   /// Título especial ao lado do nome (ex.: "Fundador & CEO"). Só pelo banco: não tem tela para editar.
   title             String?   @db.VarChar(40)
+  /// Símbolo e estilo do título (ver src/lib/awards.ts). Null = coroa / dourado
+  titleIcon         String?   @map("title_icon") @db.VarChar(20)
+  titleStyle        String?   @map("title_style") @db.VarChar(20)
   /// Concluiu ou pulou o "Primeiros passos" (null = ainda mostra o convite no feed)
   onboardedAt       DateTime? @map("onboarded_at")
 
@@ -188,6 +192,9 @@ model User {
   lists             GameList[]
   listLikes         GameListLike[]
   listComments      GameListComment[]
+  /// Selos exclusivos recebidos (dados pela moderação)
+  awards            AwardedBadge[]      @relation("AwardRecipient")
+  awardsGiven       AwardedBadge[]      @relation("AwardGiver")
 
   @@index([steamNextSyncAt])
   // Busca tolerante a erros de digitação (pg_trgm, ver src/lib/search.ts)
@@ -710,4 +717,27 @@ model GameListComment {
 
   @@index([listId, createdAt])
   @@map("game_list_comments")
+}
+
+// -----------------------------------------------------------------------------
+//  Selos exclusivos: dados à mão pela moderação (nome, símbolo e estilo livres)
+// -----------------------------------------------------------------------------
+
+model AwardedBadge {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id") @db.Uuid
+  name        String   @db.VarChar(40)
+  description String?  @db.VarChar(140)
+  /// Chave de src/lib/awards.ts (AWARD_SYMBOLS)
+  icon        String   @db.VarChar(20)
+  /// Chave de src/lib/awards.ts (AWARD_STYLES)
+  style       String   @db.VarChar(20)
+  awardedById String?  @map("awarded_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User  @relation("AwardRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  awardedBy User? @relation("AwardGiver", fields: [awardedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@map("awarded_badges")
 }

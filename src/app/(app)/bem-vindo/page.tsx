@@ -11,6 +11,7 @@ import { Avatar } from "@/components/avatar";
 import { FollowButton } from "@/components/follow-button";
 import { UserTitle } from "@/components/user-title";
 import { FinishOnboarding } from "./_components/finish-button";
+import { titleOf, titleSelect } from "@/lib/awards";
 
 export const metadata: Metadata = { title: "Primeiros passos" };
 
@@ -31,7 +32,7 @@ export default async function WelcomePage() {
     where: { id: { notIn: [user.id, ...followingIds.map((f) => f.followingId), ...hidden] }, bannedAt: null },
     orderBy: [{ title: { sort: "asc", nulls: "last" } }, { followers: { _count: "desc" } }, { activities: { _count: "desc" } }],
     take: 6,
-    select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, bio: true, isPrivate: true, title: true },
+    select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, bio: true, isPrivate: true, ...titleSelect },
   });
 
   const href = { steam: "/settings/profile", top4: "/settings/account#top4", follow: "#seguir" } as const;
@@ -91,7 +92,7 @@ export default async function WelcomePage() {
                   <span className="min-w-0">
                     <span className="flex items-center gap-1 truncate text-sm font-medium text-zinc-100">
                       {p.displayName ?? p.username}
-                      <UserTitle title={p.title} compact />
+                      <UserTitle title={titleOf(p)} compact />
                     </span>
                     <span className="block truncate text-xs text-zinc-500">{p.bio ?? `@${p.username}`}</span>
                   </span>

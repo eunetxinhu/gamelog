@@ -7,6 +7,9 @@ import { ArrowLeft, Lock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getProgression, XP_RULES } from "@/lib/progression";
 import { LevelBadge } from "@/components/level-badge";
+import { awardLook } from "@/lib/awards";
+import { AwardPill } from "@/components/user-title";
+import { SITE_NAME } from "@/lib/brand";
 
 type Props = { params: Promise<{ username: string }> };
 
@@ -19,7 +22,14 @@ export default async function BadgesPage({ params }: Props) {
   const username = decodeURIComponent((await params).username).toLowerCase();
   const profile = await prisma.user.findUnique({
     where: { username },
-    select: { id: true, username: true, displayName: true, isPrivate: true, bannedAt: true },
+    select: {
+      id: true,
+      username: true,
+      displayName: true,
+      isPrivate: true,
+      bannedAt: true,
+      awards: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, description: true, icon: true, style: true, createdAt: true } },
+    },
   });
   if (!profile) notFound();
   if (!(await canSeeProfile((await getCurrentUser())?.id ?? null, profile))) redirect(`/u/${profile.username}`);
@@ -56,6 +66,25 @@ export default async function BadgesPage({ params }: Props) {
           })}
         </ul>
       </section>
+
+      {profile.awards.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-1 text-lg font-semibold text-zinc-50">Selos exclusivos</h2>
+          <p className="mb-3 text-sm text-zinc-500">Dados pela moderação do {SITE_NAME}. Não dá para conquistar sozinho.</p>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {profile.awards.map((b) => {
+              const look = awardLook(b.icon, b.style);
+              return (
+                <li key={b.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                  <AwardPill text={b.name} icon={look.icon} style={look.style} />
+                  {b.description && <p className="mt-2 text-sm text-zinc-300">{b.description}</p>}
+                  <p className="mt-1 text-xs text-zinc-500">Recebido em {b.createdAt.toLocaleDateString("pt-BR")}</p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <h2 className="mb-3 text-lg font-semibold text-zinc-50">
         Conquistados <span className="text-zinc-500">({earned.length}/{badges.length})</span>

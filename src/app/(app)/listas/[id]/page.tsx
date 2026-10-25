@@ -13,6 +13,7 @@ import { WishlistQuickButton } from "@/components/wishlist-quick-button";
 import { wishlistSetFor } from "@/lib/wishlist";
 import { inWishlist } from "@/lib/wishlist-keys";
 import { DeleteListCommentButton, ListCommentForm, ListLikeButton } from "../_components/list-actions";
+import { titleOf } from "@/lib/awards";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -41,7 +42,7 @@ export default async function ListPage({ params }: Props) {
         <Link href={`/u/${list.user.username}`} className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200">
           <Avatar name={author} src={list.user.avatarUrl ?? list.user.steamAvatarUrl} size="xs" />
           Lista de <strong className="font-semibold text-zinc-200">{author}</strong>
-          <UserTitle title={list.user.title} compact />
+          <UserTitle title={titleOf(list.user)} compact />
         </Link>
         <h1 className="text-2xl font-bold text-zinc-50 sm:text-3xl">{list.title}</h1>
         {list.description && <p className="max-w-prose whitespace-pre-line text-sm text-zinc-300">{list.description}</p>}
@@ -125,7 +126,7 @@ export default async function ListPage({ params }: Props) {
                     <Link href={`/u/${c.user.username}`} className="font-semibold text-zinc-200 hover:underline">
                       {name}
                     </Link>
-                    <UserTitle title={c.user.title} compact />
+                    <UserTitle title={titleOf(c.user)} compact />
                     {relativeTime(c.createdAt)}
                     <span className="ml-auto flex items-center">
                       {viewer && viewer.id !== c.user.id && (

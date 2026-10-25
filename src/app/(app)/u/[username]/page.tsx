@@ -19,11 +19,21 @@ import { canMessage } from "@/lib/dm";
 import { ProfileMenu } from "@/components/profile-menu";
 import { GameCover } from "@/components/game-cover";
 import { ScrollRow } from "@/components/scroll-row";
-import { UserTitle } from "@/components/user-title";
+import { AwardPill, UserTitle } from "@/components/user-title";
+import { AwardPanel } from "@/components/award-panel";
 import { getListCards } from "@/lib/lists";
 import { ListGrid } from "@/components/list-card";
+import { awardLook, titleOf, type AwardStyle } from "@/lib/awards";
 
 type Props = { params: Promise<{ username: string }> };
+
+/** Anel do avatar de quem tem título, na cor do selo. */
+const AVATAR_RING: Record<AwardStyle, string> = {
+  gold: "ring-amber-300/90 shadow-[0_0_28px_-4px_rgba(251,191,36,0.6)]",
+  crimson: "ring-brand-500/90 shadow-[0_0_28px_-4px_rgba(239,51,64,0.6)]",
+  silver: "ring-zinc-200/90 shadow-[0_0_28px_-4px_rgba(255,255,255,0.45)]",
+  obsidian: "ring-black shadow-[0_0_0_2px_rgba(212,27,38,0.8),0_0_28px_-4px_rgba(212,27,38,0.6)]",
+};
 
 const gameSelect = { id: true, slug: true, title: true, coverUrl: true, steamAppId: true } as const;
 
@@ -37,13 +47,17 @@ export default async function ProfilePage({ params }: Props) {
   const [profile, viewer] = await Promise.all([
     prisma.user.findUnique({
       where: { username },
-      include: { _count: { select: { followers: { where: { status: "ACCEPTED" } }, following: { where: { status: "ACCEPTED" } } } } },
+      include: {
+        _count: { select: { followers: { where: { status: "ACCEPTED" } }, following: { where: { status: "ACCEPTED" } } } },
+        awards: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, description: true, icon: true, style: true } },
+      },
     }),
     getCurrentUser(),
   ]);
   if (!profile) notFound();
 
   const isMe = viewer?.id === profile.id;
+  const badges = profile.awards.map((b) => ({ ...b, ...awardLook(b.icon, b.style) }));
   const other = Boolean(viewer && !isMe);
 
   const [canSee, following, blockedByMe, dm] = await Promise.all([
@@ -70,7 +84,7 @@ export default async function ProfilePage({ params }: Props) {
         <div className="flex flex-col gap-4 px-4 pb-5 sm:flex-row sm:items-end sm:px-6 sm:pb-6">
           <div
             className={`-mt-12 w-fit rounded-full ring-4 ${
-              profile.title ? "ring-amber-300/90 shadow-[0_0_28px_-4px_rgba(251,191,36,0.6)]" : "ring-zinc-950"
+              profile.title ? AVATAR_RING[titleOf(profile)!.style] : "ring-zinc-950"
             }`}
           >
             <Avatar name={name} src={profile.avatarUrl ?? profile.steamAvatarUrl} size="lg" />
@@ -79,8 +93,17 @@ export default async function ProfilePage({ params }: Props) {
             <h1 className="truncate text-2xl font-bold text-zinc-50">{name}</h1>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-400">
               @{profile.username}
-              <UserTitle title={profile.title} />
+              <UserTitle title={titleOf(profile)} />
             </p>
+            {badges.length > 0 && (
+              <ul className="flex flex-wrap gap-1.5 pt-1" aria-label="Selos exclusivos">
+                {badges.map((b) => (
+                  <li key={b.id} title={b.description ?? b.name}>
+                    <AwardPill text={b.name} icon={b.icon} style={b.style} size="xs" />
+                  </li>
+                ))}
+              </ul>
+            )}
             {data && (
               <Link href={`/u/${profile.username}/selos`} className="block pt-1" title="Ver nível e selos">
                 <LevelBadge level={data.progression.level} />
@@ -97,6 +120,11 @@ export default async function ProfilePage({ params }: Props) {
             </p>
           </div>
           <div className="shrink-0">
+            {viewer?.isAdmin && (
+              <div className="mb-2 flex sm:justify-end">
+                <AwardPanel userId={profile.id} username={profile.username} title={titleOf(profile)} badges={badges} />
+              </div>
+            )}
             {isMe ? (
               <div className="flex flex-wrap gap-2">
                 <Link

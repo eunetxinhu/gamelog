@@ -4,6 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { ActivityType, LibrarySource, LogStatus } from "@/generated/prisma/enums";
 import { notifyFollowers } from "@/lib/notifications";
 import { visibleUsersWhere } from "@/lib/privacy";
+import { titleOf, titleSelect, type UserTitleData } from "@/lib/awards";
 
 /** Status do GameLog que viram publicação (BACKLOG não aparece no feed). */
 export const ACTIVITY_FOR_STATUS: Partial<Record<LogStatus, ActivityType>> = {
@@ -102,7 +103,7 @@ export type FeedItem = {
   images: string[];
   meta: { apiName?: string; name?: string; description?: string; icon?: string; percent?: number } | null;
   /** `title`: título especial (ex.: "Fundador & CEO"), quando houver */
-  user: { id: string; username: string; displayName: string | null; avatarUrl: string | null; title: string | null };
+  user: { id: string; username: string; displayName: string | null; avatarUrl: string | null; title: UserTitleData };
   game: { slug: string; title: string; coverUrl: string | null; steamAppId: number | null; platinumRarity: number | null };
   likeCount: number;
   ggCount: number;
@@ -130,7 +131,7 @@ export async function getActivities(opts: {
     orderBy: { createdAt: "desc" },
     take: opts.take ?? PAGE_SIZE,
     include: {
-      user: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, title: true } },
+      user: { select: { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true, ...titleSelect } },
       game: { select: { slug: true, title: true, coverUrl: true, steamAppId: true, platinumRarity: true } },
       _count: { select: { comments: true } },
       likes: { where: { userId: opts.viewerId ?? "00000000-0000-0000-0000-000000000000" }, select: { type: true } },
@@ -159,7 +160,7 @@ export async function getActivities(opts: {
       username: r.user.username,
       displayName: r.user.displayName,
       avatarUrl: r.user.avatarUrl ?? r.user.steamAvatarUrl,
-      title: r.user.title,
+      title: titleOf(r.user),
     },
     game: r.game,
     likeCount: countOf(r.id, "LIKE"),
