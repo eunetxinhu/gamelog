@@ -13,6 +13,9 @@ import { GameCover } from "@/components/game-cover";
 import { ScrollRow } from "@/components/scroll-row";
 import { SteamFriends } from "./_components/steam-friends";
 import { searchUserIds } from "@/lib/search";
+import { WishlistQuickButton } from "@/components/wishlist-quick-button";
+import { wishlistSetFor } from "@/lib/wishlist";
+import { inWishlist } from "@/lib/wishlist-keys";
 
 export const metadata: Metadata = { title: "Explorar · GameLog" };
 
@@ -192,19 +195,21 @@ async function Discover({ viewerId }: { viewerId: string | null }) {
     return game ? [{ game, sub: `★ ${(r._avg.rating ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} · ${r._count.rating} notas` }] : [];
   });
 
+  const wish = { loggedIn: !!viewerId, set: await wishlistSetFor(viewerId, [...games.values()]) };
+
   const empty = trending.length + platinums.length + topRated.length + players.length === 0;
   if (empty) return <p className="text-sm text-zinc-500">Ainda não há atividade suficiente. Volte quando mais gente estiver jogando!</p>;
 
   return (
     <div className="space-y-10">
       {trending.length > 0 && (
-        <Shelf title="Em alta esta semana" icon={<Flame className="size-4 text-orange-400" aria-hidden />} items={trending} />
+        <Shelf title="Em alta esta semana" icon={<Flame className="size-4 text-orange-400" aria-hidden />} items={trending} wish={wish} />
       )}
       {platinums.length > 0 && (
-        <Shelf title="Mais platinados" icon={<Trophy className="size-4 text-amber-400" aria-hidden />} items={platinums} />
+        <Shelf title="Mais platinados" icon={<Trophy className="size-4 text-amber-400" aria-hidden />} items={platinums} wish={wish} />
       )}
       {topRated.length > 0 && (
-        <Shelf title="Mais bem avaliados" icon={<Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />} items={topRated} />
+        <Shelf title="Mais bem avaliados" icon={<Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />} items={topRated} wish={wish} />
       )}
       {players.length > 0 && (
         <section>
@@ -225,7 +230,17 @@ function SectionTitle({ icon, children }: { icon: ReactNode; children: ReactNode
   );
 }
 
-function Shelf({ title, icon, items }: { title: string; icon: ReactNode; items: { game: GameTileData; sub: string }[] }) {
+function Shelf({
+  title,
+  icon,
+  items,
+  wish,
+}: {
+  title: string;
+  icon: ReactNode;
+  items: { game: GameTileData; sub: string }[];
+  wish: { loggedIn: boolean; set: Set<string> };
+}) {
   return (
     <section>
       <SectionTitle icon={icon}>{title}</SectionTitle>
@@ -235,12 +250,19 @@ function Shelf({ title, icon, items }: { title: string; icon: ReactNode; items: 
         className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible sm:px-0 md:grid-cols-6"
       >
         {items.map(({ game, sub }) => (
-          <li key={game.id} className="w-[6.5rem] shrink-0 snap-start sm:w-auto">
+          <li key={game.id} className="relative w-[6.5rem] shrink-0 snap-start sm:w-auto">
             <Link href={`/games/${game.slug}`} className="group block space-y-1.5">
               <GameCover title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} className="transition group-hover:ring-sky-500" />
               <p className="line-clamp-2 text-xs font-medium text-zinc-200 group-hover:text-white">{game.title}</p>
               <p className="text-[11px] text-zinc-500">{sub}</p>
             </Link>
+            <WishlistQuickButton
+              slug={game.slug}
+              title={game.title}
+              initial={inWishlist(wish.set, game)}
+              loggedIn={wish.loggedIn}
+              className="right-1 top-1"
+            />
           </li>
         ))}
       </ScrollRow>
