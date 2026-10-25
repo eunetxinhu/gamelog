@@ -1,0 +1,308 @@
+// =============================================================================
+//  GameLog — schema.prisma (Prisma ORM 7 + Supabase Postgres)
+// -----------------------------------------------------------------------------
+//  • Prisma 7: a URL do banco NÃO fica mais aqui; ela vive em prisma.config.ts
+//    e o client é instanciado com driver adapter (@prisma/adapter-pg).
+//  • User.id === auth.users.id (UUID do Supabase Auth). O perfil público é
+//    criado no primeiro login (ver src/lib/auth.ts → ensureProfile).
+//  • A Steam é vinculada só por "Entrar com Steam" (OpenID 2.0, ver
+//    src/lib/steam/openid.ts): o steamId nunca vem digitado pelo usuário.
+//  • Constraints que o Prisma não expressa (CHECK de nota 1–5, posição 1–4 do
+//    top 4, follow em si mesmo) estão em prisma/sql/constraints.sql — rode
+//    após a primeira migration.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+//  Enums
+// -----------------------------------------------------------------------------
+
+enum LogStatus {
+  PLAYING // "Jogando"
+  COMPLETED // "Finalizado"
+  PLATINUM // "Platinado" (100% das conquistas/troféus)
+  DROPPED // "Dropado"
+  BACKLOG // "Backlog"
+}
+
+/// Tipo de publicação no feed
+enum ActivityType {
+  STARTED_GAME // começou a jogar (detectado na Steam ou marcado como "Jogando")
+  COMPLETED // finalizou
+  PLATINUM // platinou (todas as conquistas na Steam ou marcado como "Platinado")
+  DROPPED // dropou
+  REVIEW // avaliou / escreveu review sem mudar de status
+}
+
+enum NotificationType {
+  LIKE // curtiu sua publicação
+  COMMENT // comentou na sua publicação
+  FOLLOW // começou a seguir você
+  PLATINUM // alguém que você segue platinou
+}
+
+enum LibrarySource {
+  STEAM
+  MANUAL
+}
+
+// -----------------------------------------------------------------------------
+//  User (perfil público + contas vinculadas)
+// -----------------------------------------------------------------------------
+
+model User {
+  /// Mesmo UUID de auth.users (Supabase). Não usa default: vem do Auth.
+  id          String  @id @db.Uuid
+  username    String  @unique @db.VarChar(30)
+  displayName String? @map("display_name") @db.VarChar(60)
+  avatarUrl   String? @map("avatar_url")
+  bio         String? @db.VarChar(280)
+  /// Fundo do cabeçalho do perfil (URL de imagem; ex.: arte de um jogo)
+  bannerUrl   String? @map("banner_url")
+
+  // ---- Steam -----------------------------------------------------------------
+  /// SteamID64 (17 dígitos, ex.: 76561198000000000), devolvido pelo login
+  /// oficial da Steam. Único: uma conta Steam só pode estar em um perfil.
+  steamId          String?   @unique @map("steam_id") @db.VarChar(17)
+  steamPersonaName String?   @map("steam_persona_name")
+  steamAvatarUrl   String?   @map("steam_avatar_url")
+  steamLastSyncAt  DateTime? @map("steam_last_sync_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // ---- Relações --------------------------------------------------------------
+  logs              GameLog[]
+  library           LibraryEntry[]
+  favorites         FavoriteGame[]
+  activities        Activity[]
+  likes             ActivityLike[]
+  comments          Comment[]
+  /// Notificações recebidas
+  notifications     Notification[] @relation("NotificationRecipient")
+  /// Notificações que eu causei (curti, comentei, segui…)
+  notificationsSent Notification[] @relation("NotificationActor")
+  followers         Follow[]       @relation("UserFollowers") // quem me segue
+  following         Follow[]       @relation("UserFollowing") // quem eu sigo
+
+  @@map("users")
+}
+
+// -----------------------------------------------------------------------------
+//  Game (cache local do catálogo externo — RAWG/IGDB — e da Steam)
+// -----------------------------------------------------------------------------
+
+model Game {
+  id          String    @id @default(cuid())
+  /// Slug interno da rota /games/[slug]. Jogos vindos só da Steam começam como
+  /// "steam-<appid>" até serem enriquecidos com dados da RAWG.
+  slug        String    @unique
+  title       String
+  coverUrl    String?   @map("cover_url")
+  summary     String?
+  releaseDate DateTime? @map("release_date") @db.Date
+  genres      String[]  @default([])
+  platforms   String[]  @default([])
+
+  // Ids externos (cada um opcional, mas único quando presente)
+  rawgId     Int? @unique @map("rawg_id")
+  igdbId     Int? @unique @map("igdb_id")
+  steamAppId Int? @unique @map("steam_app_id")
+
+  /// Última vez que os metadados vieram da API externa (para revalidar cache).
+  syncedAt  DateTime? @map("synced_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  logs       GameLog[]
+  libraryOf  LibraryEntry[]
+  favoriteOf FavoriteGame[]
+  activities Activity[]
+
+  @@index([title])
+  @@map("games")
+}
+
+// -----------------------------------------------------------------------------
+//  GameLog — o "registro" do jogo pelo usuário (status + nota + review)
+//  Um log por (usuário, jogo); o feed lê esta tabela ordenada por updatedAt.
+// -----------------------------------------------------------------------------
+
+model GameLog {
+  id     String    @id @default(cuid())
+  userId String    @map("user_id") @db.Uuid
+  gameId String    @map("game_id")
+  status LogStatus
+
+  /// 1 a 5 (CHECK em constraints.sql). Nulo = registrado sem nota.
+  rating          Int?      @db.SmallInt
+  review          String?
+  containsSpoiler Boolean   @default(false) @map("contains_spoiler")
+  startedAt       DateTime? @map("started_at") @db.Date
+  finishedAt      DateTime? @map("finished_at") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@index([userId, status]) // backlog / "jogando" do perfil
+  @@index([gameId, createdAt(sort: Desc)]) // reviews na página do jogo
+  @@index([updatedAt(sort: Desc)]) // feed global
+  @@map("game_logs")
+}
+
+// -----------------------------------------------------------------------------
+//  LibraryEntry — biblioteca importada (Steam) com horas jogadas
+//  Separado de GameLog de propósito: possuir um jogo ≠ ter registrado/avaliado.
+// -----------------------------------------------------------------------------
+
+model LibraryEntry {
+  userId                String        @map("user_id") @db.Uuid
+  gameId                String        @map("game_id")
+  source                LibrarySource @default(STEAM)
+  playtimeMinutes       Int           @default(0) @map("playtime_minutes")
+  playtime2WeeksMinutes Int           @default(0) @map("playtime_2weeks_minutes")
+  lastPlayedAt          DateTime?     @map("last_played_at")
+
+  // Conquistas (Steam). Checadas aos poucos a cada sincronização.
+  achievementsUnlocked  Int?      @map("achievements_unlocked")
+  achievementsTotal     Int?      @map("achievements_total")
+  achievementsCheckedAt DateTime? @map("achievements_checked_at")
+  /// Data da última conquista quando o jogo chega a 100%
+  platinumAt            DateTime? @map("platinum_at")
+
+  importedAt DateTime @default(now()) @map("imported_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([userId, gameId])
+  @@index([userId, playtimeMinutes(sort: Desc)]) // "mais jogados" no perfil
+  @@map("library_entries")
+}
+
+// -----------------------------------------------------------------------------
+//  Activity — publicações do feed (automáticas da Steam ou de um GameLog)
+// -----------------------------------------------------------------------------
+
+model Activity {
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id") @db.Uuid
+  gameId          String        @map("game_id")
+  type            ActivityType
+  /// STEAM = detectado na sincronização; MANUAL = o usuário registrou
+  source          LibrarySource @default(MANUAL)
+  rating          Int?          @db.SmallInt
+  review          String?
+  containsSpoiler Boolean       @default(false) @map("contains_spoiler")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game          Game           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  likes         ActivityLike[]
+  comments      Comment[]
+  notifications Notification[]
+
+  @@index([createdAt(sort: Desc)]) // feed global
+  @@index([userId, createdAt(sort: Desc)]) // perfil + feed "seguindo"
+  @@index([gameId, createdAt(sort: Desc)]) // atividade na página do jogo
+  @@map("activities")
+}
+
+model ActivityLike {
+  activityId String   @map("activity_id")
+  userId     String   @map("user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([activityId, userId])
+  @@index([userId])
+  @@map("activity_likes")
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  activityId String   @map("activity_id")
+  userId     String   @map("user_id") @db.Uuid
+  body       String   @db.VarChar(1000)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([activityId, createdAt])
+  @@map("comments")
+}
+
+// -----------------------------------------------------------------------------
+//  Notification — sino da barra (curtidas, comentários, seguidores, platinas)
+// -----------------------------------------------------------------------------
+
+model Notification {
+  id         String           @id @default(cuid())
+  /// Quem recebe
+  userId     String           @map("user_id") @db.Uuid
+  /// Quem causou
+  actorId    String           @map("actor_id") @db.Uuid
+  type       NotificationType
+  activityId String?          @map("activity_id")
+  readAt     DateTime?        @map("read_at")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  user     User      @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor    User      @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  activity Activity? @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+// -----------------------------------------------------------------------------
+//  FavoriteGame — Top 4 do perfil
+// -----------------------------------------------------------------------------
+
+model FavoriteGame {
+  userId   String @map("user_id") @db.Uuid
+  gameId   String @map("game_id")
+  /// 1 a 4 (CHECK em constraints.sql)
+  position Int    @db.SmallInt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([userId, position])
+  @@unique([userId, gameId])
+  @@map("favorite_games")
+}
+
+// -----------------------------------------------------------------------------
+//  Follow — grafo social (direcional, estilo Letterboxd)
+// -----------------------------------------------------------------------------
+
+model Follow {
+  followerId  String   @map("follower_id") @db.Uuid
+  followingId String   @map("following_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+  @@map("follows")
+}
