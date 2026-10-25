@@ -14,7 +14,7 @@ export function AuthForm({ mode, next, notice, steamLogin, inviteRef }: Props) {
   const otherHref = `${isSignup ? "/login" : "/signup"}?next=${encodeURIComponent(next)}`;
 
   return (
-    <section className="w-full max-w-[21rem] rounded-2xl border border-white/10 bg-black/45 p-5 shadow-2xl shadow-black/50 ring-1 ring-brand-500/15 backdrop-blur-[6px]">
+    <section className="brand-stage-box rounded-2xl border border-white/10 bg-black/45 p-4 sm:p-5 shadow-2xl shadow-black/50 ring-1 ring-brand-500/15 backdrop-blur-[6px]">
       <h1 className="text-xl font-bold text-zinc-50">{isSignup ? "Criar conta" : "Entrar"}</h1>
       <p className="mt-1 text-sm text-zinc-400 [@media(max-height:900px)]:hidden">
         {isSignup ? "Registre, avalie e acompanhe seus jogos." : "Bem-vindo de volta ao Poneglyph.gg."}

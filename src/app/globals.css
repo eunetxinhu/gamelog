@@ -95,7 +95,17 @@ body {
   object-position: 50% 39%;
 }
 .brand-stage-content {
+  /* Largura em que a arte está sendo exibida (cover numa tela deitada) */
+  --art-w: max(100vw, 177.78dvh);
   padding-top: calc(39dvh + max(15dvh, 8.44vw) + clamp(1.5rem, 4dvh, 3rem));
+}
+/* A caixa vai de ponta a ponta das linhas brancas abaixo do logo (ー ポーネグリフ ー):
+   x = 778 a 1083 de 1920, ou seja 15,89% da arte, com o centro 1,54% à esquerda do
+   meio. Mínimo de 16rem para o formulário não ficar apertado em telas pequenas. */
+.brand-stage-box {
+  width: max(16rem, calc(var(--art-w) * 0.1589));
+  max-width: calc(100vw - 2rem);
+  transform: translateX(calc(var(--art-w) * -0.0154));
 }
 @media (max-aspect-ratio: 3/4) {
   .brand-stage-art {
@@ -105,5 +115,11 @@ body {
   }
   .brand-stage-content {
     padding-top: calc(72dvh * 0.539 + clamp(1.25rem, 3dvh, 2rem));
+  }
+  /* Em pé a arte fica pequena demais para alinhar: a caixa usa a largura da tela */
+  .brand-stage-box {
+    width: 100%;
+    max-width: 21rem;
+    transform: none;
   }
 }
