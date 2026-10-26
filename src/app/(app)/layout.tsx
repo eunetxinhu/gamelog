@@ -35,6 +35,19 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
+      {/* Fundo com a arte do site, fixo atrás de tudo (a tela de login tem a própria arte) */}
+      <div aria-hidden className="pointer-events-none fixed inset-x-0 bottom-0 top-14 -z-10">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/fundo.jpg"
+          srcSet="/brand/fundo-1280.jpg 1280w, /brand/fundo.jpg 1920w"
+          sizes="max(100vw, 177.78vh)"
+          alt=""
+          className="size-full select-none object-cover"
+        />
+        {/* Escurece um pouco para os cards continuarem legíveis */}
+        <div className="absolute inset-0 bg-black/45" />
+      </div>
       <header className="sticky top-0 z-20 border-b border-brand-900/60 bg-black/85 pt-[env(safe-area-inset-top)] backdrop-blur">
         <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-1 sm:gap-4">
