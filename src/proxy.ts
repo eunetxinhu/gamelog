@@ -26,11 +26,13 @@ export async function proxy(request: NextRequest) {
 
   // Testes de ponta a ponta: sessão de mentira pelo cookie (nunca na Vercel, ver src/lib/e2e.ts)
   const e2eUser = e2eAuthEnabled() ? e2eUserId(request.cookies.get(E2E_COOKIE)?.value) : null;
-  const { data } = e2eAuthEnabled() ? { data: { user: e2eUser ? { id: e2eUser } : null } } : await supabase.auth.getUser();
+  // getClaims confere o JWT localmente (chaves públicas em cache) e renova a sessão perto
+  // de expirar; não vai ao servidor do Supabase a cada request como o getUser().
+  const signedIn = e2eAuthEnabled() ? Boolean(e2eUser) : Boolean((await supabase.auth.getClaims()).data?.claims?.sub);
   const path = request.nextUrl.pathname;
 
   // Compara o segmento inteiro: "/log" protege "/log/..." mas não "/login".
-  if (!data.user && PROTECTED.some((p) => path === p || path.startsWith(`${p}/`))) {
+  if (!signedIn && PROTECTED.some((p) => path === p || path.startsWith(`${p}/`))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";

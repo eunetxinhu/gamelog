@@ -8,9 +8,16 @@ import { cookies } from "next/headers";
 import { E2E_COOKIE, e2eAuthEnabled, e2eUserId } from "@/lib/e2e";
 
 /**
- * Retorna o usuário autenticado (validado no servidor do Supabase com
- * getUser(), nunca getSession()) e o perfil correspondente em `users`.
- * Cria o perfil na primeira vez (e aplica o convite, se veio de um).
+ * Retorna o usuário autenticado e o perfil correspondente em `users`.
+ *
+ * A sessão é validada com getClaims() (nunca getSession()): confere a assinatura do
+ * JWT localmente com as chaves públicas do projeto (JWKS, em cache), sem ir ao
+ * servidor do Supabase a cada página. Se o projeto ainda usar segredo simétrico,
+ * o próprio getClaims() cai para a validação no servidor.
+ *
+ * Só na primeira vez (sem perfil) confere com getUser() no servidor: garante que a
+ * conta ainda existe (um token de conta recém-excluída vale até expirar) e traz os
+ * metadados para criar o perfil e aplicar o convite.
  * `cache` deduplica dentro do mesmo request.
  */
 export const getCurrentUser = cache(async () => {
@@ -20,12 +27,17 @@ export const getCurrentUser = cache(async () => {
     return id ? prisma.user.findUnique({ where: { id } }) : null;
   }
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub;
+  if (claimsError || !userId) return null;
 
-  const authUser = data.user;
-  const existing = await prisma.user.findUnique({ where: { id: authUser.id } });
+  const existing = await prisma.user.findUnique({ where: { id: userId } });
   if (existing) return existing;
+
+  // Primeiro acesso: confirma no servidor do Supabase antes de criar o perfil
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user || data.user.id !== userId) return null;
+  const authUser = data.user;
 
   const meta = authUser.user_metadata ?? {};
   const inviter = await findInviter(cleanRef(meta.ref));
