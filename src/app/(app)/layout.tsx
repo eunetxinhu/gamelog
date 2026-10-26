@@ -52,7 +52,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 xl:max-w-7xl">
           <div className="flex items-center gap-1 sm:gap-4">
             <Link href={user ? "/feed" : "/"} className="mr-2 shrink-0 pt-1" aria-label={`${SITE_NAME}: início`}>
-              <BrandLogo className="h-7 md:h-6" />
+              <BrandLogo className="h-8 md:h-7 xl:h-9" />
             </Link>
             {/* No celular estes links ficam na barra inferior (MobileNav) */}
             <div className="hidden items-center gap-1 md:flex lg:gap-3">

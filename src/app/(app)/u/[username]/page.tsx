@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bookmark, CalendarDays, ChevronRight, GitCompareArrows, Lock, Medal, Settings, Target, Trophy, UserPlus } from "lucide-react";
+import { Bookmark, CalendarDays, ChevronRight, GitCompareArrows, Lock, Medal, ScrollText, Settings, Target, Trophy, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities } from "@/lib/activity";
@@ -146,6 +146,12 @@ export default async function ProfilePage({ params }: Props) {
                 >
                   <UserPlus className="size-4" aria-hidden /> Convidar
                 </Link>
+                <Link
+                  href={`/u/${profile.username}/recompensa`}
+                  className="inline-flex items-center gap-2 rounded-lg border border-amber-700/50 px-4 py-2 text-sm text-amber-200 transition hover:bg-amber-900/20"
+                >
+                  <ScrollText className="size-4" aria-hidden /> Meu cartaz
+                </Link>
               </div>
             ) : viewer ? (
               <div className="flex flex-wrap gap-2">
@@ -156,6 +162,16 @@ export default async function ProfilePage({ params }: Props) {
                     className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
                   >
                     <GitCompareArrows className="size-4" aria-hidden /> Comparar
+                  </Link>
+                )}
+                {!profile.bannedAt && (
+                  <Link
+                    href={`/u/${profile.username}/recompensa`}
+                    title="Cartaz de recompensa"
+                    aria-label="Cartaz de recompensa"
+                    className="inline-flex items-center rounded-lg border border-amber-700/50 px-3 py-2 text-amber-200 transition hover:bg-amber-900/20"
+                  >
+                    <ScrollText className="size-4" aria-hidden />
                   </Link>
                 )}
                 <ProfileMenu userId={profile.id} username={profile.username} blocked={blockedByMe} canMessage={Boolean(dm?.ok)} />
