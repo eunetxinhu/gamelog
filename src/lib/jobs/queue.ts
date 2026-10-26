@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import type { SyncStep, SyncTrigger } from "@/generated/prisma/enums";
 import type { SteamSyncError } from "@/app/(app)/settings/profile/_actions/types";
 import { SYNC_INTERVAL, RETRY_AFTER_ERROR } from "@/lib/steam/schedule";
+import { recordError } from "@/lib/error-log";
 import { stepAchievements, stepCovers, stepFinalize, stepLibrary, stepRare, stepWishlist, type StepOutcome, type SyncUser } from "@/lib/steam/sync";
 import { MAX_ATTEMPTS, MAX_PARALLEL_WORKERS, retryDelayMs, STALE_LOCK_MS, summarize, jobProgress, type LibraryResult, type SyncSummary, type StepProgress } from "./sync-plan";
 
@@ -129,7 +130,14 @@ async function failStuckJobs() {
   for (const j of stuck) await failJob(j.id, j.userId, { code: "UNKNOWN", message: "A sincronização travou. Tente de novo." });
 }
 
+/** Falhas que dependem da pessoa (privacidade, conta) não são problema do site. */
+const EXPECTED_FAILURES = new Set(["STEAM_PRIVATE", "STEAM_NOT_FOUND", "STEAM_NOT_LINKED"]);
+
 async function failJob(jobId: string, userId: string, error: SteamSyncError) {
+  // O resto vira alerta para a moderação (agrupado, push no máximo 1x/h por tipo de erro)
+  if (!EXPECTED_FAILURES.has(error.code)) {
+    await recordError({ kind: "server", message: `Sincronização da Steam falhou: ${error.code} (${error.message})`, path: "/moderacao/fila" });
+  }
   // Privado / conta sumiu: depende da pessoa, o cron tenta 1x por dia. Resto: de novo em 1 h.
   const wait = error.code === "STEAM_PRIVATE" || error.code === "STEAM_NOT_FOUND" ? SYNC_INTERVAL.REGULAR : RETRY_AFTER_ERROR;
   await prisma.$transaction([

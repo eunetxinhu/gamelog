@@ -43,6 +43,8 @@ export const RATE_RULES = {
 
   // Erros que o navegador relata (por IP)
   "error-report": [{ limit: 20, windowSec: HOUR }],
+  // Medições de velocidade (cada página manda 1 ou 2 lotes)
+  vitals: [{ limit: 300, windowSec: HOUR }],
 
   // Dados da conta
   "data-export": [{ limit: 3, windowSec: DAY }],

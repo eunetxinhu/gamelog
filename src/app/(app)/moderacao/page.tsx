@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, Crown, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Crown, Gauge, Layers, ShieldAlert } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { countRecentSyncFailures } from "@/lib/jobs/admin";
 import { getCurrentUser } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
 import { ModerationActions, UnbanButton } from "./_components/moderation-actions";
@@ -61,7 +62,7 @@ export default async function ModerationPage() {
   const user = await getCurrentUser();
   if (!user?.isAdmin) notFound();
 
-  const [reports, banned, awarded, openErrors] = await Promise.all([
+  const [reports, banned, awarded, openErrors, failedSyncs] = await Promise.all([
     prisma.report.findMany({
       where: { status: "OPEN" },
       orderBy: { createdAt: "asc" },
@@ -77,6 +78,7 @@ export default async function ModerationPage() {
       select: { id: true, username: true, title: true, titleIcon: true, titleStyle: true, awards: { select: { id: true, name: true, icon: true, style: true } } },
     }),
     prisma.errorEvent.count({ where: { resolvedAt: null } }),
+    countRecentSyncFailures(),
   ]);
   const previews = await Promise.all(reports.map((r) => preview(r.targetType, r.targetId)));
 
@@ -96,6 +98,17 @@ export default async function ModerationPage() {
         {openErrors ? `${openErrors} ${openErrors === 1 ? "erro aberto" : "erros abertos"} no site` : "Erros do site: nenhum aberto"}
         <span className="ml-auto text-xs text-zinc-500">ver →</span>
       </Link>
+      <div className="-mt-3 mb-6 grid gap-2 sm:grid-cols-2">
+        <Link href="/moderacao/fila" className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-600">
+          <Layers className="size-4 text-brand-400" aria-hidden /> Fila de sincronização
+          {failedSyncs > 0 && <span className="rounded-full bg-red-500/15 px-2 text-xs text-red-300">{failedSyncs} falha(s) em 24 h</span>}
+          <span className="ml-auto text-xs text-zinc-500">ver →</span>
+        </Link>
+        <Link href="/moderacao/desempenho" className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 transition hover:border-zinc-600">
+          <Gauge className="size-4 text-brand-400" aria-hidden /> Desempenho real
+          <span className="ml-auto text-xs text-zinc-500">ver →</span>
+        </Link>
+      </div>
 
       {reports.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">Nenhuma denúncia aberta. 🎉</p>
