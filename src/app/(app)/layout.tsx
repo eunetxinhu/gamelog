@@ -39,14 +39,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div aria-hidden className="pointer-events-none fixed inset-x-0 bottom-0 top-14 -z-10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/brand/fundo.jpg"
-          srcSet="/brand/fundo-1280.jpg 1280w, /brand/fundo.jpg 1920w"
+          src="/brand/fundo-2.jpg"
+          srcSet="/brand/fundo-2-1280.jpg 1280w, /brand/fundo-2.jpg 1920w"
           sizes="max(100vw, 177.78vh)"
           alt=""
           className="size-full select-none object-cover"
         />
-        {/* Escurece um pouco para os cards continuarem legíveis */}
-        <div className="absolute inset-0 bg-black/45" />
+        {/* A arte já vem escurecida; esta camada só dá um pouco mais de contraste aos cards */}
+        <div className="absolute inset-0 bg-black/30" />
       </div>
       <header className="sticky top-0 z-20 border-b border-brand-900/60 bg-black/85 pt-[env(safe-area-inset-top)] backdrop-blur">
         <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 xl:max-w-7xl">
