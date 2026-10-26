@@ -47,3 +47,69 @@ jobs:
 
       - name: Build
         run: npx next build
+
+  # Testes de ponta a ponta: banco Postgres de verdade, o site rodando com `next start`
+  # e um navegador (Playwright) fazendo login, registro, seguir, comentar e busca.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+      # Supabase de mentira: o login vem do cookie de teste (E2E_AUTH, ver src/lib/e2e.ts)
+      NEXT_PUBLIC_SUPABASE_URL: https://ci.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci
+      APP_URL: http://localhost:3000
+      E2E_AUTH: "1"
+      E2E_BASE_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Banco (migrations + dados de teste)
+        run: |
+          npx prisma migrate deploy
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/e2e/seed.sql
+
+      - name: Build
+        run: npx next build
+
+      - name: Navegador
+        run: npx playwright install --with-deps chromium
+
+      - name: Testes de ponta a ponta
+        run: |
+          npx next start -p 3000 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/login && break; sleep 2; done
+          npx playwright test
+
+      - name: Log do servidor
+        if: failure()
+        run: cat next.log
+
+      - name: Relatório
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

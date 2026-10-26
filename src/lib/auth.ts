@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { applyReferral, cleanRef, findInviter } from "@/lib/referral";
+import { cookies } from "next/headers";
+import { E2E_COOKIE, e2eAuthEnabled, e2eUserId } from "@/lib/e2e";
 
 /**
  * Retorna o usuário autenticado (validado no servidor do Supabase com
@@ -12,6 +14,11 @@ import { applyReferral, cleanRef, findInviter } from "@/lib/referral";
  * `cache` deduplica dentro do mesmo request.
  */
 export const getCurrentUser = cache(async () => {
+  // Testes de ponta a ponta: o usuário vem de um cookie (desligado em produção, ver src/lib/e2e.ts)
+  if (e2eAuthEnabled()) {
+    const id = e2eUserId((await cookies()).get(E2E_COOKIE)?.value);
+    return id ? prisma.user.findUnique({ where: { id } }) : null;
+  }
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return null;

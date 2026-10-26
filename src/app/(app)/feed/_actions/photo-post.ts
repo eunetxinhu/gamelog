@@ -8,6 +8,7 @@ import { isOwnImage, removeImage } from "@/lib/uploads";
 import { notifyMentions } from "@/lib/mention-notify";
 import { rateLimit } from "@/lib/rate-limit";
 import { validatePhotoPost, type PhotoPostInput } from "@/lib/photo-post";
+import { checkNewAccountText } from "@/lib/trust";
 
 export type PhotoPostResult = { ok: true; id: string } | { ok: false; message: string };
 
@@ -25,6 +26,8 @@ export async function createPhotoPost(input: PhotoPostInput): Promise<PhotoPostR
   const valid = validatePhotoPost(input, (url) => isOwnImage(url, user.id));
   if (!valid.ok) return valid;
   const { gameSlug, images, caption, containsSpoiler } = valid.value;
+  const blocked = checkNewAccountText(user, caption);
+  if (blocked) return { ok: false, message: blocked };
 
   const limit = await rateLimit("photo-post", user.id);
   if (!limit.ok) return { ok: false, message: limit.message };

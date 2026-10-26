@@ -8,6 +8,7 @@ import { isOurImage } from "@/lib/uploads";
 import { notifyMentions } from "@/lib/mention-notify";
 import { rateLimit } from "@/lib/rate-limit";
 import type { LogStatus } from "@/generated/prisma/enums";
+import { checkNewAccountText } from "@/lib/trust";
 
 const STATUSES: LogStatus[] = ["PLAYING", "COMPLETED", "PLATINUM", "DROPPED", "BACKLOG"];
 
@@ -40,6 +41,8 @@ export async function saveGameLog(input: SaveLogInput): Promise<SaveLogResult> {
   const rating = input.rating === null ? null : Math.round(input.rating);
   if (rating !== null && (rating < 1 || rating > 5)) return { ok: false, message: "A nota vai de 1 a 5." };
   const review = input.review.trim().slice(0, 5000) || null;
+  const blocked = checkNewAccountText(user, review);
+  if (blocked) return { ok: false, message: blocked };
 
   const game = await prisma.game.findUnique({ where: { id: input.gameId }, select: { id: true, slug: true } });
   if (!game) return { ok: false, message: "Jogo não encontrado." };

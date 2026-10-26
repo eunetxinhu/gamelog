@@ -2,6 +2,7 @@
 // Renova a sessão do Supabase em cada request e protege rotas autenticadas.
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { E2E_COOKIE, e2eAuthEnabled, e2eUserId } from "@/lib/e2e";
 
 const PROTECTED = ["/settings", "/feed", "/log", "/notifications", "/mensagens", "/moderacao"];
 
@@ -23,7 +24,9 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const { data } = await supabase.auth.getUser();
+  // Testes de ponta a ponta: sessão de mentira pelo cookie (nunca na Vercel, ver src/lib/e2e.ts)
+  const e2eUser = e2eAuthEnabled() ? e2eUserId(request.cookies.get(E2E_COOKIE)?.value) : null;
+  const { data } = e2eAuthEnabled() ? { data: { user: e2eUser ? { id: e2eUser } : null } } : await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
 
   // Compara o segmento inteiro: "/log" protege "/log/..." mas não "/login".

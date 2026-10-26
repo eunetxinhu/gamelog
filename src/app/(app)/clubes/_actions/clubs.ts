@@ -6,6 +6,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { isOurImage, removeImage } from "@/lib/uploads";
 import { rateLimit } from "@/lib/rate-limit";
+import { checkNewAccountText } from "@/lib/trust";
 
 export type ClubResult = { ok: true; slug?: string } | { ok: false; message: string };
 
@@ -28,6 +29,8 @@ export async function createClub(input: { name: string; description: string; ima
 
   const name = input.name.trim().slice(0, 60);
   if (name.length < 3) return { ok: false, message: "O nome precisa ter pelo menos 3 caracteres." };
+  const blocked = checkNewAccountText(user, name, input.description);
+  if (blocked) return { ok: false, message: blocked };
   const limit = await rateLimit("club-create", user.id);
   if (!limit.ok) return { ok: false, message: limit.message };
   const owned = await prisma.club.count({ where: { ownerId: user.id } });
@@ -88,6 +91,8 @@ export async function postToClub(clubId: string, rawBody: string, rawImage: stri
   const body = rawBody.trim().slice(0, 2000);
   const imageUrl = isOurImage(rawImage) ? rawImage : null;
   if (!body && !imageUrl) return { ok: false, message: "Escreva alguma coisa." };
+  const blocked = checkNewAccountText(user, body);
+  if (blocked) return { ok: false, message: blocked };
   const limit = await rateLimit("club-post", user.id);
   if (!limit.ok) return { ok: false, message: limit.message };
 
@@ -124,5 +129,74 @@ export async function deleteClub(clubId: string): Promise<{ ok: boolean }> {
   await prisma.club.delete({ where: { id: clubId } });
   await removeImage(club.imageUrl);
   revalidatePath("/clubes");
+  return { ok: true };
+}
+
+// -----------------------------------------------------------------------------
+//  Moderação do clube: o dono nomeia moderadores (papel ADMIN); dono e moderadores
+//  fixam posts, editam as regras e tiram membros. A moderação do site pode tudo.
+// -----------------------------------------------------------------------------
+
+/** Quantos posts podem ficar fixados no topo do mural. */
+const MAX_PINNED = 3;
+
+/** Papel de quem está agindo no clube (o administrador do site conta como dono). */
+async function actorRole(clubId: string, user: { id: string; isAdmin: boolean }) {
+  if (user.isAdmin) return "OWNER" as const;
+  const m = await prisma.clubMember.findUnique({ where: { clubId_userId: { clubId, userId: user.id } }, select: { role: true } });
+  return m?.role ?? null;
+}
+const canModerate = (role: string | null) => role === "OWNER" || role === "ADMIN";
+
+/** Dono promove um membro a moderador ou volta para membro comum. */
+export async function setMemberRole(clubId: string, userId: string, role: "ADMIN" | "MEMBER"): Promise<{ ok: boolean; message?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  if (!["ADMIN", "MEMBER"].includes(role)) return { ok: false };
+  if ((await actorRole(clubId, user)) !== "OWNER") return { ok: false, message: "Só o dono do clube escolhe os moderadores." };
+  const target = await prisma.clubMember.findUnique({ where: { clubId_userId: { clubId, userId } }, select: { role: true, club: { select: { slug: true } } } });
+  if (!target || target.role === "OWNER") return { ok: false, message: "Membro não encontrado." };
+  await prisma.clubMember.update({ where: { clubId_userId: { clubId, userId } }, data: { role } });
+  revalidatePath(`/clubes/${target.club.slug}`);
+  return { ok: true };
+}
+
+/** Tira alguém do clube. Moderador não tira dono nem outro moderador. */
+export async function removeMember(clubId: string, userId: string): Promise<{ ok: boolean; message?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  const role = await actorRole(clubId, user);
+  if (!canModerate(role)) return { ok: false };
+  const target = await prisma.clubMember.findUnique({ where: { clubId_userId: { clubId, userId } }, select: { role: true, club: { select: { slug: true } } } });
+  if (!target || target.role === "OWNER") return { ok: false, message: "Não dá para tirar o dono." };
+  if (target.role === "ADMIN" && role !== "OWNER") return { ok: false, message: "Só o dono tira um moderador." };
+  await prisma.clubMember.delete({ where: { clubId_userId: { clubId, userId } } });
+  revalidatePath(`/clubes/${target.club.slug}`);
+  return { ok: true };
+}
+
+/** Fixa ou desafixa um post no topo do mural (até 3). */
+export async function togglePinPost(postId: string): Promise<{ ok: boolean; pinned?: boolean; message?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  const post = await prisma.clubPost.findUnique({ where: { id: postId }, select: { clubId: true, pinnedAt: true, club: { select: { slug: true } } } });
+  if (!post || !canModerate(await actorRole(post.clubId, user))) return { ok: false };
+  if (!post.pinnedAt && (await prisma.clubPost.count({ where: { clubId: post.clubId, pinnedAt: { not: null } } })) >= MAX_PINNED) {
+    return { ok: false, message: `No máximo ${MAX_PINNED} posts fixados. Desafixe um antes.` };
+  }
+  await prisma.clubPost.update({ where: { id: postId }, data: { pinnedAt: post.pinnedAt ? null : new Date() } });
+  revalidatePath(`/clubes/${post.club.slug}`);
+  return { ok: true, pinned: !post.pinnedAt };
+}
+
+/** Regras do clube (vazio = sem regras). */
+export async function updateClubRules(clubId: string, rules: string): Promise<{ ok: boolean; message?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  if (!canModerate(await actorRole(clubId, user))) return { ok: false };
+  const text = String(rules ?? "").trim();
+  if (text.length > 1000) return { ok: false, message: "As regras têm no máximo 1000 caracteres." };
+  const club = await prisma.club.update({ where: { id: clubId }, data: { rules: text || null }, select: { slug: true } });
+  revalidatePath(`/clubes/${club.slug}`);
   return { ok: true };
 }

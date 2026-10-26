@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { removeImage, uploadImage, type UploadResult } from "@/lib/uploads";
 import { rateLimit } from "@/lib/rate-limit";
 import { getOrCreateGame } from "@/lib/catalog";
+import { checkNewAccountText } from "@/lib/trust";
 
 export type ProfileInput = { displayName: string; bio: string; avatarUrl: string; bannerUrl: string };
 export type AccountResult = { ok: true } | { ok: false; field?: keyof ProfileInput | "favorites"; message: string };
@@ -29,6 +30,8 @@ export async function updateProfile(input: ProfileInput): Promise<AccountResult>
   const displayName = input.displayName.trim().slice(0, 60) || null;
   const bio = input.bio.trim() || null;
   if (bio && bio.length > 280) return { ok: false, field: "bio", message: "A bio tem no máximo 280 caracteres." };
+  const blocked = checkNewAccountText(user, bio, displayName);
+  if (blocked) return { ok: false, field: "bio", message: blocked };
 
   const avatarUrl = imageUrl(input.avatarUrl);
   if (avatarUrl === undefined) return { ok: false, field: "avatarUrl", message: "Use um link de imagem começando com https://" };

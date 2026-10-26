@@ -10,6 +10,7 @@ import { notifyMentions } from "@/lib/mention-notify";
 import { rateLimit } from "@/lib/rate-limit";
 import { removeImage } from "@/lib/uploads";
 import type { ReactionType } from "@/generated/prisma/enums";
+import { checkNewAccountText } from "@/lib/trust";
 
 const COMMENT_MAX = 1000;
 
@@ -135,6 +136,8 @@ export async function addComment(activityId: string, rawBody: string): Promise<C
   const body = rawBody.trim();
   if (!body) return { ok: false, message: "Escreva alguma coisa." };
   if (body.length > COMMENT_MAX) return { ok: false, message: `Máximo de ${COMMENT_MAX} caracteres.` };
+  const blocked = checkNewAccountText(user, body);
+  if (blocked) return { ok: false, message: blocked };
   const limit = await rateLimit("comment", user.id);
   if (!limit.ok) return { ok: false, message: limit.message };
 

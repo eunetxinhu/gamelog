@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { notify } from "@/lib/notifications";
 import { visibleUsersWhere } from "@/lib/privacy";
 import { cleanListInput, LIST_LIMITS, type ListInput } from "@/lib/list-input";
+import { checkNewAccountText } from "@/lib/trust";
 
 export type ListResult = { ok: true; id: string } | { ok: false; message: string };
 
@@ -39,6 +40,8 @@ export async function saveList(input: ListInput & { id?: string }): Promise<List
   const parsed = cleanListInput(input);
   if (!parsed.ok) return parsed;
   const { title, description, ranked, items } = parsed.value;
+  const blocked = checkNewAccountText(user, title, description, ...items.map((i) => i.note));
+  if (blocked) return { ok: false, message: blocked };
 
   if (input.id) {
     const owner = await prisma.gameList.findUnique({ where: { id: input.id }, select: { userId: true } });
@@ -132,6 +135,8 @@ export async function addListComment(listId: string, body: string): Promise<{ ok
   const text = String(body ?? "").trim();
   if (!text) return { ok: false, message: "Escreva alguma coisa." };
   if (text.length > 1000) return { ok: false, message: "O comentário tem no máximo 1000 caracteres." };
+  const blocked = checkNewAccountText(user, text);
+  if (blocked) return { ok: false, message: blocked };
 
   const list = await visibleList(listId, user.id);
   if (!list) return { ok: false, message: "Lista não encontrada." };
