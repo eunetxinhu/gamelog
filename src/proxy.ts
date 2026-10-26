@@ -1,13 +1,36 @@
 // Next.js 16: o antigo middleware.ts agora se chama proxy.ts.
-// Renova a sessão do Supabase em cada request e protege rotas autenticadas.
+// Renova a sessão do Supabase em cada request, protege rotas autenticadas e monta a
+// Content Security Policy com um nonce novo (ver src/lib/csp.ts).
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { E2E_COOKIE, e2eAuthEnabled, e2eUserId } from "@/lib/e2e";
+import { buildCsp, cspMode, makeNonce } from "@/lib/csp";
 
 const PROTECTED = ["/settings", "/feed", "/log", "/notifications", "/mensagens", "/moderacao"];
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // CSP com nonce: o Next lê o nonce do cabeçalho do request e marca os próprios scripts;
+  // o navegador só roda script com essa marca. CSP_MODE=report-only só registra (emergência).
+  const mode = cspMode(process.env.CSP_MODE);
+  const nonce = makeNonce();
+  const csp = mode === "off" ? null : buildCsp({ nonce, dev: process.env.NODE_ENV === "development" });
+
+  // Sempre a partir dos cabeçalhos atuais: a renovação da sessão pode ter trocado os cookies
+  const next = () => {
+    const headers = new Headers(request.headers);
+    if (csp) {
+      headers.set("x-nonce", nonce);
+      headers.set("Content-Security-Policy", csp);
+    }
+    const res = NextResponse.next({ request: { headers } });
+    if (csp) {
+      res.headers.set(mode === "report-only" ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy", csp);
+      res.headers.set("Reporting-Endpoints", 'csp="/api/csp-report"');
+    }
+    return res;
+  };
+
+  let response = next();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +40,7 @@ export async function proxy(request: NextRequest) {
         getAll: () => request.cookies.getAll(),
         setAll: (toSet) => {
           toSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          response = next();
           toSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },

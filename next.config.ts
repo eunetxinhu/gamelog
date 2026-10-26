@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 // Cabeçalhos de segurança em todas as respostas.
-// A CSP aqui não restringe scripts (o Next usa scripts inline); ela fecha o que dá sem
-// quebrar nada: ninguém coloca o site num iframe (clickjacking), <base> e plugins bloqueados,
-// e qualquer recurso http:// vira https://.
+// Esta CSP é a básica, para o que não passa pelo proxy (arquivos, API): ninguém coloca o
+// site num iframe, <base> e plugins bloqueados, http:// vira https://. As páginas recebem
+// também a CSP completa, com nonce nos scripts, montada no proxy (src/lib/csp.ts).
 const SECURITY_HEADERS = [
   { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests" },
   { key: "X-Frame-Options", value: "DENY" },

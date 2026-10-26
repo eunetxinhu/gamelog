@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { connection } from "next/server";
 import "./globals.css";
 import { Pwa } from "@/components/pwa";
 import { WebVitals } from "@/components/web-vitals";
@@ -21,7 +22,10 @@ export const metadata: Metadata = {
 // margens do notch / barra de gestos vêm de env(safe-area-inset-*)
 export const viewport: Viewport = { themeColor: "#09090b", colorScheme: "dark", viewportFit: "cover" };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Toda página renderizada no request: o nonce da CSP (proxy.ts) muda a cada visita e
+  // só entra no HTML se a página não for pré-gerada no build.
+  await connection();
   return (
     <html lang="pt-BR" className="dark">
       <body>
