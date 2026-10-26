@@ -2,15 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Mail, Search } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { blockedIds } from "@/lib/privacy";
+import { recentConversations } from "@/lib/dm";
 import { relativeTime } from "@/lib/format";
 import { Avatar } from "@/components/avatar";
 
 export const metadata: Metadata = { title: "Mensagens" };
-
-const userSelect = { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } as const;
 
 /** Lista de conversas, mais recentes primeiro. */
 export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ para?: string }> }) {
@@ -22,26 +20,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   if (para) redirect(`/mensagens/${encodeURIComponent(para)}`);
 
   const hidden = await blockedIds(viewer.id);
-  const conversations = await prisma.conversation.findMany({
-    where: { OR: [{ userAId: viewer.id }, { userBId: viewer.id }] },
-    orderBy: { lastMessageAt: "desc" },
-    take: 50,
-    include: {
-      userA: { select: userSelect },
-      userB: { select: userSelect },
-      messages: { orderBy: { createdAt: "desc" }, take: 1, select: { body: true, imageUrl: true, senderId: true, createdAt: true } },
-    },
-  });
-
-  const items = conversations
-    .map((c) => {
-      const mine = c.userAId === viewer.id;
-      const other = mine ? c.userB : c.userA;
-      const readAt = mine ? c.readAtA : c.readAtB;
-      const last = c.messages[0];
-      return { id: c.id, other, last, unread: Boolean(last && last.senderId !== viewer.id && (!readAt || last.createdAt > readAt)) };
-    })
-    .filter((c) => c.last && !hidden.includes(c.other.id));
+  const items = await recentConversations(viewer.id, hidden);
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -77,11 +56,11 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                   <span className="min-w-0 flex-1">
                     <span className={`block truncate ${unread ? "font-bold text-zinc-50" : "font-medium text-zinc-100"}`}>{name}</span>
                     <span className={`block truncate text-sm ${unread ? "text-zinc-200" : "text-zinc-500"}`}>
-                      {last!.senderId === viewer.id && "Você: "}
-                      {last!.body || "📷 Foto"}
+                      {last.senderId === viewer.id && "Você: "}
+                      {last.body || "📷 Foto"}
                     </span>
                   </span>
-                  <span className="shrink-0 text-xs text-zinc-500">{relativeTime(last!.createdAt)}</span>
+                  <span className="shrink-0 text-xs text-zinc-500">{relativeTime(last.createdAt)}</span>
                   {unread && <span className="size-2.5 shrink-0 rounded-full bg-brand-400" aria-label="Não lida" />}
                 </Link>
               </li>

@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Camera, Search, Users } from "lucide-react";
+import { Camera, Mail, PenSquare, Search, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities, PAGE_SIZE, type FeedItem } from "@/lib/activity";
 import { getForYou } from "@/lib/for-you";
 import { blockedIds } from "@/lib/privacy";
+import { recentConversations } from "@/lib/dm";
+import { relativeTime } from "@/lib/format";
 import { ActivityCard } from "@/components/activity-card";
 import { Avatar } from "@/components/avatar";
 import { PhotoComposer } from "./_components/photo-composer";
@@ -69,7 +71,7 @@ export default async function FeedPage({ searchParams }: Props) {
         following: followingIds.length,
       });
 
-  const [feed, suggestions, quickGames] = await Promise.all([
+  const [feed, suggestions, quickGames, conversations] = await Promise.all([
     tab === "foryou"
       ? getForYou(viewer.id, followingIds, page)
       : getActivities({
@@ -85,6 +87,7 @@ export default async function FeedPage({ searchParams }: Props) {
       select: { username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true },
     }),
     viewer.bannedAt ? [] : quickGamesFor(viewer.id),
+    recentConversations(viewer.id, hidden, 5),
   ]);
 
   const items = feed.items;
@@ -164,7 +167,8 @@ export default async function FeedPage({ searchParams }: Props) {
         )}
       </div>
 
-      <aside className="space-y-6">
+      {/* No computador a lateral acompanha a rolagem do feed */}
+      <aside className="space-y-6 lg:sticky lg:top-20 lg:self-start">
         <Link
           href="/games"
           className="hidden items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-500 md:flex"
@@ -172,6 +176,54 @@ export default async function FeedPage({ searchParams }: Props) {
           <Search className="size-4" aria-hidden />
           Compartilhar um jogo
         </Link>
+
+        {/* Mensagens: no celular já ficam no ícone do topo */}
+        <section className="hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 backdrop-blur-sm lg:block">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-200">
+            <Mail className="size-4 text-brand-400" aria-hidden /> Mensagens
+            <Link href="/mensagens" className="ml-auto text-xs font-normal text-brand-400 hover:underline">
+              Ver todas
+            </Link>
+          </h2>
+          {conversations.length === 0 ? (
+            <p className="text-sm text-zinc-500">
+              Nenhuma conversa ainda. Abra um perfil e toque em <span className="text-zinc-300">Mensagem</span>.
+            </p>
+          ) : (
+            <ul className="-mx-2 space-y-0.5">
+              {conversations.map(({ id, other, last, unread }) => {
+                const name = other.displayName ?? other.username;
+                return (
+                  <li key={id}>
+                    <Link
+                      href={`/mensagens/${other.username}`}
+                      className={`flex items-center gap-3 rounded-lg px-2 py-2 transition hover:bg-zinc-800/70 ${unread ? "bg-brand-500/[0.07]" : ""}`}
+                    >
+                      <Avatar name={name} src={other.avatarUrl ?? other.steamAvatarUrl} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-baseline gap-2">
+                          <span className={`truncate text-sm ${unread ? "font-bold text-zinc-50" : "font-medium text-zinc-100"}`}>{name}</span>
+                          <span className="ml-auto shrink-0 text-[11px] text-zinc-500">{relativeTime(last.createdAt)}</span>
+                        </span>
+                        <span className={`block truncate text-xs ${unread ? "text-zinc-200" : "text-zinc-500"}`}>
+                          {last.senderId === viewer.id && "Você: "}
+                          {last.body || "📷 Foto"}
+                        </span>
+                      </span>
+                      {unread && <span className="size-2 shrink-0 rounded-full bg-brand-400" aria-label="Não lida" />}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Link
+            href="/mensagens"
+            className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+          >
+            <PenSquare className="size-4" aria-hidden /> Nova mensagem
+          </Link>
+        </section>
 
         {suggestions.length > 0 && (
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">

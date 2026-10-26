@@ -43,3 +43,37 @@ export async function unreadMessages(userId: string): Promise<number> {
       )`;
   return Number(rows[0]?.n ?? 0);
 }
+
+const convUserSelect = { id: true, username: true, displayName: true, avatarUrl: true, steamAvatarUrl: true } as const;
+
+export type ConversationItem = {
+  id: string;
+  other: { id: string; username: string; displayName: string | null; avatarUrl: string | null; steamAvatarUrl: string | null };
+  last: { body: string | null; imageUrl: string | null; senderId: string; createdAt: Date };
+  unread: boolean;
+};
+
+/** Conversas mais recentes (com a última mensagem), sem quem está bloqueado. Página Mensagens e lateral do feed. */
+export async function recentConversations(viewerId: string, hidden: string[], take = 50): Promise<ConversationItem[]> {
+  const conversations = await prisma.conversation.findMany({
+    where: { OR: [{ userAId: viewerId }, { userBId: viewerId }] },
+    orderBy: { lastMessageAt: "desc" },
+    // Pede um pouco a mais: conversas vazias ou bloqueadas saem depois
+    take: take + hidden.length + 5,
+    include: {
+      userA: { select: convUserSelect },
+      userB: { select: convUserSelect },
+      messages: { orderBy: { createdAt: "desc" }, take: 1, select: { body: true, imageUrl: true, senderId: true, createdAt: true } },
+    },
+  });
+  return conversations
+    .flatMap((c): ConversationItem[] => {
+      const mine = c.userAId === viewerId;
+      const other = mine ? c.userB : c.userA;
+      const readAt = mine ? c.readAtA : c.readAtB;
+      const last = c.messages[0];
+      if (!last || hidden.includes(other.id)) return [];
+      return [{ id: c.id, other, last, unread: last.senderId !== viewerId && (!readAt || last.createdAt > readAt) }];
+    })
+    .slice(0, take);
+}
