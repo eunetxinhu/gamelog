@@ -862,3 +862,25 @@ model SyncTask {
   @@index([jobId, status])
   @@map("sync_tasks")
 }
+
+// -----------------------------------------------------------------------------
+//  Desempenho real: Web Vitals medidos no navegador de quem usa o site
+//  (ver src/components/web-vitals.tsx e /moderacao/desempenho). Guardados 30 dias.
+// -----------------------------------------------------------------------------
+
+model WebVital {
+  id        String   @id @default(cuid())
+  /// LCP, INP, CLS, FCP ou TTFB
+  name      String   @db.VarChar(8)
+  /// ms (CLS: sem unidade)
+  value     Float
+  /// Página agrupada: /u/:usuario, /games/:id…
+  route     String   @db.VarChar(120)
+  /// mobile (tela < 768 px) ou desktop
+  device    String   @db.VarChar(10)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([route, name, createdAt])
+  @@map("web_vitals")
+}

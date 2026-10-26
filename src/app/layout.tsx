@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { Pwa } from "@/components/pwa";
+import { WebVitals } from "@/components/web-vitals";
 import { SITE_NAME } from "@/lib/brand";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         {children}
         <Pwa />
+        <WebVitals />
       </body>
     </html>
   );
