@@ -43,7 +43,8 @@ export function hashSubject(value: string): string {
 /** IP de quem fez a requisição (a Vercel preenche x-forwarded-for), já com hash. */
 export async function clientIpHash(): Promise<string> {
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "desconhecido";
+  // Na Vercel esses cabeçalhos são reescritos pela própria Vercel (o visitante não consegue forjar)
+  const ip = (h.get("x-vercel-forwarded-for") ?? h.get("x-forwarded-for"))?.split(",")[0]?.trim() || h.get("x-real-ip") || "desconhecido";
   return hashSubject(ip);
 }
 

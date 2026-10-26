@@ -51,7 +51,7 @@ export async function deleteActivity(activityId: string): Promise<{ ok: boolean 
   const activity = await prisma.activity.findFirst({ where: { id: activityId, userId: user.id }, select: { imageUrl: true, images: true } });
   const { count } = await prisma.activity.deleteMany({ where: { id: activityId, userId: user.id } });
   // Fotos saem do Storage junto com a publicação
-  if (activity) await Promise.all([...new Set([activity.imageUrl, ...activity.images])].map((url) => removeImage(url)));
+  if (activity) await Promise.all([...new Set([activity.imageUrl, ...activity.images])].map((url) => removeImage(url, user.id)));
   revalidatePath("/feed");
   revalidatePath(`/u/${user.username}`);
   return { ok: count > 0 };

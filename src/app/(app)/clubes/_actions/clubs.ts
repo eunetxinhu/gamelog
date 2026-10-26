@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth";
-import { isOurImage, removeImage } from "@/lib/uploads";
+import { isOwnImage, removeImage } from "@/lib/uploads";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkNewAccountText } from "@/lib/trust";
 
@@ -45,7 +45,7 @@ export async function createClub(input: { name: string; description: string; ima
           slug,
           name,
           description: input.description.trim().slice(0, 500) || null,
-          imageUrl: isOurImage(input.imageUrl) ? input.imageUrl : null,
+          imageUrl: isOwnImage(input.imageUrl, user.id) ? input.imageUrl : null,
           ownerId: user.id,
           members: { create: { userId: user.id, role: "OWNER" } },
         },
@@ -89,7 +89,7 @@ export async function postToClub(clubId: string, rawBody: string, rawImage: stri
   if (!member) return { ok: false, message: "Entre no clube para publicar." };
 
   const body = rawBody.trim().slice(0, 2000);
-  const imageUrl = isOurImage(rawImage) ? rawImage : null;
+  const imageUrl = isOwnImage(rawImage, user.id) ? rawImage : null;
   if (!body && !imageUrl) return { ok: false, message: "Escreva alguma coisa." };
   const blocked = checkNewAccountText(user, body);
   if (blocked) return { ok: false, message: blocked };
@@ -116,7 +116,7 @@ export async function deleteClubPost(postId: string): Promise<{ ok: boolean }> {
   if (!allowed) return { ok: false };
 
   await prisma.clubPost.delete({ where: { id: postId } });
-  await removeImage(post.imageUrl);
+  await removeImage(post.imageUrl, post.userId);
   revalidatePath(`/clubes/${post.club.slug}`);
   return { ok: true };
 }
@@ -127,7 +127,7 @@ export async function deleteClub(clubId: string): Promise<{ ok: boolean }> {
   const club = await prisma.club.findUnique({ where: { id: clubId }, select: { ownerId: true, imageUrl: true } });
   if (!club || (club.ownerId !== user.id && !user.isAdmin)) return { ok: false };
   await prisma.club.delete({ where: { id: clubId } });
-  await removeImage(club.imageUrl);
+  await removeImage(club.imageUrl, club.ownerId);
   revalidatePath("/clubes");
   return { ok: true };
 }

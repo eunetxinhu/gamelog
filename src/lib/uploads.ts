@@ -1,8 +1,9 @@
 import "server-only";
 import { createSupabaseAdminClient, hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { thumbOf, variantPaths } from "@/lib/image-urls";
+import { isOwnStoragePath, MEDIA_BUCKET, sniffImageType, storagePath } from "@/lib/storage-url";
 
-const BUCKET = "profile-media";
+const BUCKET = MEDIA_BUCKET;
 const MAX_BYTES = 4 * 1024 * 1024;
 /** A miniatura (até 960 px, JPEG) fica bem abaixo disso */
 const MAX_THUMB_BYTES = 600 * 1024;
@@ -36,8 +37,13 @@ export async function uploadImage(userId: string, kind: UploadKind, file: unknow
   if (!ext) return { ok: false, message: "Use uma imagem JPG, PNG ou WebP." };
   if (file.size > MAX_BYTES) return { ok: false, message: "A imagem passou de 4 MB." };
 
+  // O tipo informado pelo navegador pode ser falso: confere pelos primeiros bytes
+  if ((await sniff(file)) !== file.type) return { ok: false, message: "Use uma imagem JPG, PNG ou WebP." };
+
   const withThumb = thumb instanceof File && file.type === "image/jpeg";
-  if (withThumb && (thumb.type !== "image/jpeg" || thumb.size > MAX_THUMB_BYTES)) return { ok: false, message: "Miniatura inválida." };
+  if (withThumb && (thumb.type !== "image/jpeg" || thumb.size > MAX_THUMB_BYTES || (await sniff(thumb)) !== "image/jpeg")) {
+    return { ok: false, message: "Miniatura inválida." };
+  }
 
   const admin = createSupabaseAdminClient();
   await ensureBucket(admin);
@@ -64,16 +70,24 @@ export async function uploadImage(userId: string, kind: UploadKind, file: unknow
   return { ok: true, url: bucket.getPublicUrl(paths.full).data.publicUrl };
 }
 
+async function sniff(file: File) {
+  return sniffImageType(new Uint8Array(await file.slice(0, 16).arrayBuffer()));
+}
+
 function uploadFailed(detail: string): UploadResult {
   console.error("[upload]", detail);
   return { ok: false, message: "Não foi possível enviar a imagem. Tente de novo." };
 }
 
-/** Apaga uma imagem nossa e a miniatura dela (ignora URLs de fora, como avatares da Steam). */
-export async function removeImage(url: string | null | undefined) {
-  const marker = `/storage/v1/object/public/${BUCKET}/`;
-  if (!url?.includes(marker) || !hasSupabaseAdmin()) return;
-  const paths = [...new Set([url, thumbOf(url)])].map((u) => u.split(marker)[1]);
+/**
+ * Apaga uma imagem nossa e a miniatura dela, **só se estiver na pasta de `ownerId`**
+ * (dono do conteúdo que está saindo). Ignora URLs de fora, como avatares da Steam,
+ * e nunca apaga arquivo de outra pessoa, mesmo que a URL dela tenha sido colada aqui.
+ */
+export async function removeImage(url: string | null | undefined, ownerId: string) {
+  if (!url || !isOwnImage(url, ownerId) || !hasSupabaseAdmin()) return;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const paths = [...new Set([url, thumbOf(url)])].map((u) => storagePath(u, base)).filter((p): p is string => isOwnStoragePath(p, ownerId));
   await createSupabaseAdminClient()
     .storage.from(BUCKET)
     .remove(paths)
@@ -82,8 +96,7 @@ export async function removeImage(url: string | null | undefined) {
 
 /** URL veio do nosso Storage? (não aceitamos link arbitrário em posts e mensagens) */
 export function isOurImage(url: string | null | undefined): url is string {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return Boolean(base && url?.startsWith(base) && url.includes(`/storage/v1/object/public/${BUCKET}/`));
+  return storagePath(url, process.env.NEXT_PUBLIC_SUPABASE_URL) !== null;
 }
 
 /**
@@ -119,5 +132,5 @@ export async function removeUserFiles(userId: string, keep: string[] = []) {
 
 /** URL do nosso Storage **na pasta da própria pessoa** (ninguém posta foto enviada por outro). */
 export function isOwnImage(url: string | null | undefined, userId: string): url is string {
-  return isOurImage(url) && url.includes(`/storage/v1/object/public/${BUCKET}/${userId}/`);
+  return isOwnStoragePath(storagePath(url, process.env.NEXT_PUBLIC_SUPABASE_URL), userId);
 }

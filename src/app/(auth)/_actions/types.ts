@@ -11,8 +11,20 @@ export type AuthFormState = {
 
 export const DEFAULT_AFTER_LOGIN = "/feed";
 
-/** Só aceita caminhos internos (evita redirecionar para outro site via ?next=). */
+/**
+ * Só aceita caminhos internos (evita redirecionar para outro site via ?next=).
+ * Recusa barra invertida e caracteres de controle: o navegador apaga TAB e quebra de linha
+ * da URL, então "/<TAB>/site.com" viraria "//site.com" (outro site).
+ * No fim confere de verdade: resolvido contra um domínio qualquer, tem que continuar nele.
+ */
 export function safeNext(value: FormDataEntryValue | string | null | undefined) {
   const next = typeof value === "string" ? value : "";
-  return next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : DEFAULT_AFTER_LOGIN;
+  if (!next.startsWith("/") || next.length > 2000 || /[\\\u0000-\u001f\u007f]/.test(next)) return DEFAULT_AFTER_LOGIN;
+  if (next.startsWith("//")) return DEFAULT_AFTER_LOGIN;
+  try {
+    const resolved = new URL(next, "https://interno.invalid");
+    return resolved.origin === "https://interno.invalid" ? next : DEFAULT_AFTER_LOGIN;
+  } catch {
+    return DEFAULT_AFTER_LOGIN;
+  }
 }

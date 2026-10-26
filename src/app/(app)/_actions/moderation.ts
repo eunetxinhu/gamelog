@@ -146,14 +146,14 @@ async function requireAdmin() {
 /** Apaga o conteúdo denunciado (publicação, comentário, post de clube ou mensagem). */
 async function removeTarget(type: ReportTarget, id: string) {
   if (type === "ACTIVITY") {
-    const a = await prisma.activity.findUnique({ where: { id }, select: { imageUrl: true, images: true } });
+    const a = await prisma.activity.findUnique({ where: { id }, select: { userId: true, imageUrl: true, images: true } });
     await prisma.activity.deleteMany({ where: { id } });
-    if (a) await Promise.all([...new Set([a.imageUrl, ...a.images])].map((url) => removeImage(url)));
+    if (a) await Promise.all([...new Set([a.imageUrl, ...a.images])].map((url) => removeImage(url, a.userId)));
   } else if (type === "COMMENT") await prisma.comment.deleteMany({ where: { id } });
   else if (type === "CLUB_POST") {
-    const p = await prisma.clubPost.findUnique({ where: { id }, select: { imageUrl: true } });
+    const p = await prisma.clubPost.findUnique({ where: { id }, select: { userId: true, imageUrl: true } });
     await prisma.clubPost.deleteMany({ where: { id } });
-    await removeImage(p?.imageUrl);
+    if (p) await removeImage(p.imageUrl, p.userId);
   } else if (type === "MESSAGE") await prisma.message.deleteMany({ where: { id } });
   else if (type === "LIST") await prisma.gameList.deleteMany({ where: { id } });
   else if (type === "LIST_COMMENT") await prisma.gameListComment.deleteMany({ where: { id } });
