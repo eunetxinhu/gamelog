@@ -82,5 +82,5 @@ export async function discardUpload(url: string): Promise<void> {
     prisma.club.count({ where: { imageUrl: url } }),
     prisma.user.count({ where: { OR: [{ avatarUrl: url }, { bannerUrl: url }] } }),
   ]);
-  if (posts + messages + clubPosts + clubs + profile === 0) await removeImage(url);
+  if (posts + messages + clubPosts + clubs + profile === 0) await removeImage(url, user.id);
 }

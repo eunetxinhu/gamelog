@@ -89,7 +89,7 @@ export async function uploadProfileImage(formData: FormData): Promise<UploadResu
   const res = await uploadImage(user.id, kind, formData.get("file"));
   if (!res.ok) return res;
 
-  await removeImage(kind === "avatar" ? user.avatarUrl : user.bannerUrl);
+  await removeImage(kind === "avatar" ? user.avatarUrl : user.bannerUrl, user.id);
   await prisma.user.update({ where: { id: user.id }, data: kind === "avatar" ? { avatarUrl: res.url } : { bannerUrl: res.url } });
   revalidatePath(`/u/${user.username}`);
   revalidatePath("/", "layout");

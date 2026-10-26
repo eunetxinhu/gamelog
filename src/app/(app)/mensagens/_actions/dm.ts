@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { canMessage, conversationPair } from "@/lib/dm";
 import { sendPush } from "@/lib/push";
-import { isOurImage } from "@/lib/uploads";
+import { isOwnImage } from "@/lib/uploads";
 import { rateLimit } from "@/lib/rate-limit";
 import { wantsPush } from "@/lib/notification-prefs";
 import { checkNewAccountText, isNewAccount, NEW_ACCOUNT_NEW_DMS_PER_DAY } from "@/lib/trust";
@@ -22,7 +22,7 @@ export async function sendMessage(username: string, rawBody: string, rawImage?: 
   if (user.bannedAt) return { ok: false, message: "Sua conta está suspensa." };
 
   const body = rawBody.trim().slice(0, MAX_LENGTH);
-  const imageUrl = isOurImage(rawImage) ? rawImage : null;
+  const imageUrl = isOwnImage(rawImage, user.id) ? rawImage : null;
   if (!body && !imageUrl) return { ok: false, message: "Escreva alguma coisa." };
   const blocked = checkNewAccountText(user, body);
   if (blocked) return { ok: false, message: blocked };
