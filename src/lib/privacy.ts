@@ -1,16 +1,20 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 
-/** Ids de quem eu bloqueei + de quem me bloqueou (some dos dois lados). */
-export async function blockedIds(viewerId: string | null): Promise<string[]> {
+/**
+ * Ids de quem eu bloqueei + de quem me bloqueou (some dos dois lados).
+ * `cache`: uma consulta só por request, mesmo com vários componentes pedindo.
+ */
+export const blockedIds = cache(async (viewerId: string | null): Promise<string[]> => {
   if (!viewerId) return [];
   const rows = await prisma.block.findMany({
     where: { OR: [{ blockerId: viewerId }, { blockedId: viewerId }] },
     select: { blockerId: true, blockedId: true },
   });
   return [...new Set(rows.map((r) => (r.blockerId === viewerId ? r.blockedId : r.blockerId)))];
-}
+});
 
 export async function isBlockedEitherWay(a: string, b: string) {
   const n = await prisma.block.count({

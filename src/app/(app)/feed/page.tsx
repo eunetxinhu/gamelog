@@ -53,10 +53,14 @@ export default async function FeedPage({ searchParams }: Props) {
   // Sem login, volta para cá depois (com o ?postar / ?compartilhado de quem veio do "Compartilhar")
   if (!viewer) redirect(`/login?next=${encodeURIComponent(`/feed?${new URLSearchParams(query as Record<string, string>)}`)}`);
 
-  const hidden = await blockedIds(viewer.id);
-  const followingIds = (
-    await prisma.follow.findMany({ where: { followerId: viewer.id, status: "ACCEPTED" }, select: { followingId: true } })
-  ).map((f) => f.followingId);
+  // Em paralelo: cada ida ao banco custa uma viagem de rede
+  const [hidden, followingIds, favoritesCount] = await Promise.all([
+    blockedIds(viewer.id),
+    prisma.follow
+      .findMany({ where: { followerId: viewer.id, status: "ACCEPTED" }, select: { followingId: true } })
+      .then((rows) => rows.map((f) => f.followingId)),
+    viewer.onboardedAt ? 0 : prisma.favoriteGame.count({ where: { userId: viewer.id } }),
+  ]);
 
   // Quem ainda não segue ninguém cai no "Para você" por padrão
   const tab: FeedTab =
@@ -68,7 +72,7 @@ export default async function FeedPage({ searchParams }: Props) {
     ? null
     : onboardingSteps({
         hasSteam: Boolean(viewer.steamId),
-        favorites: await prisma.favoriteGame.count({ where: { userId: viewer.id } }),
+        favorites: favoritesCount,
         following: followingIds.length,
       });
 
