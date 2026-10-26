@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarClock, ListOrdered, LogOut, Medal, Menu, ScrollText, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { CalendarClock, ListOrdered, LogOut, Medal, Menu, ScrollText, Settings, ShieldAlert, ShieldCheck, UserRound } from "lucide-react";
 import { signOut } from "../../(auth)/_actions/auth";
 
 /** Menu do topo no celular: o que não cabe na barra inferior. */
-export function HeaderMenu({ username }: { username: string }) {
+export function HeaderMenu({ username, isAdmin = false, openReports = 0 }: { username: string; isAdmin?: boolean; openReports?: number }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -45,6 +45,12 @@ export function HeaderMenu({ username }: { username: string }) {
           <Link href={`/u/${username}`} className={item}>
             <UserRound className="size-5 text-zinc-400" aria-hidden /> Meu perfil
           </Link>
+          {isAdmin && (
+            <Link href="/moderacao" className={item}>
+              <ShieldAlert className="size-5 text-amber-400" aria-hidden /> Moderação
+              {openReports > 0 && <span className="ml-auto rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white">{openReports}</span>}
+            </Link>
+          )}
           <Link href="/listas" className={item}>
             <ListOrdered className="size-5 text-zinc-400" aria-hidden /> Listas
           </Link>

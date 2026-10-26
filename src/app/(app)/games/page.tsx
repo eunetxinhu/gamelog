@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { CalendarClock, Flame, Percent, Search, Sparkles, Star, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +13,7 @@ import { WishlistQuickButton } from "@/components/wishlist-quick-button";
 import { getCurrentUser } from "@/lib/auth";
 import { wishlistSetFor } from "@/lib/wishlist";
 import { inWishlist } from "@/lib/wishlist-keys";
+import { getRecommendations } from "@/lib/taste-data";
 
 export const metadata: Metadata = { title: "Jogos" };
 
@@ -144,6 +145,11 @@ async function Hub({ viewerId }: { viewerId: string | null }) {
 
   return (
     <div className="space-y-12">
+      {viewerId && (
+        <Suspense fallback={null}>
+          <ForYouGames viewerId={viewerId} />
+        </Suspense>
+      )}
       {store && store.topSellers.length > 0 && (
         <StoreRow title="Mais vendidos na Steam" icon={<Flame className="size-4 text-orange-400" aria-hidden />} items={store.topSellers} wish={wish} />
       )}
@@ -196,6 +202,23 @@ async function Hub({ viewerId }: { viewerId: string | null }) {
 
       <p className="text-center text-xs text-zinc-600">Vitrines, preços e Metascore vêm da loja da Steam.</p>
     </div>
+  );
+}
+
+/** Recomendados: o que pessoas de gosto parecido curtiram (src/lib/taste-data.ts). */
+async function ForYouGames({ viewerId }: { viewerId: string }) {
+  const recs = await getRecommendations(viewerId, 12).catch(() => []);
+  if (recs.length === 0) return null;
+  const wish: Wish = { loggedIn: true, set: await wishlistSetFor(viewerId, recs.map((r) => r.game)) };
+  return (
+    <section>
+      <SectionTitle icon={<Sparkles className="size-4 text-brand-400" aria-hidden />}>Recomendados para você</SectionTitle>
+      <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
+        {recs.map(({ game, reason }) => (
+          <CoverTile key={game.slug} slug={game.slug} title={game.title} coverUrl={game.coverUrl} steamAppId={game.steamAppId} sub={reason} wish={wish} />
+        ))}
+      </ul>
+    </section>
   );
 }
 

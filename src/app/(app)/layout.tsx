@@ -15,6 +15,7 @@ import { needsAutoSync, shouldTouchLastSeen } from "@/lib/steam/schedule";
 import { upcomingWishlistCount } from "@/lib/releases";
 import { SITE_NAME } from "@/lib/brand";
 import { BrandLogo } from "@/components/brand-logo";
+import { CommandPalette } from "@/components/command-palette";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -79,6 +80,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
           {user ? (
             <div className="flex min-w-0 items-center gap-0.5 sm:gap-2">
+              <CommandPalette />
               {/* No celular o perfil fica na barra inferior; Configurações e Sair vão para o menu */}
               <Link
                 href={`/u/${user.username}`}
@@ -87,10 +89,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               >
                 <Avatar name={user.displayName ?? user.username} src={user.avatarUrl ?? user.steamAvatarUrl} size="sm" />
               </Link>
+              {/* No celular a moderação fica no menu ☰ (o topo não comporta mais um ícone) */}
               {user.isAdmin && (
-                <IconLink href="/moderacao" label={`Moderação (${openReports} denúncias abertas)`} count={openReports}>
-                  <ShieldAlert className="size-5 md:size-4" aria-hidden />
-                </IconLink>
+                <span className="hidden md:flex">
+                  <IconLink href="/moderacao" label={`Moderação (${openReports} denúncias abertas)`} count={openReports}>
+                    <ShieldAlert className="size-4" aria-hidden />
+                  </IconLink>
+                </span>
               )}
               <IconLink href="/mensagens" label={unreadDms ? `Mensagens (${unreadDms} novas)` : "Mensagens"} count={unreadDms}>
                 <Mail className="size-5 md:size-4" aria-hidden />
@@ -120,12 +125,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                   <LogOut className="size-4" aria-hidden />
                 </button>
               </form>
-              <HeaderMenu username={user.username} />
+              <HeaderMenu username={user.username} isAdmin={user.isAdmin} openReports={openReports} />
             </div>
           ) : (
-            <Link href="/login" className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-500">
-              Entrar
-            </Link>
+            <div className="flex items-center gap-2">
+              <CommandPalette />
+              <Link href="/login" className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-500">
+                Entrar
+              </Link>
+            </div>
           )}
         </nav>
       </header>
