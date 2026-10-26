@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { formatPlaytime } from "@/lib/format";
 import { getProgression } from "@/lib/progression";
+import { getCompatibility } from "@/lib/taste-data";
+import { CompatSection } from "@/components/compatibility";
 import { canSeeProfile } from "@/lib/privacy";
 import { Avatar } from "@/components/avatar";
 import { GameCover } from "@/components/game-cover";
@@ -39,11 +41,12 @@ export default async function ComparePage({ params }: Props) {
   if (other.id === viewer.id) redirect(`/u/${viewer.username}`);
   if (!(await canSeeProfile(viewer.id, other))) redirect(`/u/${other.username}`);
 
-  const [me, them, myLib, theirLib] = await Promise.all([
+  const [me, them, myLib, theirLib, compat] = await Promise.all([
     getProgression(viewer.id),
     getProgression(other.id),
     prisma.libraryEntry.findMany({ where: { userId: viewer.id }, select: entrySelect }),
     prisma.libraryEntry.findMany({ where: { userId: other.id }, select: entrySelect }),
+    getCompatibility(viewer.id, other.id),
   ]);
 
   const theirs = new Map(theirLib.map((e) => [e.gameId, e]));
@@ -91,6 +94,8 @@ export default async function ComparePage({ params }: Props) {
           </tbody>
         </table>
       </section>
+
+      {compat && <CompatSection data={compat} otherName={theirName} />}
 
       {/* ---- Jogos em comum --------------------------------------------------- */}
       <h2 className="mb-3 mt-8 text-lg font-semibold text-zinc-50">

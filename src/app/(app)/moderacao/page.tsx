@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Crown, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Crown, ShieldAlert } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
@@ -61,7 +61,7 @@ export default async function ModerationPage() {
   const user = await getCurrentUser();
   if (!user?.isAdmin) notFound();
 
-  const [reports, banned, awarded] = await Promise.all([
+  const [reports, banned, awarded, openErrors] = await Promise.all([
     prisma.report.findMany({
       where: { status: "OPEN" },
       orderBy: { createdAt: "asc" },
@@ -76,6 +76,7 @@ export default async function ModerationPage() {
       take: 100,
       select: { id: true, username: true, title: true, titleIcon: true, titleStyle: true, awards: { select: { id: true, name: true, icon: true, style: true } } },
     }),
+    prisma.errorEvent.count({ where: { resolvedAt: null } }),
   ]);
   const previews = await Promise.all(reports.map((r) => preview(r.targetType, r.targetId)));
 
@@ -84,7 +85,17 @@ export default async function ModerationPage() {
       <h1 className="mb-1 flex items-center gap-2 text-2xl font-bold text-zinc-50">
         <ShieldAlert className="size-6 text-amber-400" aria-hidden /> Moderação
       </h1>
-      <p className="mb-6 text-sm text-zinc-400">Denúncias abertas, mais antigas primeiro.</p>
+      <p className="mb-4 text-sm text-zinc-400">Denúncias abertas, mais antigas primeiro.</p>
+      <Link
+        href="/moderacao/erros"
+        className={`mb-6 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm transition ${
+          openErrors ? "border-amber-600/50 bg-amber-500/10 text-amber-100 hover:bg-amber-500/15" : "border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-zinc-600"
+        }`}
+      >
+        <AlertTriangle className="size-4 text-amber-400" aria-hidden />
+        {openErrors ? `${openErrors} ${openErrors === 1 ? "erro aberto" : "erros abertos"} no site` : "Erros do site: nenhum aberto"}
+        <span className="ml-auto text-xs text-zinc-500">ver →</span>
+      </Link>
 
       {reports.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">Nenhuma denúncia aberta. 🎉</p>

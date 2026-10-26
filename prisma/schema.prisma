@@ -561,6 +561,8 @@ model Club {
   name        String   @db.VarChar(60)
   description String?  @db.VarChar(500)
   imageUrl    String?  @map("image_url")
+  /// Regras do clube, escritas pelo dono ou pelos moderadores
+  rules       String?  @db.VarChar(1000)
   ownerId     String   @map("owner_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -591,6 +593,8 @@ model ClubPost {
   userId    String   @map("user_id") @db.Uuid
   body      String   @db.VarChar(2000)
   imageUrl  String?  @map("image_url")
+  /// Fixado no topo do mural pelos moderadores (no máximo 3 por clube)
+  pinnedAt  DateTime? @map("pinned_at")
   createdAt DateTime @default(now()) @map("created_at")
 
   club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
@@ -740,4 +744,28 @@ model AwardedBadge {
 
   @@index([userId, createdAt])
   @@map("awarded_badges")
+}
+
+// -----------------------------------------------------------------------------
+//  Erros em produção (agrupados): a moderação vê em /moderacao/erros e recebe push
+// -----------------------------------------------------------------------------
+
+model ErrorEvent {
+  id          String    @id @default(cuid())
+  /// Hash de tipo + mensagem + rota: o mesmo erro repetido vira uma linha só
+  fingerprint String    @unique @db.VarChar(64)
+  kind        String    @db.VarChar(20)
+  message     String    @db.VarChar(500)
+  stack       String?
+  path        String?   @db.VarChar(300)
+  method      String?   @db.VarChar(10)
+  count       Int       @default(1)
+  firstSeenAt DateTime  @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime  @default(now()) @map("last_seen_at")
+  /// Último push mandado para os administradores (no máximo 1 por hora por erro)
+  notifiedAt  DateTime? @map("notified_at")
+  resolvedAt  DateTime? @map("resolved_at")
+
+  @@index([resolvedAt, lastSeenAt(sort: Desc)])
+  @@map("error_events")
 }

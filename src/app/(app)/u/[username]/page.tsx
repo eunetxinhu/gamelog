@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bookmark, CalendarDays, ChevronRight, GitCompareArrows, Lock, Medal, Settings, Target, Trophy, UserPlus } from "lucide-react";
+import { Bookmark, CalendarDays, ChevronRight, GitCompareArrows, Lock, Medal, ScrollText, Settings, Sparkles, Target, Trophy, UserPlus } from "lucide-react";
+import { getCompatibility, getTasteStats } from "@/lib/taste-data";
+import { wrappedYears } from "@/lib/wrapped";
+import { CompatChip } from "@/components/compatibility";
+import { TasteSection } from "./_components/taste-section";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities } from "@/lib/activity";
@@ -74,7 +78,10 @@ export default async function ProfilePage({ params }: Props) {
   ]);
 
   // Sem acesso (privado, suspenso ou bloqueio): só o cabeçalho e um aviso
-  const data = canSee ? await loadProfileContent(profile.id, viewer?.id ?? null) : null;
+  const [data, compat] = await Promise.all([
+    canSee ? loadProfileContent(profile.id, viewer?.id ?? null) : null,
+    canSee && other && !blockedByMe ? getCompatibility(viewer!.id, profile.id) : null,
+  ]);
   const name = profile.displayName ?? profile.username;
   const gamesHref = (aba: string) => `/u/${profile.username}/jogos?aba=${aba}`;
   return (
@@ -125,6 +132,11 @@ export default async function ProfilePage({ params }: Props) {
                 <strong className="text-zinc-100">{profile._count.following}</strong> seguindo
               </Link>
             </p>
+            {compat?.score != null && (
+              <div className="pt-2">
+                <CompatChip score={compat.score} href={`/u/${profile.username}/comparar`} />
+              </div>
+            )}
           </div>
           <div className="shrink-0">
             {viewer?.isAdmin && (
@@ -146,6 +158,12 @@ export default async function ProfilePage({ params }: Props) {
                 >
                   <UserPlus className="size-4" aria-hidden /> Convidar
                 </Link>
+                <Link
+                  href={`/u/${profile.username}/recompensa`}
+                  className="inline-flex items-center gap-2 rounded-lg border border-amber-700/50 px-4 py-2 text-sm text-amber-200 transition hover:bg-amber-900/20"
+                >
+                  <ScrollText className="size-4" aria-hidden /> Meu cartaz
+                </Link>
               </div>
             ) : viewer ? (
               <div className="flex flex-wrap gap-2">
@@ -156,6 +174,16 @@ export default async function ProfilePage({ params }: Props) {
                     className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
                   >
                     <GitCompareArrows className="size-4" aria-hidden /> Comparar
+                  </Link>
+                )}
+                {!profile.bannedAt && (
+                  <Link
+                    href={`/u/${profile.username}/recompensa`}
+                    title="Cartaz de recompensa"
+                    aria-label="Cartaz de recompensa"
+                    className="inline-flex items-center rounded-lg border border-amber-700/50 px-3 py-2 text-amber-200 transition hover:bg-amber-900/20"
+                  >
+                    <ScrollText className="size-4" aria-hidden />
                   </Link>
                 )}
                 <ProfileMenu userId={profile.id} username={profile.username} blocked={blockedByMe} canMessage={Boolean(dm?.ok)} />
@@ -190,7 +218,7 @@ export default async function ProfilePage({ params }: Props) {
 
 /** Tudo que só aparece para quem pode ver o perfil. */
 async function loadProfileContent(profileId: string, viewerId: string | null) {
-  const [library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount] = await Promise.all([
+  const [library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, taste, years] = await Promise.all([
     prisma.libraryEntry.aggregate({ where: { userId: profileId }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
     prisma.gameLog.findMany({ where: { userId: profileId, status: "COMPLETED" }, select: { gameId: true } }),
     getPlatinums(profileId),
@@ -209,10 +237,12 @@ async function loadProfileContent(profileId: string, viewerId: string | null) {
     getAchievementSummary(profileId),
     getListCards({ viewerId, where: { userId: profileId }, take: 3 }),
     prisma.gameList.count({ where: { userId: profileId, items: { some: {} } } }),
+    getTasteStats(profileId),
+    wrappedYears(profileId),
   ]);
   // Finalizados inclui as platinas (platinar implica ter terminado)
   const completedCount = new Set([...completedLogs.map((l) => l.gameId), ...platinumList.map((p) => p.game.id)]).size;
-  return { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, viewerId };
+  return { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, taste, years, viewerId };
 }
 
 function LockedNotice({ text }: { text: string }) {
@@ -235,7 +265,7 @@ function ProfileContent({
   isMe: boolean;
   gamesHref: (aba: string) => string;
 }) {
-  const { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, viewerId } = data;
+  const { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, taste, years, viewerId } = data;
   const earnedBadges = progression.badges.filter((b) => b.earned);
 
   return (
@@ -307,6 +337,20 @@ function ProfileContent({
         <ChevronRight className="ml-auto size-4 shrink-0 text-zinc-500" aria-hidden />
       </Link>
 
+      {years.length > 0 && (
+        <Link
+          href={`/u/${profile.username}/retrospectiva?ano=${years[0]}`}
+          className="mt-2 flex items-center gap-2 rounded-xl border border-brand-900/60 bg-gradient-to-r from-brand-950/60 to-zinc-900/60 px-4 py-3 text-sm text-zinc-200 transition hover:border-brand-700"
+        >
+          <Sparkles className="size-4 text-brand-400" aria-hidden />
+          <span className="min-w-0">
+            Retrospectiva {years[0]}
+            <span className="hidden text-zinc-400 sm:inline">: o ano em jogos, platinas, notas e gêneros</span>
+          </span>
+          <ChevronRight className="ml-auto size-4 shrink-0 text-zinc-500" aria-hidden />
+        </Link>
+      )}
+
       {/* ---- Números -------------------------------------------------------- */}
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat href={gamesHref("biblioteca")} label="Jogos" value={library._count._all.toLocaleString("pt-BR")} />
@@ -335,6 +379,9 @@ function ProfileContent({
           <ChevronRight className="ml-auto size-4 shrink-0 text-zinc-500" aria-hidden />
         </Link>
       )}
+
+      {/* ---- Gosto ---------------------------------------------------------- */}
+      {(taste.genres.length > 0 || taste.myAverage !== null) && <TasteSection taste={taste} isMe={isMe} />}
 
       {/* ---- Listas --------------------------------------------------------- */}
       {(lists.length > 0 || isMe) && (

@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Fontes lidas do disco pelo gerador do cartaz de recompensa: garante que vão junto no deploy
+  outputFileTracingIncludes: {
+    "/u/[username]/recompensa.png": ["./src/assets/fonts/*.woff"],
+    "/u/[username]/retrospectiva.png": ["./src/assets/fonts/*.woff"],
+  },
   experimental: {
     // Upload de foto/capa do perfil (o navegador já reduz a imagem; isto é a folga)
     serverActions: { bodySizeLimit: "5mb" },

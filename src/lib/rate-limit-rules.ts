@@ -24,6 +24,8 @@ export const RATE_RULES = {
 
   // Social (por usuário)
   comment: [{ limit: 8, windowSec: MIN }, { limit: 200, windowSec: DAY }],
+  // Conta nova (72 h): conversas com quem ela nunca falou (ver src/lib/trust.ts)
+  "dm-new-account": [{ limit: 5, windowSec: DAY }],
   message: [{ limit: 20, windowSec: MIN }, { limit: 500, windowSec: DAY }],
   reaction: [{ limit: 60, windowSec: MIN }],
   follow: [{ limit: 30, windowSec: MIN }, { limit: 300, windowSec: DAY }],
@@ -38,6 +40,9 @@ export const RATE_RULES = {
   "photo-post": [{ limit: 6, windowSec: 10 * MIN }, { limit: 50, windowSec: DAY }],
   upload: [{ limit: 30, windowSec: 10 * MIN }, { limit: 150, windowSec: DAY }],
   search: [{ limit: 60, windowSec: MIN }],
+
+  // Erros que o navegador relata (por IP)
+  "error-report": [{ limit: 20, windowSec: HOUR }],
 
   // Dados da conta
   "data-export": [{ limit: 3, windowSec: DAY }],
