@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Heart, Loader2, Send, Trash2 } from "lucide-react";
 import { addListComment, deleteListComment, toggleListLike } from "../_actions/lists";
+import { useConfirm } from "@/components/confirm-dialog";
 
 export function ListLikeButton({ listId, initialLiked, initialCount, loggedIn }: { listId: string; initialLiked: boolean; initialCount: number; loggedIn: boolean }) {
   const router = useRouter();
@@ -92,16 +93,12 @@ export function ListCommentForm({ listId }: { listId: string }) {
 
 export function DeleteListCommentButton({ id }: { id: string }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
   return (
     <button
       type="button"
-      disabled={pending}
-      onClick={() => {
-        if (!confirm("Apagar este comentário?")) return;
-        startTransition(async () => {
-          if ((await deleteListComment(id)).ok) router.refresh();
-        });
+      onClick={async () => {
+        if (await ask({ title: "Apagar este comentário?", action: () => deleteListComment(id) })) router.refresh();
       }}
       aria-label="Apagar comentário"
       className="rounded p-1 text-zinc-500 transition hover:text-red-300 disabled:opacity-50"

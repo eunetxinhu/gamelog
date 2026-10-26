@@ -7,6 +7,7 @@ import type { LogStatus } from "@/generated/prisma/enums";
 import { STATUS_LABEL } from "@/lib/format";
 import { removeGameLog, saveGameLog } from "../_actions/log";
 import { ImageAttach } from "@/components/image-attach";
+import { useConfirm } from "@/components/confirm-dialog";
 
 type Props = {
   gameId: string;
@@ -33,6 +34,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
   const [spoiler, setSpoiler] = useState(initial?.containsSpoiler ?? false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const ask = useConfirm();
   const [pending, startTransition] = useTransition();
   const [hasLog, setHasLog] = useState(Boolean(initial));
 
@@ -58,10 +60,15 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
     });
   }
 
-  function onRemove() {
-    if (!confirm("Tirar este jogo do seu perfil?")) return;
+  async function onRemove() {
+    const done = await ask({
+      title: "Tirar este jogo do seu perfil?",
+      description: "Some o status, a nota e a review. As publicações que você já fez continuam no feed.",
+      confirmLabel: "Tirar do perfil",
+      action: () => removeGameLog(gameId),
+    });
+    if (!done) return;
     startTransition(async () => {
-      await removeGameLog(gameId);
       setHasLog(false);
       setRating(null);
       setReview("");

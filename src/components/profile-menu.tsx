@@ -5,15 +5,25 @@ import Link from "next/link";
 import { Ban, Mail, MoreHorizontal } from "lucide-react";
 import { blockUser, unblockUser } from "@/app/(app)/_actions/moderation";
 import { ReportButton } from "./report-button";
+import { useConfirm } from "@/components/confirm-dialog";
 
 /** Ações sobre outro perfil: mensagem, bloquear/desbloquear e denunciar. */
 export function ProfileMenu({ userId, username, blocked: initialBlocked, canMessage }: { userId: string; username: string; blocked: boolean; canMessage: boolean }) {
   const [open, setOpen] = useState(false);
   const [blocked, setBlocked] = useState(initialBlocked);
   const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
 
-  function toggleBlock() {
-    if (!blocked && !confirm(`Bloquear @${username}? Vocês deixam de se seguir e não verão mais o conteúdo um do outro.`)) return;
+  async function toggleBlock() {
+    if (
+      !blocked &&
+      !(await ask({
+        title: `Bloquear @${username}?`,
+        description: "Vocês deixam de se seguir e não verão mais o conteúdo um do outro. Dá para desbloquear depois.",
+        confirmLabel: "Bloquear",
+      }))
+    )
+      return;
     startTransition(async () => {
       const res = blocked ? await unblockUser(userId) : await blockUser(userId);
       if (res.ok) {

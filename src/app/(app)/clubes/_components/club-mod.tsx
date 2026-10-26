@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, MoreHorizontal, Pencil, Pin, PinOff, Shield, ShieldOff, UserMinus } from "lucide-react";
 import { removeMember, setMemberRole, togglePinPost, updateClubRules } from "../_actions/clubs";
+import { useConfirm } from "@/components/confirm-dialog";
 
 /** Fixar / desafixar um post (dono e moderadores). */
 export function PinPostButton({ postId, pinned }: { postId: string; pinned: boolean }) {
@@ -54,6 +55,7 @@ export function MemberActions({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
   if (role === "OWNER" || (role === "ADMIN" && viewerRole !== "OWNER")) return null;
 
   const run = (fn: () => Promise<{ ok: boolean; message?: string }>) =>
@@ -62,7 +64,7 @@ export function MemberActions({
       if (r.ok) {
         setOpen(false);
         router.refresh();
-      } else if (r.message) alert(r.message);
+      } else if (r.message) await ask({ title: "Não deu certo", description: r.message, danger: false, confirmLabel: "Ok" });
     });
 
   return (
@@ -84,7 +86,16 @@ export function MemberActions({
           )}
           <button
             type="button"
-            onClick={() => confirm(`Tirar ${name} do clube?`) && run(() => removeMember(clubId, userId))}
+            onClick={async () => {
+              setOpen(false);
+              const done = await ask({
+                title: `Tirar ${name} do clube?`,
+                description: "A pessoa pode entrar de novo depois, se quiser.",
+                confirmLabel: "Tirar do clube",
+                action: () => removeMember(clubId, userId),
+              });
+              if (done) router.refresh();
+            }}
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-300 hover:bg-zinc-800"
           >
             <UserMinus className="size-4" aria-hidden /> Tirar do clube

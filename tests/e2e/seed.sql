@@ -20,3 +20,8 @@ INSERT INTO games (id, slug, title, summary, genres, synced_at, media_synced_at,
 -- Uma publicação da Bia para comentar
 INSERT INTO activities (id, user_id, game_id, type, review, created_at) VALUES
   ('e2e-post-1', 'e2e00000-0000-4000-8000-000000000002', 'e2e-jogo', 'COMPLETED', 'Zerei! Final muito bom.', now() - interval '1 hour');
+
+-- Uma lista da Ana para o teste de apagar
+INSERT INTO game_lists (id, user_id, title, created_at, updated_at) VALUES
+  ('e2e-lista', 'e2e00000-0000-4000-8000-000000000001', 'Lista E2E para apagar', now(), now());
+INSERT INTO game_list_items (list_id, game_id, position) VALUES ('e2e-lista', 'e2e-jogo', 1);

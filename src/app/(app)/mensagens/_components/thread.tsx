@@ -7,6 +7,7 @@ import { Loader2, Send, Trash2 } from "lucide-react";
 import { ImageAttach } from "@/components/image-attach";
 import { MentionText } from "@/components/mention-text";
 import { deleteMessage, markConversationRead, sendMessage } from "../_actions/dm";
+import { useConfirm } from "@/components/confirm-dialog";
 
 type Msg = { id: string; body: string; imageUrl: string | null; senderId: string; createdAt: string };
 
@@ -35,6 +36,7 @@ export function Thread({
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
   const lastId = messages.at(-1)?.id;
 
   // Rola para o fim e marca como lida quando chega mensagem nova
@@ -64,12 +66,10 @@ export function Thread({
     });
   }
 
-  function onDelete(id: string) {
-    if (!confirm("Apagar esta mensagem?")) return;
-    startTransition(async () => {
-      await deleteMessage(id);
+  async function onDelete(id: string) {
+    if (await ask({ title: "Apagar esta mensagem?", description: "Ela some para as duas pessoas.", action: () => deleteMessage(id) })) {
       router.refresh();
-    });
+    }
   }
 
   return (

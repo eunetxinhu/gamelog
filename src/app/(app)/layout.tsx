@@ -16,6 +16,7 @@ import { upcomingWishlistCount } from "@/lib/releases";
 import { SITE_NAME } from "@/lib/brand";
 import { BrandLogo } from "@/components/brand-logo";
 import { CommandPalette } from "@/components/command-palette";
+import { ConfirmProvider } from "@/components/confirm-dialog";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -138,7 +139,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </nav>
       </header>
       {needsSync && <SteamAutoSync />}
-      {children}
+      {/* Janela de confirmação do site (useConfirm), no lugar do confirm() do navegador */}
+      <ConfirmProvider>{children}</ConfirmProvider>
       <MobileNav
         user={user ? { username: user.username, name: user.displayName ?? user.username, avatar: user.avatarUrl ?? user.steamAvatarUrl } : null}
       />

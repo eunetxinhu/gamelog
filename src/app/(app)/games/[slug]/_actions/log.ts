@@ -9,6 +9,7 @@ import { notifyMentions } from "@/lib/mention-notify";
 import { rateLimit } from "@/lib/rate-limit";
 import type { LogStatus } from "@/generated/prisma/enums";
 import { checkNewAccountText } from "@/lib/trust";
+import { fail, MSG, ok, type ActionResult } from "@/lib/action-result";
 
 const STATUSES: LogStatus[] = ["PLAYING", "COMPLETED", "PLATINUM", "DROPPED", "BACKLOG"];
 
@@ -103,12 +104,12 @@ export async function saveGameLog(input: SaveLogInput): Promise<SaveLogResult> {
 }
 
 /** Tira o jogo do perfil (as publicações já feitas continuam até serem apagadas). */
-export async function removeGameLog(gameId: string): Promise<{ ok: boolean }> {
+export async function removeGameLog(gameId: string): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false };
+  if (!user) return fail(MSG.login);
   const game = await prisma.game.findUnique({ where: { id: gameId }, select: { slug: true } });
   await prisma.gameLog.deleteMany({ where: { userId: user.id, gameId } });
   if (game) revalidatePath(`/games/${game.slug}`);
   revalidatePath(`/u/${user.username}`);
-  return { ok: true };
+  return ok();
 }

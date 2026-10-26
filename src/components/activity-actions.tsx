@@ -4,6 +4,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Heart, Trash2, Trophy } from "lucide-react";
 import { deleteActivity, toggleReaction } from "@/app/(app)/_actions/social";
+import { useConfirm } from "@/components/confirm-dialog";
 
 const REACTION = {
   LIKE: { label: "Curtir", undo: "Descurtir", on: "text-rose-400", icon: (on: boolean) => <Heart className={`size-4 ${on ? "fill-rose-400" : ""}`} aria-hidden /> },
@@ -62,19 +63,20 @@ export function ReactionButton({
 
 /** Apagar publicação própria. */
 export function DeleteActivityButton({ activityId }: { activityId: string }) {
-  const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
   const [gone, setGone] = useState(false);
   if (gone) return null;
 
   return (
     <button
       type="button"
-      disabled={pending}
-      onClick={() => {
-        if (!confirm("Apagar esta publicação?")) return;
-        startTransition(async () => {
-          if ((await deleteActivity(activityId)).ok) setGone(true);
+      onClick={async () => {
+        const done = await ask({
+          title: "Apagar esta publicação?",
+          description: "Curtidas, GGs, comentários e fotos dela também somem. Não dá para desfazer.",
+          action: () => deleteActivity(activityId),
         });
+        if (done) setGone(true);
       }}
       className="inline-flex items-center rounded-full p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-red-300 disabled:opacity-50"
       aria-label="Apagar publicação"

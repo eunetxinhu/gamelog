@@ -7,6 +7,7 @@ import { giveBadge, revokeBadge, setUserTitle } from "@/app/(app)/_actions/award
 import { AWARD_LIMITS, AWARD_STYLES, AWARD_SYMBOLS, type AwardStyle, type AwardSymbol, type UserTitleData } from "@/lib/awards";
 import { AwardIcon } from "./award-icon";
 import { AWARD_LOOK, AwardPill } from "./user-title";
+import { useConfirm } from "@/components/confirm-dialog";
 
 export type PanelBadge = { id: string; name: string; description: string | null; icon: AwardSymbol; style: AwardStyle };
 
@@ -31,6 +32,7 @@ function Dialog({ userId, username, title, badges, onClose }: { userId: string; 
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const ask = useConfirm();
 
   const run = (fn: () => Promise<{ ok: boolean; message?: string }>, done: string, after?: () => void) => {
     setMessage(null);
@@ -74,7 +76,7 @@ function Dialog({ userId, username, title, badges, onClose }: { userId: string; 
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => confirm("Tirar o título deste perfil?") && run(() => setUserTitle(userId, null), "Título removido.")}
+                  onClick={async () => (await ask({ title: "Tirar o título deste perfil?", confirmLabel: "Tirar título" })) && run(() => setUserTitle(userId, null), "Título removido.")}
                   className="rounded-lg border border-red-900/60 px-3 py-2 text-sm text-red-300 hover:bg-red-950/40 disabled:opacity-50"
                 >
                   Tirar título
@@ -97,7 +99,7 @@ function Dialog({ userId, username, title, badges, onClose }: { userId: string; 
                   <button
                     type="button"
                     disabled={pending}
-                    onClick={() => confirm(`Tirar o selo "${b.name}"?`) && run(() => revokeBadge(b.id), "Selo removido.")}
+                    onClick={async () => (await ask({ title: `Tirar o selo “${b.name}”?`, confirmLabel: "Tirar selo" })) && run(() => revokeBadge(b.id), "Selo removido.")}
                     aria-label={`Tirar o selo ${b.name}`}
                     className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-red-300 disabled:opacity-50"
                   >

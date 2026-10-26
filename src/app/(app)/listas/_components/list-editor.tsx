@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Loader2, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, Plus, Search, X } from "lucide-react";
 import { GameCover } from "@/components/game-cover";
 import { searchGamesForPost, type GameOption } from "@/app/(app)/feed/_actions/photo-post";
 import { LIST_LIMITS } from "@/lib/list-input";
-import { deleteList, saveList } from "../_actions/lists";
+import { saveList } from "../_actions/lists";
+import { DeleteListButton } from "./delete-list-button";
 
 export type EditorItem = { slug: string; title: string; coverUrl: string | null; steamAppId: number | null; note: string };
 
@@ -48,12 +49,6 @@ export function ListEditor({ list, initialItems }: Props) {
     });
   }
 
-  function onDelete() {
-    if (!list || !confirm("Apagar esta lista? Curtidas e comentários também somem.")) return;
-    startTransition(async () => {
-      if ((await deleteList(list.id)).ok) router.push("/listas");
-    });
-  }
 
   return (
     <div className="space-y-6">
@@ -138,16 +133,7 @@ export function ListEditor({ list, initialItems }: Props) {
           {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
           {list ? "Salvar alterações" : "Criar lista"}
         </button>
-        {list && (
-          <button
-            type="button"
-            onClick={onDelete}
-            disabled={pending}
-            className="inline-flex items-center gap-2 rounded-lg border border-red-900/60 px-4 py-2.5 text-sm text-red-300 transition hover:bg-red-950/40 disabled:opacity-60"
-          >
-            <Trash2 className="size-4" aria-hidden /> Apagar lista
-          </button>
-        )}
+        {list && <DeleteListButton listId={list.id} title={list.title} disabled={pending} />}
         {error && (
           <p role="alert" className="text-sm text-red-300">
             {error}

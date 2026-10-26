@@ -3,17 +3,19 @@
 import { useState, useTransition } from "react";
 import { Clock, Loader2, UserCheck, UserPlus } from "lucide-react";
 import { toggleFollow, type FollowState } from "@/app/(app)/_actions/social";
+import { useConfirm } from "@/components/confirm-dialog";
 
 /** Seguir / Solicitado (perfil privado) / Seguindo. */
 export function FollowButton({ userId, state: initial, isPrivate }: { userId: string; state: FollowState; isPrivate?: boolean }) {
   const [state, setState] = useState<FollowState>(initial);
   const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
 
   function onClick() {
     startTransition(async () => {
       const res = await toggleFollow(userId);
       if (res.ok && res.state !== undefined) setState(res.state);
-      else if (res.message) alert(res.message);
+      else if (res.message) void ask({ title: "Não deu certo", description: res.message, notice: true });
     });
   }
 

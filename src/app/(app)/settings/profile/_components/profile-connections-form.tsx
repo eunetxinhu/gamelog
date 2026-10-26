@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, Clock, Gamepad2, Loader2, LogIn, RefreshCw
 import { syncSteamLibrary, unlinkSteam } from "../_actions/steam";
 import type { SteamSyncError, SteamSyncResult } from "../_actions/types";
 import { PlaytimeHiddenNotice, SteamPrivacyNotice } from "./steam-privacy-notice";
+import { useConfirm } from "@/components/confirm-dialog";
 
 /** Rota que inicia o "Entrar com Steam" (login oficial, OpenID 2.0). */
 const STEAM_LOGIN_HREF = "/api/steam/login";
@@ -48,6 +49,7 @@ function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnections
   const [pending, startTransition] = useTransition();
   const [unlinking, startUnlink] = useTransition();
   const autoSynced = useRef(false);
+  const ask = useConfirm();
 
   function runSync() {
     startTransition(async () => {
@@ -66,11 +68,16 @@ function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnections
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function onUnlink() {
-    if (!confirm("Desvincular a Steam? Os jogos importados saem da sua biblioteca (seus logs e reviews ficam).")) return;
+  async function onUnlink() {
+    const sure = await ask({
+      title: "Desvincular a Steam?",
+      description: "Os jogos importados saem da sua biblioteca. Seus registros, notas e reviews ficam.",
+      confirmLabel: "Desvincular",
+    });
+    if (!sure) return;
     startUnlink(async () => {
       const res = await unlinkSteam();
-      if (!res.ok && res.message) return alert(res.message);
+      if (!res.ok && res.message) return void ask({ title: "Não deu para desvincular", description: res.message, notice: true });
       setResult(null);
     });
   }
