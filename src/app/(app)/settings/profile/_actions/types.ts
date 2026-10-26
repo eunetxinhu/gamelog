@@ -55,6 +55,8 @@ export type SteamSyncSuccess = {
   playtimeHidden: boolean;
   /** Jogos que ainda vão ter as conquistas conferidas nas próximas sincronizações */
   pendingAchievementChecks: number;
+  /** Wishlist da Steam importada (null = etapa não rodou) */
+  wishlist: { imported: number; removed: number; private: boolean } | null;
   syncedAt: string; // ISO
 };
 

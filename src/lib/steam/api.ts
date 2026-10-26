@@ -276,6 +276,52 @@ async function getPlayerAchievementList(steamId: string, appId: number) {
   }
 }
 
+// ---- Wishlist da Steam ----------------------------------------------------------
+
+/**
+ * Wishlist da Steam (IWishlistService). `null` = privada ou indisponível: a Steam responde
+ * `{ response: {} }` quando a pessoa não deixa a wishlist pública.
+ * `retry` = falha passageira (limite, Steam fora): a tarefa tenta de novo depois.
+ */
+export async function getSteamWishlist(steamId: string): Promise<{ status: "ok"; appIds: number[] } | { status: "private" } | { status: "retry" }> {
+  const url = new URL(`${STEAM_API}/IWishlistService/GetWishlist/v1/`);
+  url.search = new URLSearchParams({ key: apiKey(), steamid: steamId }).toString();
+  try {
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+    if (res.status === 429 || res.status >= 500) return { status: "retry" };
+    if (!res.ok) return { status: "private" };
+    const body = (await res.json()) as { response?: { items?: { appid: number }[] } };
+    const items = body.response?.items;
+    if (!items) return { status: "private" };
+    return { status: "ok", appIds: [...new Set(items.map((i) => i.appid).filter((n) => Number.isInteger(n) && n > 0))] };
+  } catch {
+    return { status: "retry" };
+  }
+}
+
+/** Nome de cada app (a wishlist só traz o appid). Apps que não existem não aparecem. */
+export async function getStoreNames(appIds: number[]): Promise<Map<number, string>> {
+  const out = new Map<number, string>();
+  for (let i = 0; i < appIds.length; i += 100) {
+    const url = new URL(`${STEAM_API}/IStoreBrowseService/GetItems/v1/`);
+    url.searchParams.set(
+      "input_json",
+      JSON.stringify({ ids: appIds.slice(i, i + 100).map((appid) => ({ appid })), context: { language: "brazilian", country_code: "BR" } }),
+    );
+    try {
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+      if (!res.ok) continue;
+      const body = (await res.json()) as { response?: { store_items?: { appid?: number; success: number; name?: string }[] } };
+      for (const item of body.response?.store_items ?? []) {
+        if (item.success === 1 && item.appid && item.name?.trim()) out.set(item.appid, item.name.trim());
+      }
+    } catch {
+      // lote falhou: esses jogos entram com o nome provisório e são corrigidos depois
+    }
+  }
+  return out;
+}
+
 // ---- Imagens com o caminho real (IStoreBrowseService, sem API key) -------------
 
 export type StoreAssets = { cover: string | null; header: string | null; hero: string | null };

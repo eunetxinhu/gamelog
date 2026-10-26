@@ -171,6 +171,7 @@ model User {
   likes             ActivityLike[]
   comments          Comment[]
   wishlist          WishlistItem[]
+  syncJobs          SyncJob[]
   /// Notificações recebidas
   notifications     Notification[]     @relation("NotificationRecipient")
   /// Notificações que eu causei (curti, comentei, segui…)
@@ -448,6 +449,8 @@ model WishlistItem {
   notifiedPrice     Int?      @map("notified_price")
   /// Já avisou que o jogo lançou
   releaseNotifiedAt DateTime? @map("release_notified_at")
+  /// MANUAL = botão do site; STEAM = importado da wishlist da Steam (sai se sair de lá)
+  source            WishlistSource @default(MANUAL)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
@@ -768,4 +771,94 @@ model ErrorEvent {
 
   @@index([resolvedAt, lastSeenAt(sort: Desc)])
   @@map("error_events")
+}
+
+// -----------------------------------------------------------------------------
+//  Fila de sincronização da Steam: cada sincronização é um job dividido em tarefas
+//  (biblioteca → conquistas em lotes paralelos, conquistas raras, capas, wishlist
+//  → finalizar). Ver src/lib/jobs/.
+// -----------------------------------------------------------------------------
+
+enum WishlistSource {
+  MANUAL
+  STEAM
+}
+
+enum SyncJobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum SyncTrigger {
+  /// Botão "Sincronizar agora" ou acabou de vincular
+  MANUAL
+  /// Abriu o site com a última sincronização velha
+  AUTO
+  /// Cron (sincronização escalonada)
+  CRON
+}
+
+enum SyncStep {
+  LIBRARY
+  ACHIEVEMENTS
+  RARE
+  COVERS
+  WISHLIST
+  FINALIZE
+}
+
+enum SyncTaskStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+  SKIPPED
+}
+
+model SyncJob {
+  id         String        @id @default(cuid())
+  userId     String        @map("user_id") @db.Uuid
+  status     SyncJobStatus @default(QUEUED)
+  trigger    SyncTrigger
+  /// Resumo para a tela (jogos novos, platinas publicadas, wishlist importada…)
+  result     Json?
+  /// { code, message, privacyReason? } quando falhou
+  error      Json?
+  createdAt  DateTime      @default(now()) @map("created_at")
+  startedAt  DateTime?     @map("started_at")
+  finishedAt DateTime?     @map("finished_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks SyncTask[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@map("sync_jobs")
+}
+
+model SyncTask {
+  id         String         @id @default(cuid())
+  jobId      String         @map("job_id")
+  step       SyncStep
+  status     SyncTaskStatus @default(QUEUED)
+  /// Entrada da etapa (ex.: os appids do lote de conquistas)
+  payload    Json?
+  /// Saída da etapa, somada no FINALIZE
+  result     Json?
+  error      String?        @db.VarChar(500)
+  attempts   Int            @default(0)
+  /// Não pega antes disso (nova tentativa com espera crescente)
+  runAfter   DateTime       @default(now()) @map("run_after")
+  /// Quando um worker pegou; se ficar velho (worker caiu), volta para a fila
+  lockedAt   DateTime?      @map("locked_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  finishedAt DateTime?      @map("finished_at")
+
+  job SyncJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([status, runAfter])
+  @@index([jobId, status])
+  @@map("sync_tasks")
 }
