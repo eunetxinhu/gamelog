@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState, useTransition, type ComponentProps, type ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, Clock, Gamepad2, Loader2, LogIn, RefreshCw, Unlink } from "lucide-react";
-import { syncSteamLibrary, unlinkSteam } from "../_actions/steam";
-import type { SteamSyncError, SteamSyncResult } from "../_actions/types";
+import { unlinkSteam } from "../_actions/steam";
+import type { SteamSyncError } from "../_actions/types";
+import { useSteamSync } from "./use-steam-sync";
+import { SyncProgress } from "./sync-progress";
 import { PlaytimeHiddenNotice, SteamPrivacyNotice } from "./steam-privacy-notice";
+import { useConfirm } from "@/components/confirm-dialog";
 
 /** Rota que inicia o "Entrar com Steam" (login oficial, OpenID 2.0). */
 const STEAM_LOGIN_HREF = "/api/steam/login";
@@ -44,39 +47,48 @@ export function ProfileConnectionsForm(props: ProfileConnectionsProps) {
 
 function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnectionsProps) {
   const linked = Boolean(initial.steamId);
-  const [result, setResult] = useState<SteamSyncResult | null>(linkError ? { ok: false, error: linkError } : null);
-  const [pending, startTransition] = useTransition();
+  const [linkErr, setLinkErr] = useState<SteamSyncError | null>(linkError);
+  const sync = useSteamSync();
   const [unlinking, startUnlink] = useTransition();
   const autoSynced = useRef(false);
+  const ask = useConfirm();
 
   function runSync() {
-    startTransition(async () => {
-      setResult(await syncSteamLibrary());
-    });
+    setLinkErr(null);
+    void sync.start("MANUAL");
   }
 
   // Voltou do "Entrar com Steam": sincroniza sozinho e limpa a query da URL
-  // (sem refazer o request), para um F5 não disparar de novo.
+  // (sem refazer o request), para um F5 não disparar de novo. Senão, se tem uma
+  // sincronização andando (ex.: automática), volta a acompanhar.
   useEffect(() => {
     if (justLinked && !autoSynced.current) {
       autoSynced.current = true;
-      runSync();
+      void sync.start("MANUAL");
+    } else if (initial.steamId) {
+      void sync.resume();
     }
     if (justLinked || linkError) window.history.replaceState(null, "", "/settings/profile");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function onUnlink() {
-    if (!confirm("Desvincular a Steam? Os jogos importados saem da sua biblioteca (seus logs e reviews ficam).")) return;
+  async function onUnlink() {
+    const sure = await ask({
+      title: "Desvincular a Steam?",
+      description: "Os jogos importados saem da sua biblioteca. Seus registros, notas e reviews ficam.",
+      confirmLabel: "Desvincular",
+    });
+    if (!sure) return;
     startUnlink(async () => {
       const res = await unlinkSteam();
-      if (!res.ok && res.message) return alert(res.message);
-      setResult(null);
+      if (!res.ok && res.message) return void ask({ title: "Não deu para desvincular", description: res.message, notice: true });
+      sync.clear();
     });
   }
 
-  const error = result && !result.ok ? result.error : null;
-  const success = result?.ok ? result.data : null;
+  const error = sync.startError ?? (sync.view?.status === "FAILED" ? sync.view.error : null) ?? linkErr;
+  const success = sync.view?.status === "DONE" ? sync.view.result : null;
+  const pending = sync.running;
   const busy = pending || unlinking;
 
   // Dados exibidos: o resultado mais recente tem prioridade sobre as props
@@ -160,6 +172,9 @@ function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnections
           <SteamPrivacyNotice reason={error.privacyReason ?? "GAME_DETAILS"} onRetry={runSync} retrying={pending} />
         )}
 
+        {/* Sincronização em andamento: etapas da fila, sem travar a página */}
+        {sync.view && pending && <SyncProgress view={sync.view} />}
+
         {hiddenPlaytime && <PlaytimeHiddenNotice onRetry={runSync} retrying={pending} />}
 
         {error && (error.code === "SYNC_COOLDOWN" || error.code === "STEAM_LOGIN_CANCELLED") && (
@@ -186,16 +201,35 @@ function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnections
               )}
               .
             </p>
-            {(success.posted.platinums > 0 || success.posted.started > 0) && (
+            {(success.posted.platinums > 0 || success.posted.started > 0 || success.posted.rare > 0) && (
               <p className="mt-1">
                 Publicado no feed:{" "}
                 {[
                   success.posted.platinums > 0 && `${success.posted.platinums} platina(s) 🏆`,
+                  success.posted.rare > 0 && `${success.posted.rare} conquista(s) rara(s) 💎`,
                   success.posted.started > 0 && `${success.posted.started} jogo(s) novo(s)`,
                 ]
                   .filter(Boolean)
                   .join(" e ")}
                 .
+              </p>
+            )}
+            {success.wishlist && !success.wishlist.private && (success.wishlist.imported > 0 || success.wishlist.removed > 0) && (
+              <p className="mt-1">
+                Wishlist da Steam:{" "}
+                {[
+                  success.wishlist.imported > 0 && `${success.wishlist.imported} jogo(s) importado(s)`,
+                  success.wishlist.removed > 0 && `${success.wishlist.removed} que saiu(saíram) de lá removido(s)`,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+                .
+              </p>
+            )}
+            {success.wishlist?.private && (
+              <p className="mt-1 text-emerald-200/80">
+                Sua wishlist da Steam está privada, então não deu para importar. Para importar, deixe “Detalhes dos jogos” público nas
+                configurações de privacidade da Steam.
               </p>
             )}
             {success.pendingAchievementChecks > 0 && (

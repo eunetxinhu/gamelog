@@ -11,6 +11,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { removeImage } from "@/lib/uploads";
 import type { ReactionType } from "@/generated/prisma/enums";
 import { checkNewAccountText } from "@/lib/trust";
+import { fail, MSG, ok, type ActionResult } from "@/lib/action-result";
 
 const COMMENT_MAX = 1000;
 
@@ -44,17 +45,19 @@ export async function toggleReaction(activityId: string, type: ReactionType): Pr
 }
 
 /** Apaga uma publicação própria. */
-export async function deleteActivity(activityId: string): Promise<{ ok: boolean }> {
+export async function deleteActivity(activityId: string): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false };
+  if (!user) return fail(MSG.login);
 
-  const activity = await prisma.activity.findFirst({ where: { id: activityId, userId: user.id }, select: { imageUrl: true, images: true } });
-  const { count } = await prisma.activity.deleteMany({ where: { id: activityId, userId: user.id } });
+  const activity = await prisma.activity.findUnique({ where: { id: activityId }, select: { userId: true, imageUrl: true, images: true } });
+  if (!activity) return ok(); // já tinha sido apagada
+  if (activity.userId !== user.id) return fail("Só dá para apagar as suas publicações.");
+  await prisma.activity.delete({ where: { id: activityId } });
   // Fotos saem do Storage junto com a publicação
-  if (activity) await Promise.all([...new Set([activity.imageUrl, ...activity.images])].map((url) => removeImage(url, user.id)));
+  await Promise.all([...new Set([activity.imageUrl, ...activity.images])].map((url) => removeImage(url, user.id)));
   revalidatePath("/feed");
   revalidatePath(`/u/${user.username}`);
-  return { ok: count > 0 };
+  return ok();
 }
 
 export type FollowState = "ACCEPTED" | "PENDING" | null;
@@ -162,14 +165,15 @@ export async function addComment(activityId: string, rawBody: string): Promise<C
 }
 
 /** Apaga um comentário: o autor do comentário ou o dono da publicação podem. */
-export async function deleteComment(commentId: string): Promise<{ ok: boolean }> {
+export async function deleteComment(commentId: string): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false };
+  if (!user) return fail(MSG.login);
 
-  const { count } = await prisma.comment.deleteMany({
-    where: { id: commentId, OR: [{ userId: user.id }, { activity: { userId: user.id } }] },
-  });
-  return { ok: count > 0 };
+  const c = await prisma.comment.findUnique({ where: { id: commentId }, select: { userId: true, activity: { select: { userId: true } } } });
+  if (!c) return ok(); // já tinha sido apagado
+  if (c.userId !== user.id && c.activity.userId !== user.id) return fail(MSG.notAllowed);
+  await prisma.comment.delete({ where: { id: commentId } });
+  return ok();
 }
 
 /** Marca todas as notificações como lidas. */

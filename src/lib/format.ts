@@ -25,5 +25,6 @@ export const STATUS_LABEL = {
   COMPLETED: "Finalizado",
   PLATINUM: "Platinado",
   DROPPED: "Dropado",
-  BACKLOG: "Backlog",
+  // "Quero jogar" = fila do que jogar (tenha ou não). Comprar é a wishlist, à parte.
+  BACKLOG: "Quero jogar",
 } as const;

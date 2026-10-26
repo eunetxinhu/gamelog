@@ -10,6 +10,7 @@ import { isOwnImage } from "@/lib/uploads";
 import { rateLimit } from "@/lib/rate-limit";
 import { wantsPush } from "@/lib/notification-prefs";
 import { checkNewAccountText, isNewAccount, NEW_ACCOUNT_NEW_DMS_PER_DAY } from "@/lib/trust";
+import { fail, MSG, ok, type ActionResult } from "@/lib/action-result";
 
 const MAX_LENGTH = 2000;
 
@@ -84,9 +85,12 @@ export async function markConversationRead(conversationId: string): Promise<void
 }
 
 /** Apaga uma mensagem minha. */
-export async function deleteMessage(messageId: string): Promise<{ ok: boolean }> {
+export async function deleteMessage(messageId: string): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false };
-  const { count } = await prisma.message.deleteMany({ where: { id: messageId, senderId: user.id } });
-  return { ok: count > 0 };
+  if (!user) return fail(MSG.login);
+  const msg = await prisma.message.findUnique({ where: { id: messageId }, select: { senderId: true } });
+  if (!msg) return ok(); // já tinha sido apagada
+  if (msg.senderId !== user.id) return fail("Só dá para apagar as suas mensagens.");
+  await prisma.message.delete({ where: { id: messageId } });
+  return ok();
 }

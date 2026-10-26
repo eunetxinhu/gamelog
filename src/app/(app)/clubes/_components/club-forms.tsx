@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, LogIn, LogOut, Plus, Send, Trash2 } from "lucide-react";
 import { ImageAttach } from "@/components/image-attach";
 import { createClub, deleteClub, deleteClubPost, postToClub, toggleMembership } from "../_actions/clubs";
+import { useConfirm } from "@/components/confirm-dialog";
 
 const inputCls =
   "w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
@@ -61,6 +62,7 @@ export function MembershipButton({ clubId, member: initial, loggedIn }: { clubId
   const router = useRouter();
   const [member, setMember] = useState(initial);
   const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
 
   function onClick() {
     if (!loggedIn) {
@@ -72,7 +74,7 @@ export function MembershipButton({ clubId, member: initial, loggedIn }: { clubId
       if (res.ok && res.member !== undefined) {
         setMember(res.member);
         router.refresh();
-      } else if (res.message) alert(res.message);
+      } else if (res.message) void ask({ title: "Não deu certo", description: res.message, notice: true });
     });
   }
 
@@ -127,16 +129,14 @@ export function ClubComposer({ clubId }: { clubId: string }) {
 
 export function DeleteClubPostButton({ postId }: { postId: string }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
   return (
     <button
       type="button"
-      disabled={pending}
-      onClick={() => {
-        if (!confirm("Apagar esta publicação?")) return;
-        startTransition(async () => {
-          if ((await deleteClubPost(postId)).ok) router.refresh();
-        });
+      onClick={async () => {
+        if (await ask({ title: "Apagar esta publicação do clube?", description: "A foto dela também some.", action: () => deleteClubPost(postId) })) {
+          router.refresh();
+        }
       }}
       className="rounded-full p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-red-300"
       aria-label="Apagar publicação"
@@ -146,18 +146,21 @@ export function DeleteClubPostButton({ postId }: { postId: string }) {
   );
 }
 
-export function DeleteClubButton({ clubId }: { clubId: string }) {
+export function DeleteClubButton({ clubId, name }: { clubId: string; name?: string }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
   return (
     <button
       type="button"
-      disabled={pending}
-      onClick={() => {
-        if (!confirm("Apagar o clube e todas as publicações? Não dá para desfazer.")) return;
-        startTransition(async () => {
-          if ((await deleteClub(clubId)).ok) router.push("/clubes");
+      onClick={async () => {
+        const done = await ask({
+          title: name ? `Apagar o clube “${name}”?` : "Apagar o clube?",
+          description: "Todas as publicações e membros saem junto. Não dá para desfazer.",
+          confirmLabel: "Apagar clube",
+          action: () => deleteClub(clubId),
         });
+        // replace: o "voltar" do navegador não cai na página de um clube que não existe mais
+        if (done) router.replace("/clubes");
       }}
       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-red-300 hover:bg-red-950/40"
     >

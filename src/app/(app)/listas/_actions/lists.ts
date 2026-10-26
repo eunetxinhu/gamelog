@@ -9,6 +9,7 @@ import { notify } from "@/lib/notifications";
 import { visibleUsersWhere } from "@/lib/privacy";
 import { cleanListInput, LIST_LIMITS, type ListInput } from "@/lib/list-input";
 import { checkNewAccountText } from "@/lib/trust";
+import { fail, MSG, ok, type ActionResult } from "@/lib/action-result";
 
 export type ListResult = { ok: true; id: string } | { ok: false; message: string };
 
@@ -72,15 +73,20 @@ export async function saveList(input: ListInput & { id?: string }): Promise<List
   return { ok: true, id };
 }
 
-export async function deleteList(id: string): Promise<{ ok: boolean }> {
+/**
+ * Apaga uma lista (dona ou moderação). Repetir não dá erro: lista que já não existe
+ * conta como apagada. Quem chama navega para fora da página dela (ver DeleteListButton).
+ */
+export async function deleteList(id: string): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false };
-  const list = await prisma.gameList.findUnique({ where: { id }, select: { userId: true } });
-  if (!list || (list.userId !== user.id && !user.isAdmin)) return { ok: false };
+  if (!user) return fail(MSG.login);
+  const list = await prisma.gameList.findUnique({ where: { id }, select: { userId: true, user: { select: { username: true } } } });
+  if (!list) return ok();
+  if (list.userId !== user.id && !user.isAdmin) return fail("Essa lista não é sua.");
   await prisma.gameList.delete({ where: { id } });
   revalidatePath("/listas");
-  revalidatePath(`/u/${user.username}`);
-  return { ok: true };
+  revalidatePath(`/u/${list.user.username}`);
+  return ok();
 }
 
 /** Coloca um jogo no fim de uma das minhas listas (botão "Adicionar a uma lista" da página do jogo). */
@@ -150,12 +156,13 @@ export async function addListComment(listId: string, body: string): Promise<{ ok
 }
 
 /** Apaga quem escreveu, o dono da lista ou a moderação. */
-export async function deleteListComment(id: string): Promise<{ ok: boolean }> {
+export async function deleteListComment(id: string): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false };
+  if (!user) return fail(MSG.login);
   const c = await prisma.gameListComment.findUnique({ where: { id }, select: { userId: true, listId: true, list: { select: { userId: true } } } });
-  if (!c || (c.userId !== user.id && c.list.userId !== user.id && !user.isAdmin)) return { ok: false };
+  if (!c) return ok(); // já tinha sido apagado
+  if (c.userId !== user.id && c.list.userId !== user.id && !user.isAdmin) return fail(MSG.notAllowed);
   await prisma.gameListComment.delete({ where: { id } });
   revalidatePath(`/listas/${c.listId}`);
-  return { ok: true };
+  return ok();
 }

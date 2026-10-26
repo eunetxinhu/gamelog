@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isOwnImage, removeImage } from "@/lib/uploads";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkNewAccountText } from "@/lib/trust";
+import { fail, MSG, ok, type ActionResult } from "@/lib/action-result";
 
 export type ClubResult = { ok: true; slug?: string } | { ok: false; message: string };
 
@@ -102,34 +103,35 @@ export async function postToClub(clubId: string, rawBody: string, rawImage: stri
 }
 
 /** Autor, dono ou admin do clube apagam o post. */
-export async function deleteClubPost(postId: string): Promise<{ ok: boolean }> {
+export async function deleteClubPost(postId: string): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false };
+  if (!user) return fail(MSG.login);
   const post = await prisma.clubPost.findUnique({ where: { id: postId }, select: { userId: true, imageUrl: true, clubId: true, club: { select: { slug: true } } } });
-  if (!post) return { ok: false };
+  if (!post) return ok(); // já tinha sido apagada
 
   let allowed = post.userId === user.id || user.isAdmin;
   if (!allowed) {
     const m = await prisma.clubMember.findUnique({ where: { clubId_userId: { clubId: post.clubId, userId: user.id } }, select: { role: true } });
     allowed = m?.role === "OWNER" || m?.role === "ADMIN";
   }
-  if (!allowed) return { ok: false };
+  if (!allowed) return fail(MSG.notAllowed);
 
   await prisma.clubPost.delete({ where: { id: postId } });
   await removeImage(post.imageUrl, post.userId);
   revalidatePath(`/clubes/${post.club.slug}`);
-  return { ok: true };
+  return ok();
 }
 
-export async function deleteClub(clubId: string): Promise<{ ok: boolean }> {
+export async function deleteClub(clubId: string): Promise<ActionResult> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false };
+  if (!user) return fail(MSG.login);
   const club = await prisma.club.findUnique({ where: { id: clubId }, select: { ownerId: true, imageUrl: true } });
-  if (!club || (club.ownerId !== user.id && !user.isAdmin)) return { ok: false };
+  if (!club) return ok(); // já tinha sido apagado
+  if (club.ownerId !== user.id && !user.isAdmin) return fail("Só quem criou o clube pode apagá-lo.");
   await prisma.club.delete({ where: { id: clubId } });
   await removeImage(club.imageUrl, club.ownerId);
   revalidatePath("/clubes");
-  return { ok: true };
+  return ok();
 }
 
 // -----------------------------------------------------------------------------

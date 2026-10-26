@@ -49,7 +49,7 @@ export default async function ReleasesPage() {
       {empty ? (
         <div className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-400">
           {total === 0 ? "Sua wishlist está vazia." : "Nenhum jogo da sua wishlist tem lançamento marcado."}{" "}
-          Na página de um jogo que ainda vai sair, toque em “Quero jogar”. Veja os que estão{" "}
+          Na página de um jogo que ainda vai sair, toque em “Wishlist”. Veja os que estão{" "}
           <Link href="/games" className="text-brand-400 hover:underline">
             chegando em breve
           </Link>

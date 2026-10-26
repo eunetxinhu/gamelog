@@ -8,6 +8,7 @@ import { removeImage } from "@/lib/uploads";
 import { REPORT_REASONS } from "@/lib/report-reasons";
 import { rateLimit } from "@/lib/rate-limit";
 import { parsePrefs, type NotificationPrefs } from "@/lib/notification-prefs";
+import { fail, MSG, ok, type ActionResult } from "@/lib/action-result";
 
 /** Limite de denúncias por pessoa por dia (evita uso como arma). */
 const REPORTS_PER_DAY = 20;
@@ -170,11 +171,11 @@ async function authorOf(type: ReportTarget, id: string) {
   return (await prisma.message.findUnique({ where: { id }, select: { senderId: true } }))?.senderId;
 }
 
-export async function moderateReport(reportId: string, action: "dismiss" | "remove" | "ban"): Promise<{ ok: boolean }> {
+export async function moderateReport(reportId: string, action: "dismiss" | "remove" | "ban"): Promise<ActionResult> {
   const admin = await requireAdmin();
-  if (!admin) return { ok: false };
+  if (!admin) return fail(MSG.notAllowed);
   const report = await prisma.report.findUnique({ where: { id: reportId } });
-  if (!report) return { ok: false };
+  if (!report) return fail("Essa denúncia não existe mais.");
 
   if (action === "ban") {
     const author = await authorOf(report.targetType, report.targetId);
@@ -189,7 +190,7 @@ export async function moderateReport(reportId: string, action: "dismiss" | "remo
   });
   revalidatePath("/moderacao");
   revalidatePath("/feed");
-  return { ok: true };
+  return ok();
 }
 
 export async function setBanned(userId: string, banned: boolean): Promise<{ ok: boolean }> {

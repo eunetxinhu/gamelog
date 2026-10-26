@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 
-/** Coloca / tira o jogo da wishlist ("Quero jogar"). Devolve o estado final. */
+/** Coloca / tira o jogo da wishlist (quero comprar). Devolve o estado final. */
 export async function toggleWishlist(gameId: string): Promise<{ ok: boolean; wishlisted?: boolean }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false };

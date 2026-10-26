@@ -8,6 +8,7 @@ import { MentionText } from "@/components/mention-text";
 import { ReportButton } from "@/components/report-button";
 import { relativeTime } from "@/lib/format";
 import { addComment, deleteComment } from "@/app/(app)/_actions/social";
+import { useConfirm } from "@/components/confirm-dialog";
 
 export type CommentView = {
   id: string;
@@ -29,6 +30,7 @@ export function Comments({ activityId, initial, viewer, activityOwnerId }: Props
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -42,11 +44,10 @@ export function Comments({ activityId, initial, viewer, activityOwnerId }: Props
     });
   }
 
-  function onDelete(id: string) {
-    if (!confirm("Apagar este comentário?")) return;
-    startTransition(async () => {
-      if ((await deleteComment(id)).ok) setComments((c) => c.filter((x) => x.id !== id));
-    });
+  async function onDelete(id: string) {
+    if (await ask({ title: "Apagar este comentário?", action: () => deleteComment(id) })) {
+      setComments((c) => c.filter((x) => x.id !== id));
+    }
   }
 
   return (

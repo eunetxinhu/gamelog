@@ -13,6 +13,7 @@ import { WishlistQuickButton } from "@/components/wishlist-quick-button";
 import { wishlistSetFor } from "@/lib/wishlist";
 import { inWishlist } from "@/lib/wishlist-keys";
 import { DeleteListCommentButton, ListCommentForm, ListLikeButton } from "../_components/list-actions";
+import { DeleteListButton } from "../_components/delete-list-button";
 import { titleOf } from "@/lib/awards";
 
 type Props = { params: Promise<{ id: string }> };
@@ -62,6 +63,8 @@ export default async function ListPage({ params }: Props) {
               <Pencil className="size-4" aria-hidden /> Editar
             </Link>
           )}
+          {/* Mesmo lugar do "Apagar clube": na página, para a dona e para a moderação */}
+          {(isOwner || viewer?.isAdmin) && <DeleteListButton listId={list.id} title={list.title} compact />}
           {viewer && !isOwner && (
             <ReportButton
               targetType="LIST"

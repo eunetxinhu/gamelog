@@ -3,13 +3,24 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { moderateReport, setBanned } from "@/app/(app)/_actions/moderation";
+import { useConfirm } from "@/components/confirm-dialog";
 
 export function ModerationActions({ reportId, canBan }: { reportId: string; canBan: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const ask = useConfirm();
 
-  function run(action: "dismiss" | "remove" | "ban") {
-    if (action === "ban" && !confirm("Remover o conteúdo e suspender o autor?")) return;
+  async function run(action: "dismiss" | "remove" | "ban") {
+    if (action === "ban") {
+      const done = await ask({
+        title: "Remover o conteúdo e suspender o autor?",
+        description: "A conta fica suspensa até alguém da moderação reverter.",
+        confirmLabel: "Remover e suspender",
+        action: () => moderateReport(reportId, action),
+      });
+      if (done) router.refresh();
+      return;
+    }
     startTransition(async () => {
       if ((await moderateReport(reportId, action)).ok) router.refresh();
     });
