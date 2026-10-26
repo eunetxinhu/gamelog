@@ -17,6 +17,7 @@ import { GameCover } from "@/components/game-cover";
 import { ScoreBadge } from "@/components/score-badge";
 import { LogForm } from "./_components/log-form";
 import { WishlistButton } from "./_components/wishlist-button";
+import { WantToPlayButton } from "./_components/want-to-play-button";
 import { AddToList } from "./_components/add-to-list";
 import { getListCards } from "@/lib/lists";
 import { ListGrid } from "@/components/list-card";
@@ -62,7 +63,7 @@ export default async function GamePage({ params, searchParams }: Props) {
     viewer
       ? prisma.libraryEntry.findUnique({
           where: { userId_gameId: { userId: viewer.id, gameId: game.id } },
-          select: { playtimeMinutes: true, platinumAt: true },
+          select: { playtimeMinutes: true, platinumAt: true, source: true },
         })
       : null,
     viewer
@@ -144,7 +145,14 @@ export default async function GamePage({ params, searchParams }: Props) {
           </section>
 
           <div className="flex flex-wrap items-center gap-4 text-sm">
-            <WishlistButton gameId={game.id} slug={game.slug} initial={wishlisted} loggedIn={Boolean(viewer)} />
+            {/* Quero jogar = fila do que jogar; só aparece sem registro ou já na fila (os outros status ficam no registro abaixo) */}
+            {(!myLog || myLog.status === "BACKLOG") && (
+              <WantToPlayButton gameId={game.id} slug={game.slug} initial={myLog?.status === "BACKLOG"} loggedIn={Boolean(viewer)} />
+            )}
+            {/* Wishlist = quero comprar: some quando o jogo já é seu na Steam */}
+            {(myLibrary?.source !== "STEAM" || wishlisted) && (
+              <WishlistButton gameId={game.id} slug={game.slug} initial={wishlisted} loggedIn={Boolean(viewer)} />
+            )}
             {!viewer?.bannedAt && (
               <AddToList slug={game.slug} loggedIn={Boolean(viewer)} lists={myLists.map((l) => ({ id: l.id, title: l.title, hasGame: l.items.length > 0 }))} />
             )}

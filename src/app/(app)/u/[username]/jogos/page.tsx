@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { canSeeProfile } from "@/lib/privacy";
-import { ArrowLeft, Bookmark, CalendarClock, Hourglass, Medal, Target, Trophy } from "lucide-react";
+import { ArrowLeft, Bookmark, CalendarClock, Hourglass, Medal, Tag, Target, Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getAchievementSummary, getShelf, getShelfCounts, parseTab, PROFILE_TABS } from "@/lib/profile-games";
 import { getBacklogEstimates } from "@/lib/time-to-beat";
@@ -28,8 +28,8 @@ const EMPTY: Record<string, string> = {
   quase: "Nenhum jogo perto da platina (80% ou mais das conquistas). As conquistas são conferidas aos poucos a cada sincronização.",
   conquistas: "Nenhuma conquista conferida ainda. Elas vêm da Steam e são conferidas aos poucos a cada sincronização.",
   dropados: "Nenhum jogo dropado.",
-  backlog: "Backlog vazio.",
-  wishlist: "Nada na wishlist. Na página de um jogo, clique em “Quero jogar” para ser avisado das promoções.",
+  backlog: "Nada na fila. Na página de um jogo, toque em “Quero jogar” para guardar o que você pretende jogar.",
+  wishlist: "Nada na wishlist. Na página de um jogo, toque em “Wishlist” para ser avisado de promoções e do lançamento.",
 };
 
 /** Jogos do perfil por categoria (aberta pelos números do perfil). */
@@ -75,7 +75,8 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
             >
               {t.slug === "platinas" && <Trophy className="size-3.5 text-amber-400" aria-hidden />}
               {t.slug === "quase" && <Target className="size-3.5 text-brand-400" aria-hidden />}
-              {t.slug === "wishlist" && <Bookmark className="size-3.5 text-emerald-400" aria-hidden />}
+              {t.slug === "backlog" && <Bookmark className="size-3.5 text-ember-300" aria-hidden />}
+              {t.slug === "wishlist" && <Tag className="size-3.5 text-emerald-400" aria-hidden />}
               {t.slug === "conquistas" && <Medal className="size-3.5 text-ember-400" aria-hidden />}
               {t.label}
               <span className={`rounded-full px-1.5 text-xs tabular-nums ${active ? "bg-zinc-700 text-zinc-200" : "bg-zinc-800 text-zinc-500"}`}>
@@ -101,7 +102,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
           <p>
             {backlog.covered > 0 ? (
               <>
-                {isMe ? "Seu backlog" : "O backlog"} tem <strong className="text-zinc-50">{formatEstimate(backlog.minutes)}</strong> de jogo
+                {isMe ? "Sua fila de “Quero jogar”" : "A fila de “Quero jogar”"} tem <strong className="text-zinc-50">{formatEstimate(backlog.minutes)}</strong> de jogo
                 {backlog.covered < backlog.total && (
                   <span className="text-zinc-400">
                     {" "}
@@ -111,7 +112,7 @@ export default async function ProfileGamesPage({ params, searchParams }: Props) 
                 .
               </>
             ) : (
-              "Ainda não há estimativa de tempo para os jogos deste backlog."
+              "Ainda não há estimativa de tempo para os jogos desta fila."
             )}{" "}
             <span className="text-zinc-500">
               Estimativa pelas horas na Steam de quem finalizou no Poneglyph.gg ou, sem dados suficientes, pela média da RAWG.

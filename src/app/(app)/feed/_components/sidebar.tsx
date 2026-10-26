@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Bookmark, CalendarClock, Gamepad2, ListOrdered, Percent, Radio, Rocket, UserRound, Users } from "lucide-react";
+import { Bookmark, CalendarClock, Gamepad2, ListOrdered, Percent, Radio, Rocket, Tag, UserRound, Users } from "lucide-react";
 import { getMyClubs, getNowPlaying, getUpcomingWishlist, getWishlistDeals } from "@/lib/feed-sidebar";
 import { getPopularLists } from "@/lib/lists";
 import { Avatar } from "@/components/avatar";
@@ -169,7 +169,8 @@ export async function ShortcutsAndClubs({ userId, username }: { userId: string; 
   const clubs = await getMyClubs(userId);
   const links = [
     { href: `/u/${username}`, label: "Meu perfil", icon: UserRound },
-    { href: `/u/${username}/jogos?aba=wishlist`, label: "Quero jogar", icon: Bookmark },
+    { href: `/u/${username}/jogos?aba=backlog`, label: "Quero jogar", icon: Bookmark },
+    { href: `/u/${username}/jogos?aba=wishlist`, label: "Wishlist", icon: Tag },
     { href: `/u/${username}/jogos?aba=jogando`, label: "Jogando", icon: Gamepad2 },
     { href: "/listas", label: "Listas", icon: ListOrdered },
     { href: "/lancamentos", label: "Lançamentos", icon: CalendarClock },

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bookmark, BookmarkCheck } from "lucide-react";
+import { Tag } from "lucide-react";
 import { setWishlistBySlug } from "@/app/(app)/_actions/wishlist";
 
 /**
@@ -59,7 +59,7 @@ export function WishlistQuickButton({
           on ? "bg-emerald-500 text-zinc-950 ring-emerald-300/50 hover:bg-emerald-400" : "bg-zinc-950/70 text-zinc-100 ring-white/15 hover:bg-zinc-900"
         } ${error ? "ring-2 ring-rose-500" : ""} ${className}`}
       >
-        {on ? <BookmarkCheck className="size-4" aria-hidden /> : <Bookmark className="size-4" aria-hidden />}
+        <Tag className={`size-4 ${on ? "fill-zinc-950/25" : ""}`} aria-hidden />
       </button>
       <span role="status" className="sr-only">
         {error ?? ""}

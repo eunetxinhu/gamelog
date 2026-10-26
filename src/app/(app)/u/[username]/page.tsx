@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bookmark, CalendarDays, ChevronRight, GitCompareArrows, Lock, Medal, ScrollText, Settings, Sparkles, Target, Trophy, UserPlus } from "lucide-react";
+import { Bookmark, CalendarDays, ChevronRight, GitCompareArrows, Lock, Medal, ScrollText, Settings, Sparkles, Tag, Target, Trophy, UserPlus } from "lucide-react";
 import { getCompatibility, getTasteStats } from "@/lib/taste-data";
 import { wrappedYears } from "@/lib/wrapped";
 import { CompatChip } from "@/components/compatibility";
@@ -218,7 +218,7 @@ export default async function ProfilePage({ params }: Props) {
 
 /** Tudo que só aparece para quem pode ver o perfil. */
 async function loadProfileContent(profileId: string, viewerId: string | null) {
-  const [library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, taste, years] = await Promise.all([
+  const [library, completedLogs, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, taste, years, wantToPlay] = await Promise.all([
     prisma.libraryEntry.aggregate({ where: { userId: profileId }, _count: { _all: true }, _sum: { playtimeMinutes: true } }),
     prisma.gameLog.findMany({ where: { userId: profileId, status: "COMPLETED" }, select: { gameId: true } }),
     getPlatinums(profileId),
@@ -239,10 +239,12 @@ async function loadProfileContent(profileId: string, viewerId: string | null) {
     prisma.gameList.count({ where: { userId: profileId, items: { some: {} } } }),
     getTasteStats(profileId),
     wrappedYears(profileId),
+    // "Quero jogar": a fila do que jogar (status BACKLOG), mais recentes primeiro
+    prisma.gameLog.findMany({ where: { userId: profileId, status: "BACKLOG" }, orderBy: { updatedAt: "desc" }, take: 6, select: { game: { select: gameSelect } } }),
   ]);
   // Finalizados inclui as platinas (platinar implica ter terminado)
   const completedCount = new Set([...completedLogs.map((l) => l.gameId), ...platinumList.map((p) => p.game.id)]).size;
-  return { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, taste, years, viewerId };
+  return { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, wantToPlay, achievements, lists, listCount, taste, years, viewerId };
 }
 
 function LockedNotice({ text }: { text: string }) {
@@ -265,7 +267,7 @@ function ProfileContent({
   isMe: boolean;
   gamesHref: (aba: string) => string;
 }) {
-  const { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, achievements, lists, listCount, taste, years, viewerId } = data;
+  const { library, completedCount, platinumList, playing, nearPlatinum, mostPlayed, activities, favorites, progression, wishlist, wantToPlay, achievements, lists, listCount, taste, years, viewerId } = data;
   const earnedBadges = progression.badges.filter((b) => b.earned);
 
   return (
@@ -469,8 +471,16 @@ function ProfileContent({
             </ShelfSection>
           )}
 
+          {wantToPlay.length > 0 && (
+            <ShelfSection title="Quero jogar" href={gamesHref("backlog")} icon={<Bookmark className="size-4 text-ember-300" aria-hidden />}>
+              {wantToPlay.map(({ game }) => (
+                <Shelf key={game.id} game={game} />
+              ))}
+            </ShelfSection>
+          )}
+
           {wishlist.length > 0 && (
-            <ShelfSection title="Quero jogar" href={gamesHref("wishlist")} icon={<Bookmark className="size-4 text-emerald-400" aria-hidden />}>
+            <ShelfSection title="Wishlist" href={gamesHref("wishlist")} icon={<Tag className="size-4 text-emerald-400" aria-hidden />}>
               {wishlist.map(({ game }) => (
                 <Shelf key={game.id} game={game} />
               ))}

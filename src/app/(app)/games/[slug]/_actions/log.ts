@@ -113,3 +113,31 @@ export async function removeGameLog(gameId: string): Promise<ActionResult> {
   revalidatePath(`/u/${user.username}`);
   return ok();
 }
+
+/**
+ * "Quero jogar" num toque: coloca o jogo na fila (status Quero jogar, sem publicar no
+ * feed) ou tira. Não mexe em jogo que já tem outro status (Jogando, Finalizado…) e não
+ * apaga nota/review: nesses casos devolve uma mensagem para usar o registro abaixo.
+ */
+export async function setWantToPlay(gameId: string, want: boolean): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return fail(MSG.login);
+  if (user.bannedAt) return fail("Sua conta está suspensa.");
+  const game = await prisma.game.findUnique({ where: { id: gameId }, select: { slug: true } });
+  if (!game) return fail("Jogo não encontrado.");
+
+  const key = { userId_gameId: { userId: user.id, gameId } };
+  const log = await prisma.gameLog.findUnique({ where: key, select: { status: true, rating: true, review: true } });
+
+  if (want) {
+    if (log && log.status !== "BACKLOG") return fail("Esse jogo já está no seu perfil com outro status. Mude no registro abaixo.");
+    if (!log) await prisma.gameLog.create({ data: { userId: user.id, gameId, status: "BACKLOG" } });
+  } else if (log?.status === "BACKLOG") {
+    if (log.rating !== null || log.review?.trim()) return fail("Esse registro tem nota ou review. Para tirar, use “Tirar do perfil” no registro abaixo.");
+    await prisma.gameLog.delete({ where: key });
+  }
+
+  revalidatePath(`/games/${game.slug}`);
+  revalidatePath(`/u/${user.username}`);
+  return ok();
+}

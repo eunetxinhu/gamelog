@@ -9,21 +9,27 @@ import { getBacklogEstimates } from "@/lib/time-to-beat";
 import { formatEstimate } from "@/lib/time-to-beat-calc";
 
 /** Abas da página /u/[username]/jogos (o slug vai na URL: ?aba=platinas). */
+/**
+ * "Quero jogar" (slug `backlog`, status BACKLOG) é a fila do que a pessoa quer jogar,
+ * tenha o jogo ou não. "Wishlist" é o que ela quer comprar: avisos de promoção e
+ * lançamento, importada da Steam, e sai sozinha quando o jogo entra na biblioteca.
+ */
 export const PROFILE_TABS = [
   { slug: "biblioteca", label: "Biblioteca" },
   { slug: "jogando", label: "Jogando" },
+  { slug: "backlog", label: "Quero jogar" },
   { slug: "finalizados", label: "Finalizados" },
   { slug: "platinas", label: "Platinas" },
   { slug: "quase", label: "Quase lá" },
   { slug: "conquistas", label: "Conquistas" },
   { slug: "dropados", label: "Dropados" },
-  { slug: "backlog", label: "Backlog" },
-  { slug: "wishlist", label: "Quero jogar" },
+  { slug: "wishlist", label: "Wishlist" },
 ] as const;
 
 export type ProfileTab = (typeof PROFILE_TABS)[number]["slug"];
 
 export function parseTab(value: string | undefined): ProfileTab {
+  if (value === "quero-jogar") return "backlog";
   return PROFILE_TABS.some((t) => t.slug === value) ? (value as ProfileTab) : "biblioteca";
 }
 

@@ -38,6 +38,16 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
   const [pending, startTransition] = useTransition();
   const [hasLog, setHasLog] = useState(Boolean(initial));
 
+  // O registro pode mudar por fora (botão "Quero jogar" no topo): acompanha o status vindo
+  // do servidor sem remontar o formulário (remontar apagaria a mensagem de "salvo")
+  const serverStatus = initial?.status ?? null;
+  const [seenStatus, setSeenStatus] = useState(serverStatus);
+  if (serverStatus !== seenStatus) {
+    setSeenStatus(serverStatus);
+    setHasLog(serverStatus !== null);
+    if (serverStatus) setStatus(serverStatus);
+  }
+
   if (!loggedIn) {
     return (
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 text-sm text-zinc-300">
@@ -161,7 +171,7 @@ export function LogForm({ gameId, loggedIn, slug, initial }: Props) {
           className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-500 disabled:opacity-50 sm:flex-none sm:py-2"
         >
           {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Share2 className="size-4" aria-hidden />}
-          {status === "BACKLOG" ? "Salvar no backlog" : "Salvar e compartilhar"}
+          {status === "BACKLOG" ? "Salvar em Quero jogar" : "Salvar e compartilhar"}
         </button>
         {hasLog && (
           <button

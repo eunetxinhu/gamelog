@@ -305,6 +305,9 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
           where: { userId: user.id, source: "STEAM", gameId: { notIn: rows.map((r) => r.gameId) } },
         });
 
+        // Comprou: sai da wishlist (wishlist é "quero comprar"; "Quero jogar" é outra coisa)
+        if (rows.length) await tx.wishlistItem.deleteMany({ where: { userId: user.id, gameId: { in: rows.map((r) => r.gameId) } } });
+
         // 8d) Conquistas + platinas → publicação no feed (só platinas recentes)
         let platinums = 0;
         const platinumGameIds: string[] = [];
