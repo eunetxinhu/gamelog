@@ -51,6 +51,10 @@ export type SteamSyncSuccess = {
   recentlyPlayed: { appId: number; name: string; hours2Weeks: number }[];
   /** Publicações criadas no feed por esta sincronização */
   posted: { platinums: number; started: number; rare: number };
+  /** A Steam mandou 0 h em todos os jogos ("Sempre manter meu tempo total de jogo privado") */
+  playtimeHidden: boolean;
+  /** Jogos que ainda vão ter as conquistas conferidas nas próximas sincronizações */
+  pendingAchievementChecks: number;
   syncedAt: string; // ISO
 };
 

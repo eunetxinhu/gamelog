@@ -115,6 +115,8 @@ export async function getOwnedGames(steamId: string) {
     steamid: steamId,
     include_appinfo: 1,
     include_played_free_games: 1,
+    // Sem isso a Steam esconde alguns apps (jogos novos ou ainda não revisados)
+    skip_unvetted_apps: 0,
   });
   if (!r.ok) return r;
   return { ok: true as const, data: r.data.response };
@@ -132,26 +134,35 @@ export async function getRecentlyPlayedGames(steamId: string) {
 export type AchievementProgress = { unlocked: number; total: number; lastUnlockAt: Date | null };
 
 /**
- * Progresso de conquistas de um jogo. Devolve `null` quando não dá para saber
- * (jogo sem conquistas, conquistas privadas, erro da Steam): quem chama só pula o jogo.
- * Não usa `steamGet` porque aqui 400/403 são respostas normais, não chave inválida.
+ * Resultado da conferência de conquistas de um jogo:
+ *  - `ok`: progresso (pode ser `null` = jogo sem conquistas ou conquistas que a Steam não mostra)
+ *  - `retry`: a Steam falhou (limite, fora do ar, demorou): confere de novo na próxima
  */
-export async function getPlayerAchievements(steamId: string, appId: number): Promise<AchievementProgress | null> {
+export type AchievementCheck = { status: "ok"; progress: AchievementProgress | null } | { status: "retry" };
+
+/**
+ * Progresso de conquistas de um jogo. Não usa `steamGet` porque aqui 400/403 são
+ * respostas normais (jogo sem conquistas / sem estatísticas), não chave inválida.
+ */
+export async function getPlayerAchievements(steamId: string, appId: number): Promise<AchievementCheck> {
   const url = new URL(`${STEAM_API}/ISteamUserStats/GetPlayerAchievements/v1/`);
   url.search = new URLSearchParams({ key: apiKey(), steamid: steamId, appid: String(appId) }).toString();
   try {
     const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (!res.ok) return null;
+    // 429 e 5xx: falha da Steam, não do jogo
+    if (res.status === 429 || res.status >= 500) return { status: "retry" };
+    if (!res.ok) return { status: "ok", progress: null };
     const body = (await res.json()) as {
       playerstats?: { success?: boolean; achievements?: { achieved: number; unlocktime: number }[] };
     };
     const list = body.playerstats?.success ? body.playerstats.achievements : undefined;
-    if (!list?.length) return null;
+    if (!list?.length) return { status: "ok", progress: null };
     const done = list.filter((a) => a.achieved === 1);
     const last = Math.max(0, ...done.map((a) => a.unlocktime));
-    return { unlocked: done.length, total: list.length, lastUnlockAt: last ? new Date(last * 1000) : null };
+    return { status: "ok", progress: { unlocked: done.length, total: list.length, lastUnlockAt: last ? new Date(last * 1000) : null } };
   } catch {
-    return null;
+    // Timeout, rede ou JSON quebrado
+    return { status: "retry" };
   }
 }
 

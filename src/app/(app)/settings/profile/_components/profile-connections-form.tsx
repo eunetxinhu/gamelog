@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition, type ComponentProps, type R
 import { AlertTriangle, CheckCircle2, Clock, Gamepad2, Loader2, LogIn, RefreshCw, Unlink } from "lucide-react";
 import { syncSteamLibrary, unlinkSteam } from "../_actions/steam";
 import type { SteamSyncError, SteamSyncResult } from "../_actions/types";
-import { SteamPrivacyNotice } from "./steam-privacy-notice";
+import { PlaytimeHiddenNotice, SteamPrivacyNotice } from "./steam-privacy-notice";
 
 /** Rota que inicia o "Entrar com Steam" (login oficial, OpenID 2.0). */
 const STEAM_LOGIN_HREF = "/api/steam/login";
@@ -21,6 +21,8 @@ export type ProfileConnectionsProps = {
     lastSyncAt: string | null; // ISO
     gamesCount: number;
     totalHours: number;
+    /** Biblioteca com 0 minutos em todos os jogos (tempo de jogo oculto na Steam) */
+    playtimeHidden: boolean;
   };
   /** Acabou de voltar do login da Steam com sucesso (?steam=linked) */
   justLinked: boolean;
@@ -83,6 +85,7 @@ function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnections
   const gamesCount = success?.totalGames ?? initial.gamesCount;
   const totalHours = success?.totalHours ?? initial.totalHours;
   const lastSync = success?.syncedAt ?? initial.lastSyncAt;
+  const hiddenPlaytime = linked && !error && (success ? success.playtimeHidden : initial.playtimeHidden);
 
   return (
     <Card
@@ -157,6 +160,8 @@ function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnections
           <SteamPrivacyNotice reason={error.privacyReason ?? "GAME_DETAILS"} onRetry={runSync} retrying={pending} />
         )}
 
+        {hiddenPlaytime && <PlaytimeHiddenNotice onRetry={runSync} retrying={pending} />}
+
         {error && (error.code === "SYNC_COOLDOWN" || error.code === "STEAM_LOGIN_CANCELLED") && (
           <Alert tone="info" icon={<Clock className="size-4" aria-hidden />}>
             {error.message}
@@ -191,6 +196,12 @@ function SteamCard({ steam: initial, justLinked, linkError }: ProfileConnections
                   .filter(Boolean)
                   .join(" e ")}
                 .
+              </p>
+            )}
+            {success.pendingAchievementChecks > 0 && (
+              <p className="mt-1 text-emerald-200/80">
+                Ainda faltam conferir as conquistas de {success.pendingAchievementChecks.toLocaleString("pt-BR")} jogo(s): as
+                platinas deles vão aparecendo sozinhas nas próximas sincronizações.
               </p>
             )}
             {success.recentlyPlayed.length > 0 && (
