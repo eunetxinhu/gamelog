@@ -39,6 +39,7 @@ export default async function ProfileSettingsPage({ searchParams }: Props) {
           lastSyncAt: user.steamLastSyncAt?.toISOString() ?? null,
           gamesCount: library._count._all,
           totalHours: Math.round((library._sum.playtimeMinutes ?? 0) / 60),
+          playtimeHidden: library._count._all > 0 && (library._sum.playtimeMinutes ?? 0) === 0,
         }}
         justLinked={query.steam === "linked" && Boolean(user.steamId)}
         linkError={linkError}

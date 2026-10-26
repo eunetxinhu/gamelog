@@ -14,18 +14,21 @@ import {
   getPlayerSummary,
   getRecentlyPlayedGames,
   steamCoverUrl,
-  type AchievementProgress,
+  type AchievementCheck,
   type SteamFetchError,
   type SteamOwnedGame,
 } from "@/lib/steam/api";
 import type { SteamSyncError, SteamSyncResult } from "@/app/(app)/settings/profile/_actions/types";
 import { detectSteamPrivacy } from "@/lib/steam/privacy";
 import { nextSyncAt } from "@/lib/steam/schedule";
+import { ACHIEVEMENT_CONCURRENCY, achievementQueue, playtimeHidden } from "@/lib/steam/achievement-queue";
 
 /** Intervalo mínimo entre sincronizações do mesmo usuário. */
 const SYNC_COOLDOWN_SECONDS = 5 * 60;
-/** Quantos jogos têm as conquistas checadas por sincronização. */
-const ACHIEVEMENT_CHECKS_PER_SYNC = 20;
+/** Tempo máximo gasto conferindo conquistas numa sincronização (o cron tem 60 s para várias pessoas). */
+const ACHIEVEMENT_BUDGET_MS = 25_000;
+/** Ainda tem jogo para conferir: a próxima sincronização do cron vem logo. */
+const BACKLOG_RESYNC_MS = 15 * 60 * 1000;
 /** Jogos com menos conquistas que isso não contam como platina (ex.: CS2 tem 1). */
 export const MIN_ACHIEVEMENTS_FOR_PLATINUM = 5;
 /** Conquista abaixo disso (% de jogadores) vira publicação "conquista rara". */
@@ -229,38 +232,32 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
     const allGames = [...games, ...family];
 
     // 7) Conquistas (fora da transação: são chamadas de rede) -------------------
-    // Até ACHIEVEMENT_CHECKS_PER_SYNC jogos por vez: primeiro os jogados nas últimas
-    // 2 semanas, depois os nunca checados. A biblioteca inteira é coberta em algumas sincronizações.
-    // Jogos da família entram mesmo sem horas conhecidas (o registro no GameLog já indica que jogou).
-    // Também entra quem foi jogado depois da última checagem (ex.: ficou mais de 2 semanas sem sincronizar).
-    const candidates = allGames
-      .filter((g) => ((g.playtime_forever ?? 0) > 0 || familyIds.has(g.appid)) && !prevByApp.get(g.appid)?.platinumAt)
-      .map((g) => {
-        const checkedAt = prevByApp.get(g.appid)?.achievementsCheckedAt ?? null;
-        return {
-          g,
-          recent: minutes2w(g) > 0,
-          family: familyIds.has(g.appid),
-          checked: Boolean(checkedAt),
-          playedSinceCheck: Boolean(checkedAt && g.rtime_last_played && g.rtime_last_played * 1000 > checkedAt.getTime()),
-        };
-      })
-      .filter((c) => c.recent || !c.checked || c.playedSinceCheck)
-      .sort(
-        (a, b) =>
-          Number(b.recent) - Number(a.recent) ||
-          Number(b.playedSinceCheck) - Number(a.playedSinceCheck) ||
-          Number(b.family) - Number(a.family) ||
-          b.g.playtime_forever - a.g.playtime_forever,
-      )
-      .slice(0, ACHIEVEMENT_CHECKS_PER_SYNC);
+    // Primeiro os jogados nas últimas 2 semanas, depois os nunca conferidos (ver
+    // lib/steam/achievement-queue.ts). Conta nova confere até 100 por vez; o resto
+    // vem nas próximas sincronizações, que o cron puxa para logo.
+    // Com o tempo de jogo oculto na Steam, todos os jogos entram (sem horas não dá
+    // para saber quais foram jogados).
+    const hiddenPlaytime = playtimeHidden(games);
+    const { queue: candidates, pending } = achievementQueue({
+      games: allGames,
+      familyIds,
+      prev: prevByApp,
+      minutes2w,
+      hiddenPlaytime,
+    });
 
-    const achievements = new Map<number, AchievementProgress | null>();
-    for (let i = 0; i < candidates.length; i += 5) {
-      const batch = candidates.slice(i, i + 5);
+    const achievements = new Map<number, AchievementCheck>();
+    const achievementsStarted = Date.now();
+    let retries = 0;
+    for (let i = 0; i < candidates.length; i += ACHIEVEMENT_CONCURRENCY) {
+      // Steam limitando ou lenta: para por aqui e continua na próxima sincronização
+      if (retries >= 3 || Date.now() - achievementsStarted > ACHIEVEMENT_BUDGET_MS) break;
+      const batch = candidates.slice(i, i + ACHIEVEMENT_CONCURRENCY);
       const results = await Promise.all(batch.map((c) => getPlayerAchievements(steamId, c.g.appid)));
       batch.forEach((c, j) => achievements.set(c.g.appid, results[j]));
+      retries += results.filter((r) => r.status === "retry").length;
     }
+    const unchecked = pending + candidates.filter((c) => achievements.get(c.g.appid)?.status !== "ok").length;
 
     // 8) Persistência -----------------------------------------------------------
     const syncedAt = new Date();
@@ -311,9 +308,11 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
         // 8d) Conquistas + platinas → publicação no feed (só platinas recentes)
         let platinums = 0;
         const platinumGameIds: string[] = [];
-        for (const [appId, progress] of achievements) {
+        for (const [appId, check] of achievements) {
           const gameId = gameIdByApp.get(appId);
-          if (!gameId) continue;
+          // Falha da Steam: não marca como conferido, tenta de novo na próxima
+          if (!gameId || check.status !== "ok") continue;
+          const progress = check.progress;
           const isPlatinum =
             progress !== null && progress.total >= MIN_ACHIEVEMENTS_FOR_PLATINUM && progress.unlocked === progress.total;
           const platinumAt = isPlatinum ? (progress.lastUnlockAt ?? syncedAt) : null;
@@ -353,7 +352,13 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
         const minutesLast2Weeks = allGames.reduce((acc, g) => acc + minutes2w(g), 0);
         await tx.user.update({
           where: { id: user.id },
-          data: { steamLastSyncAt: syncedAt, steamNextSyncAt: nextSyncAt({ minutesLast2Weeks, lastSeenAt: user.lastSeenAt, now: syncedAt }) },
+          data: {
+            steamLastSyncAt: syncedAt,
+            steamNextSyncAt:
+              unchecked > 0
+                ? new Date(syncedAt.getTime() + BACKLOG_RESYNC_MS)
+                : nextSyncAt({ minutesLast2Weeks, lastSeenAt: user.lastSeenAt, now: syncedAt }),
+          },
         });
 
         return {
@@ -418,6 +423,8 @@ export async function syncSteamForUser(user: SyncUser): Promise<SteamSyncResult>
         totalHours: Math.round(totalMinutes / 60),
         recentlyPlayed,
         posted,
+        playtimeHidden: hiddenPlaytime,
+        pendingAchievementChecks: unchecked,
         syncedAt: syncedAt.toISOString(),
       },
     };
