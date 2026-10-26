@@ -35,6 +35,9 @@ export type SteamPlayerSummary = {
   /** 1 = privado/amigos, 3 = público */
   communityvisibilitystate: number;
   profilestate?: number;
+  /** Jogo aberto agora (só aparece se o perfil e os detalhes de jogos forem públicos) */
+  gameid?: string;
+  gameextrainfo?: string;
 };
 
 /**
@@ -62,7 +65,7 @@ function apiKey() {
   return key;
 }
 
-async function steamGet<T>(path: string, params: Record<string, string | number>): Promise<SteamResult<T>> {
+async function steamGet<T>(path: string, params: Record<string, string | number>, revalidate?: number): Promise<SteamResult<T>> {
   const url = new URL(`${STEAM_API}${path}`);
   url.searchParams.set("key", apiKey());
   url.searchParams.set("format", "json");
@@ -70,7 +73,10 @@ async function steamGet<T>(path: string, params: Record<string, string | number>
 
   let res: Response;
   try {
-    res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+    res = await fetch(url, {
+      ...(revalidate ? { next: { revalidate } } : { cache: "no-store" as const }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
   } catch (err) {
     if (err instanceof DOMException && err.name === "TimeoutError") return { ok: false, error: { kind: "TIMEOUT" } };
     return { ok: false, error: { kind: "UNAVAILABLE" } };
@@ -93,6 +99,15 @@ export async function getPlayerSummary(steamId: string): Promise<SteamResult<Ste
   const r = await steamGet<PlayerSummariesResponse>("/ISteamUser/GetPlayerSummaries/v2/", { steamids: steamId });
   if (!r.ok) return r;
   return { ok: true, data: r.data.response.players?.[0] ?? null };
+}
+
+/** Vários perfis de uma vez (até 100 por chamada), com cache curto: usado no "Jogando agora". */
+export async function getPlayerSummaries(steamIds: string[], revalidate = 60): Promise<SteamResult<SteamPlayerSummary[]>> {
+  const ids = [...new Set(steamIds)].slice(0, 100);
+  if (ids.length === 0) return { ok: true, data: [] };
+  const r = await steamGet<PlayerSummariesResponse>("/ISteamUser/GetPlayerSummaries/v2/", { steamids: [...ids].sort().join(",") }, revalidate);
+  if (!r.ok) return r;
+  return { ok: true, data: r.data.response.players ?? [] };
 }
 
 export async function getOwnedGames(steamId: string) {

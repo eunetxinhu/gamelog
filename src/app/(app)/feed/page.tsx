@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Camera, Mail, PenSquare, Search, Users } from "lucide-react";
@@ -13,6 +13,7 @@ import { relativeTime } from "@/lib/format";
 import { ActivityCard } from "@/components/activity-card";
 import { Avatar } from "@/components/avatar";
 import { PhotoComposer } from "./_components/photo-composer";
+import { DealsCard, NowPlayingCard, PopularListsCard, ReleasesCard, ShortcutsAndClubs } from "./_components/sidebar";
 import { DismissOnboarding } from "../bem-vindo/_components/finish-button";
 import { onboardingSteps } from "@/lib/onboarding";
 import type { GameOption } from "./_actions/photo-post";
@@ -98,7 +99,13 @@ export default async function FeedPage({ searchParams }: Props) {
       : `/feed?tab=${tab}&before=${encodeURIComponent(items[items.length - 1].createdAt.toISOString())}`;
 
   return (
-    <main className="mx-auto grid max-w-5xl gap-8 px-4 py-4 sm:py-8 lg:grid-cols-[1fr_280px]">
+    // Telas largas (xl): três colunas, com atalhos e clubes à esquerda
+    <main className="mx-auto grid max-w-5xl gap-8 px-4 py-4 sm:py-8 lg:grid-cols-[minmax(0,1fr)_280px] xl:max-w-7xl xl:grid-cols-[220px_minmax(0,1fr)_300px]">
+      <aside className="hidden xl:sticky xl:top-20 xl:block xl:self-start">
+        <Suspense fallback={null}>
+          <ShortcutsAndClubs userId={viewer.id} username={viewer.username} />
+        </Suspense>
+      </aside>
       {/* Celular: botão flutuante abre o post de fotos, acima da barra inferior */}
       {!viewer.bannedAt && (
         <Link
@@ -168,7 +175,7 @@ export default async function FeedPage({ searchParams }: Props) {
       </div>
 
       {/* No computador a lateral acompanha a rolagem do feed */}
-      <aside className="space-y-6 lg:sticky lg:top-20 lg:self-start">
+      <aside className="scrollbar-none space-y-6 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-y-auto lg:pb-4">
         <Link
           href="/games"
           className="hidden items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-500 md:flex"
@@ -224,6 +231,22 @@ export default async function FeedPage({ searchParams }: Props) {
             <PenSquare className="size-4" aria-hidden /> Nova mensagem
           </Link>
         </section>
+
+        {/* Cada card carrega sozinho (o da Steam pode demorar) e some quando não tem nada */}
+        <div className="hidden space-y-6 lg:block">
+          <Suspense fallback={null}>
+            <NowPlayingCard viewerId={viewer.id} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <ReleasesCard userId={viewer.id} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <DealsCard userId={viewer.id} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <PopularListsCard viewerId={viewer.id} />
+          </Suspense>
+        </div>
 
         {suggestions.length > 0 && (
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
