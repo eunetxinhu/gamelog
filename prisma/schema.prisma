@@ -1,10 +1,10 @@
 // =============================================================================
-//  GameLog — schema.prisma (Prisma ORM 7 + Supabase Postgres)
+//  GameLog — schema.prisma (Prisma ORM 7 + Postgres na Neon)
 // -----------------------------------------------------------------------------
 //  • Prisma 7: a URL do banco NÃO fica mais aqui; ela vive em prisma.config.ts
 //    e o client é instanciado com driver adapter (@prisma/adapter-pg).
-//  • User.id === auth.users.id (UUID do Supabase Auth). O perfil público é
-//    criado no primeiro login (ver src/lib/auth.ts → ensureProfile).
+//  • Login próprio: User.id é o UUID da conta; e-mail e senha ficam em
+//    AuthAccount, sessões em Session (ver src/lib/session.ts).
 //  • A Steam é vinculada só por "Entrar com Steam" (OpenID 2.0, ver
 //    src/lib/steam/openid.ts): o steamId nunca vem digitado pelo usuário.
 //  • Constraints que o Prisma não expressa (CHECK de nota 1–5, posição 1–4 do
@@ -115,7 +115,7 @@ enum LibrarySource {
 // -----------------------------------------------------------------------------
 
 model User {
-  /// Mesmo UUID de auth.users (Supabase). Não usa default: vem do Auth.
+  /// UUID gerado pelo app no cadastro (as contas antigas mantêm o id que tinham no Supabase).
   id          String  @id @db.Uuid
   username    String  @unique @db.VarChar(30)
   displayName String? @map("display_name") @db.VarChar(60)
@@ -361,7 +361,7 @@ model Activity {
   rating          Int?          @db.SmallInt
   review          String?
   containsSpoiler Boolean       @default(false) @map("contains_spoiler")
-  /// Primeira foto (Supabase Storage). Mantida para compatibilidade: a lista completa é `images`
+  /// Primeira foto (Cloudflare R2). Mantida para compatibilidade: a lista completa é `images`
   imageUrl        String?       @map("image_url")
   /// Fotos da publicação (até 4), na ordem escolhida
   images          String[]      @default([])

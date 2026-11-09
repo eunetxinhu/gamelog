@@ -40,8 +40,12 @@ test.describe("logada como Ana", () => {
 
   test("busca com Ctrl+K encontra jogo e abre a página", async ({ page }) => {
     await page.goto("/feed");
-    await page.keyboard.press("Control+k");
     const dialog = page.getByRole("dialog", { name: "Buscar" });
+    // O atalho só existe depois da hidratação: tenta de novo até a busca abrir
+    await expect(async () => {
+      await page.keyboard.press("Control+k");
+      await expect(dialog).toBeVisible({ timeout: 1000 });
+    }).toPass();
     await dialog.getByRole("combobox").fill("Ponta a Ponta");
     await expect(dialog.getByRole("option", { name: /Jogo Ponta a Ponta/ })).toBeVisible();
     await page.keyboard.press("Enter");

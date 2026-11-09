@@ -74,7 +74,7 @@ export async function setFavorites(slugs: (string | null)[]): Promise<AccountRes
 }
 
 // -----------------------------------------------------------------------------
-//  Upload de foto e capa (Supabase Storage, ver lib/uploads.ts)
+//  Upload de foto e capa (Cloudflare R2, ver lib/uploads.ts)
 // -----------------------------------------------------------------------------
 
 /** Envia a foto ou a capa e já salva no perfil. `kind` vem no FormData. */

@@ -21,7 +21,7 @@ export function buildCsp({ nonce, dev }: { nonce: string; dev: boolean }): strin
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(dev ? ["'unsafe-eval'"] : [])],
     // React usa style="" (barras de progresso, notas): precisa de 'unsafe-inline' nos estilos
     "style-src": ["'self'", "'unsafe-inline'"],
-    // Capas e avatares vêm de vários CDNs (Steam, RAWG, Supabase)
+    // Capas e avatares vêm de vários CDNs (Steam, RAWG, Cloudflare R2)
     "img-src": ["'self'", "data:", "blob:", "https:"],
     // Trailers da Steam (HLS: o hls.js usa blob:)
     "media-src": ["'self'", "blob:", "https:"],

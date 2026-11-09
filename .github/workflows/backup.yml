@@ -1,15 +1,15 @@
 name: Backup do banco
 
-# No plano grátis o Supabase não faz backup diário. Este workflow faz um dump lógico
-# toda noite (o mesmo método da documentação do Supabase: roles + schema + dados),
-# CRIPTOGRAFA com a sua senha e guarda como artefato por 30 dias.
+# A Neon guarda só um histórico curto no plano grátis. Este workflow faz um dump lógico
+# (pg_dump, formato custom) toda noite, CRIPTOGRAFA com a sua senha e guarda como
+# artefato por 30 dias.
 #
 # ⚠️ O repositório é público: qualquer pessoa pode baixar artefatos. Por isso o dump
 # só sai daqui criptografado (AES-256). Sem a senha, o arquivo não serve para nada.
 #
 # Configure em Settings → Secrets and variables → Actions:
-#   BACKUP_DATABASE_URL  conexão "Session pooler" do Supabase (porta 5432)
-#                        Project Settings → Database → Connection string → Session pooler
+#   BACKUP_DATABASE_URL  conexão DIRETA da Neon (host sem "-pooler")
+#                        Neon → Connect → desmarque "Connection pooling"
 #   BACKUP_PASSPHRASE    uma senha longa (guarde num gerenciador de senhas: sem ela
 #                        não dá para restaurar)
 #
@@ -40,23 +40,16 @@ jobs:
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: supabase/setup-cli@v1
-        if: steps.check.outputs.enabled == 'true'
-        with:
-          version: latest
-
-      - name: Dump (roles, schema e dados)
+      - name: Dump (schema e dados)
         if: steps.check.outputs.enabled == 'true'
         run: |
           set -euo pipefail
           mkdir -p dump
-          supabase db dump --db-url "$DB_URL" -f dump/roles.sql --role-only
-          supabase db dump --db-url "$DB_URL" -f dump/schema.sql
-          supabase db dump --db-url "$DB_URL" -f dump/data.sql --use-copy --data-only \
-            -x "storage.buckets_vectors" -x "storage.vector_indexes"
+          # pg_dump da mesma versão do servidor da Neon (Postgres 17), via Docker
+          docker run --rm -e DB_URL postgres:17-alpine \
+            sh -c 'pg_dump "$DB_URL" --format=custom --no-owner --no-privileges' > dump/poneglyph.dump
           # Dump vazio = algo deu errado (conexão, permissão): falha em vez de guardar lixo
-          test -s dump/schema.sql
-          test -s dump/data.sql
+          test -s dump/poneglyph.dump
           ls -la dump
 
       - name: Compactar e criptografar

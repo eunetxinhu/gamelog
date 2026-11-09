@@ -1,6 +1,6 @@
 # Poneglyph.gg — rede social de registro e avaliação de jogos
 
-Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · Supabase (Auth + Postgres) · Prisma 7 · RAWG/IGDB · Steam Web API + Steam OpenID
+Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · Postgres na Neon · Cloudflare R2 (fotos) · login próprio (bcrypt + sessão em cookie) · Prisma 7 · RAWG/IGDB · Steam Web API + Steam OpenID
 
 ---
 
@@ -24,7 +24,7 @@ gamelog/
    │  ├─ (auth)/
    │  │  ├─ login/page.tsx
    │  │  ├─ signup/page.tsx
-   │  │  └─ auth/callback/route.ts          troca o code do Supabase por sessão
+   │  │  └─ auth/confirmar/route.ts         link do e-mail de confirmação → sessão
    │  ├─ (app)/                             área logada (layout com navbar)
    │  │  ├─ layout.tsx
    │  │  ├─ feed/
@@ -66,8 +66,10 @@ gamelog/
    │  └─ rating-stars.tsx
    ├─ lib/
    │  ├─ prisma.ts                          ✅ singleton + @prisma/adapter-pg
-   │  ├─ auth.ts                            ✅ getCurrentUser() (cria perfil no 1º login)
-   │  ├─ supabase/server.ts                 ✅
+   │  ├─ auth.ts                            ✅ getCurrentUser() pela sessão
+   │  ├─ session.ts                         ✅ sessão (cookie httpOnly + tabela sessions)
+   │  ├─ auth/accounts.ts                   ✅ cadastro, senha, links de e-mail
+   │  ├─ r2.ts                              ✅ fotos no Cloudflare R2 (S3)
    │  ├─ steam/api.ts                       ✅ cliente tipado da Steam Web API
    │  ├─ steam/openid.ts                    ✅ Steam OpenID 2.0 (URL de login + validação)
    │  └─ catalog/rawg.ts                    busca + upsert em `games`
@@ -100,7 +102,7 @@ Convenção: `_actions` e `_components` (pastas com `_`) são privadas da rota e
 
 ```bash
 npm install
-cp .env.example .env            # preencha Supabase, APP_URL, Steam e RAWG
+cp .env.example .env            # preencha DATABASE_URL/DIRECT_URL, APP_URL, Steam e RAWG (R2 e Resend são opcionais em dev)
 
 # 1ª migration: gere sem aplicar, cole prisma/sql/constraints.sql no fim, aplique
 npx prisma migrate dev --name init --create-only
@@ -112,20 +114,21 @@ npm run dev
 
 `APP_URL` precisa ser o endereço exato do site (em dev, `http://localhost:3000`): a Steam devolve o login para `APP_URL/api/steam/callback`.
 
-### Deploy (Vercel + Supabase)
+### Deploy (Vercel + Neon + Cloudflare R2)
 
 1. Suba o projeto para um repositório no GitHub (o `.env` fica de fora pelo `.gitignore`).
 2. Na Vercel: **Add New → Project**, importe o repositório. O build já é `prisma generate && next build`.
 3. Em **Settings → Environment Variables**, cadastre as mesmas variáveis do `.env`, trocando `APP_URL` pelo domínio da Vercel (ex.: `https://gamelog.vercel.app`, sem barra no final).
-4. No Supabase, em **Authentication → URL Configuration**: Site URL = o domínio da Vercel e, em Redirect URLs, `https://SEU-DOMINIO/auth/callback`.
-5. Migrations rodam sozinhas no build de **produção** (`scripts/migrate-production.mjs` → `prisma migrate deploy`). Para isso, cadastre `DIRECT_URL` na Vercel (conexão direta do Supabase, porta 5432). Prévias de PR e o CI não mexem no banco. Se a migration falhar, o build falha e a versão anterior continua no ar.
-   - Sem acesso a uma máquina, também dá para colar o `migration.sql` no SQL Editor do Supabase, desde que a migration seja registrada em `_prisma_migrations` (senão o próximo deploy tenta aplicar de novo).
+4. Migrations rodam sozinhas no build de **produção** (`scripts/migrate-production.mjs` → `prisma migrate deploy`), pela `DIRECT_URL` (conexão direta da Neon, host sem `-pooler`). Prévias de PR e o CI não mexem no banco. Se a migration falhar, o build falha e a versão anterior continua no ar.
+5. `regions` no `vercel.json` precisa ser a mais próxima do banco (Neon em us-west-2 → `pdx1`).
 
 O "Entrar com Steam" passa a voltar para `APP_URL/api/steam/callback` sozinho, e os cards de compartilhamento usam `APP_URL` como base.
 
-### Login com Steam
+### Login
 
-Precisa da chave secreta do Supabase em `SUPABASE_SECRET_KEY` (Project Settings → API Keys → Secret keys → `sb_secret_…`), no `.env` e na Vercel. Sem ela o botão "Entrar com Steam" some do login e a Steam só pode ser vinculada a uma conta de e-mail. Contas criadas pela Steam usam um e-mail interno (`steam-<id>@steam-login.gamelog.app`) e não podem desvincular a Steam (é o único login delas).
+Login próprio, sem serviço externo: senha com bcrypt em `auth_accounts`, sessão = token aleatório num cookie `httpOnly` (`pg_session`, 30 dias, renovado no uso) cujo hash fica em `sessions`. Sair derruba a sessão no banco; trocar a senha derruba todas. Links de confirmação e de "Esqueci a senha" são tokens de uso único (`auth_tokens`, 48 h e 1 h). Sem `RESEND_API_KEY`/`EMAIL_FROM`, o cadastro entra direto e "Esqueci a senha" fica desligado.
+
+**Entrar com Steam** cria a conta sem e-mail nem senha. Essas contas não podem desvincular a Steam (é o único login delas).
 
 ### Crons
 
@@ -148,65 +151,43 @@ npm run lint        # ESLint com as regras do Next.js (eslint.config.mjs)
 
 ### Backup e restauração
 
-No plano grátis o Supabase não faz backup diário. `.github/workflows/backup.yml` faz toda noite (03h23 de Brasília) o dump recomendado pelo Supabase (roles, schema e dados), **criptografa com AES-256** e guarda como artefato do GitHub por 30 dias. O repositório é público e qualquer um pode baixar artefatos, por isso o arquivo só sai criptografado.
+`.github/workflows/backup.yml` faz toda noite (03h23 de Brasília) um `pg_dump` (formato custom), **criptografa com AES-256** e guarda como artefato do GitHub por 30 dias. O repositório é público e qualquer um pode baixar artefatos, por isso o arquivo só sai criptografado.
 
 Configure em **Settings → Secrets and variables → Actions**:
 
-- `BACKUP_DATABASE_URL`: conexão **Session pooler** do Supabase (Project Settings → Database → Connection string → Session pooler, porta 5432). Os runners do GitHub não têm IPv6, então a conexão direta não funciona.
+- `BACKUP_DATABASE_URL`: conexão **direta** da Neon (Connect → desmarque "Connection pooling").
 - `BACKUP_PASSPHRASE`: uma senha longa. **Guarde num gerenciador de senhas: sem ela o backup não abre.**
 
 Para rodar na hora: Actions → Backup do banco → Run workflow.
 
-Restaurar (num projeto Supabase novo ou no mesmo, com o banco vazio):
+Restaurar (num banco vazio, por exemplo um branch novo na Neon):
 
 ```bash
 # 1) Baixe o artefato backup-AAAA-MM-DD em Actions → Backup do banco → (execução) → Artifacts
 unzip backup-AAAA-MM-DD.zip
 gpg -d poneglyph-AAAA-MM-DD.tar.gz.gpg | tar -xz        # pede a BACKUP_PASSPHRASE
 
-# 2) Restaura (comando da documentação do Supabase)
-psql --single-transaction --variable ON_ERROR_STOP=1 \
-  --file roles.sql --file schema.sql \
-  --command 'SET session_replication_role = replica' \
-  --file data.sql \
-  --dbname "CONEXAO_SESSION_POOLER"
+# 2) Restaura
+pg_restore --no-owner --no-privileges --exit-on-error --dbname "CONEXAO_DIRETA" poneglyph.dump
 ```
 
-As fotos ficam no Supabase Storage e não entram neste backup (só os links delas).
+As fotos ficam no Cloudflare R2 e não entram neste backup (só os links delas).
 
 ### Busca (pg_trgm)
 
-A migration `fotos_lancamentos_busca` ativa a extensão `pg_trgm` no schema `extensions` (padrão do Supabase) e cria índices GIN em `games.title`, `users.username` e `users.display_name`. A busca de jogos e de pessoas tolera erro de digitação ("zelda breth" acha Breath of the Wild) e mostra "Você quis dizer…?". Se a extensão já estava ativada no schema `public`, a migration move ela para `extensions`.
+A migration `fotos_lancamentos_busca` ativa a extensão `pg_trgm` no schema `extensions` e cria índices GIN em `games.title`, `users.username` e `users.display_name`. A busca de jogos e de pessoas tolera erro de digitação ("zelda breth" acha Breath of the Wild) e mostra "Você quis dizer…?". Se a extensão já estava ativada no schema `public`, a migration move ela para `extensions`.
 
-### E-mails (Resend + Supabase)
-
-O SMTP padrão do Supabase manda poucos e-mails por hora; com mais usuários, cadastro e "Esqueci a senha" travam.
+### E-mails (Resend)
 
 1. Crie uma conta em resend.com e adicione seu domínio (Domains → Add Domain), configurando os registros DNS que ele mostrar. Sem domínio próprio, o Resend só envia para o seu próprio e-mail (bom para testar).
 2. Em API Keys, crie uma chave.
-3. No Supabase: Authentication → Emails → SMTP Settings → Enable custom SMTP:
-   - Host `smtp.resend.com`, porta `465`, usuário `resend`, senha = a chave do Resend
-   - Sender email `nao-responda@SEU-DOMINIO`, sender name `Poneglyph.gg`
-4. Em Authentication → Rate Limits, aumente "Rate limit for sending emails".
-5. Em Authentication → Emails → Templates, troque os textos:
+3. Na Vercel: `RESEND_API_KEY` = a chave e `EMAIL_FROM` = `Poneglyph.gg <nao-responda@SEU-DOMINIO>`.
 
-**Confirm signup** — assunto: `Confirme sua conta no Poneglyph.gg`
+Os textos dos e-mails ficam em `src/lib/email.ts`.
 
-```html
-<h2>Bem-vindo ao Poneglyph.gg!</h2>
-<p>Falta só um passo: confirme seu e-mail para ativar sua conta.</p>
-<p><a href="{{ .ConfirmationURL }}">Confirmar minha conta</a></p>
-<p>Se você não criou uma conta, pode ignorar este e-mail.</p>
-```
+### Migração do Supabase (nov/2026)
 
-**Reset password** — assunto: `Crie uma nova senha no Poneglyph.gg`
-
-```html
-<h2>Esqueceu a senha?</h2>
-<p>Clique no link abaixo para criar uma nova senha. Abra no mesmo navegador em que você pediu.</p>
-<p><a href="{{ .ConfirmationURL }}">Criar nova senha</a></p>
-<p>Se não foi você que pediu, ignore este e-mail: sua senha continua a mesma.</p>
-```
+O site saiu do Supabase (banco, login e fotos) para Neon + login próprio + Cloudflare R2. A cópia é feita uma vez pelo workflow **Migrar do Supabase** (`scripts/migrar-do-supabase.mts`): copia todas as tabelas, cria o login de cada conta com o mesmo hash de senha (ninguém precisa trocar a senha), copia as fotos para o R2, troca as URLs e confere a contagem de linhas. Tudo numa transação: se algo falhar, a Neon fica como estava. Com "simular" marcado, faz tudo e desfaz no fim.
 
 ---
 
@@ -216,7 +197,7 @@ O SMTP padrão do Supabase manda poucos e-mails por hora; com mais usuários, ca
 
 **Um log por (usuário, jogo).** `@@unique([userId, gameId])` mantém o status atual simples. Se depois quiser um "diário" estilo Letterboxd (rejogar e avaliar de novo), crie uma tabela `LogEntry` filha.
 
-**Acesso ao banco.** Como o Supabase expõe o schema `public` pela Data API, `constraints.sql` liga RLS em todas as tabelas sem policies: o acesso é só via Prisma no servidor.
+**Acesso ao banco.** `constraints.sql` liga RLS em todas as tabelas sem policies: o acesso é só via Prisma no servidor (era essencial no Supabase, que expunha o schema `public` pela Data API).
 
 **Feed = tabela `activities`.** Cada publicação é uma linha: começou a jogar, finalizou, platinou, dropou ou avaliou. Vêm de dois lugares: do formulário na página do jogo (`games/[slug]/_actions/log.ts`) e da sincronização da Steam. Publicações iguais em sequência são agrupadas (`lib/activity.ts → recordActivity`): a Steam publica no máximo uma por jogo e tipo, e mudar de ideia no formulário em menos de 24h atualiza a publicação em vez de criar outra.
 
@@ -240,4 +221,11 @@ O SMTP padrão do Supabase manda poucos e-mails por hora; com mais usuários, ca
 
 **RAWG vs IGDB.** RAWG é mais simples (só API key). O IGDB exige credenciais de app da Twitch (client id/secret). O schema guarda `rawgId` e `igdbId`.
 
-**Prisma 7.** A URL do banco saiu do `schema.prisma` para o `prisma.config.ts`, e o client exige driver adapter (`@prisma/adapter-pg`). Migrations usam `DIRECT_URL` (porta 5432); o app usa o pooler (`DATABASE_URL`, porta 6543).
+**Prisma 7.** A URL do banco saiu do `schema.prisma` para o `prisma.config.ts`, e o client exige driver adapter (`@prisma/adapter-pg`). Migrations usam `DIRECT_URL` (conexão direta da Neon); o app usa o pooler (`DATABASE_URL`, host com `-pooler`).
+
+## 4. Se o site não abrir
+
+1. **Deploy com erro**: Vercel → Deployments. "Instant Rollback" volta para o último que funcionava.
+2. **Banco fora**: painel da Neon (o compute "dorme" sem uso e acorda sozinho na primeira consulta, em ~1 s; não pausa o projeto como o Supabase fazia). Confira se a cota do plano grátis não acabou.
+3. **CSP bloqueando algo** (tela carrega sem reagir a cliques): cadastre `CSP_MODE=report-only` na Vercel e faça Redeploy; os bloqueios aparecem em /moderacao/erros.
+4. **Cron do GitHub com 404**: o segredo `APP_URL` do GitHub tem que ser o endereço que abre o site.
