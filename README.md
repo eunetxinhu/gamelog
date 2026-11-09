@@ -241,3 +241,10 @@ O SMTP padrão do Supabase manda poucos e-mails por hora; com mais usuários, ca
 **RAWG vs IGDB.** RAWG é mais simples (só API key). O IGDB exige credenciais de app da Twitch (client id/secret). O schema guarda `rawgId` e `igdbId`.
 
 **Prisma 7.** A URL do banco saiu do `schema.prisma` para o `prisma.config.ts`, e o client exige driver adapter (`@prisma/adapter-pg`). Migrations usam `DIRECT_URL` (porta 5432); o app usa o pooler (`DATABASE_URL`, porta 6543).
+
+## 4. Se o site não abrir
+
+1. **Supabase pausado** (causa da queda de nov/2026). No plano grátis o projeto pausa depois de ~1 semana com pouca atividade e o site inteiro cai (todas as páginas consultam o banco). Sinal: o workflow "Manter o Supabase acordado" falha com "não existe mais no DNS". Solução: supabase.com/dashboard → projeto → **Resume project** (dados e configurações voltam iguais; dá para restaurar por até 1 ano). O workflow diário `keepalive.yml` evita que aconteça de novo — precisa dos segredos `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY`.
+2. **Deploy com erro**: Vercel → Deployments. "Instant Rollback" volta para o último que funcionava.
+3. **CSP bloqueando algo** (tela carrega sem reagir a cliques): cadastre `CSP_MODE=report-only` na Vercel e faça Redeploy; os bloqueios aparecem em /moderacao/erros.
+4. **Região**: `regions` no `vercel.json` tem que ser a mais próxima do banco (Supabase em us-west-2 → `pdx1`). Região errada não derruba, mas deixa tudo lento.

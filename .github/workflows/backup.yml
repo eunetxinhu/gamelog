@@ -36,6 +36,10 @@ jobs:
           if [ -z "$DB_URL" ] || [ -z "$PASSPHRASE" ]; then
             echo "::warning::Backup DESATIVADO: defina os segredos BACKUP_DATABASE_URL e BACKUP_PASSPHRASE."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
+          elif printf '%s' "$DB_URL" | grep -qE '@db\.[a-z0-9]+\.supabase\.co'; then
+            # Conexão direta do Supabase só tem IPv6; o GitHub não tem IPv6 ("Network is unreachable")
+            echo "::error::BACKUP_DATABASE_URL usa a conexão direta (db.<ref>.supabase.co), que só funciona com IPv6. Troque pela do Session pooler: Supabase → Project Settings → Database → Connection string → Session pooler (porta 5432)."
+            exit 1
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
