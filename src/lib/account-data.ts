@@ -1,6 +1,5 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { createSupabaseAdminClient, hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { removeUserFiles } from "@/lib/uploads";
 
 /**
@@ -146,16 +145,10 @@ export type DeleteResult = { ok: true } | { ok: false; message: string };
 /**
  * Exclui a conta:
  *  1. clubes que a pessoa criou passam para o admin (ou membro) mais antigo; sem ninguém, são apagados
- *  2. apaga o usuário no Supabase Auth; o trigger on_auth_user_deleted apaga o perfil e,
- *     em cascata, publicações, comentários, reações, mensagens, follows, biblioteca…
+ *  2. apaga o perfil, que leva em cascata login, sessões, publicações, mensagens, biblioteca…
  *  3. apaga as imagens dela no Storage (menos as capas dos clubes que foram passados adiante)
- * O Auth vem antes dos arquivos: se ele falhar, a conta continua inteira (com as fotos).
  */
 export async function deleteAccount(userId: string): Promise<DeleteResult> {
-  if (!hasSupabaseAdmin()) {
-    return { ok: false, message: "A exclusão automática não está disponível agora. Fale com a moderação para excluir sua conta." };
-  }
-
   // 1) Clubes: não apagar a comunidade dos outros junto
   const owned = await prisma.club.findMany({ where: { ownerId: userId }, select: { id: true, imageUrl: true } });
   const keepFiles: string[] = [];
@@ -173,13 +166,8 @@ export async function deleteAccount(userId: string): Promise<DeleteResult> {
     if (club.imageUrl) keepFiles.push(club.imageUrl);
   }
 
-  // 2) Conta
-  const { error } = await createSupabaseAdminClient().auth.admin.deleteUser(userId);
-  if (error && !/not.?found/i.test(error.message)) {
-    console.error("[conta] exclusão no Auth", error.message);
-    return { ok: false, message: "Não foi possível excluir agora. Tente de novo em instantes." };
-  }
-  // Se o trigger não existir (ambiente sem a migration "social"), apaga o perfil direto
+  // 2) Conta: apagar o perfil leva junto, em cascata, login, sessões, publicações,
+  //    comentários, reações, mensagens, follows, biblioteca…
   await prisma.user.deleteMany({ where: { id: userId } });
 
   // 3) Arquivos (falha aqui não volta a conta: fica no log para limpar à mão)

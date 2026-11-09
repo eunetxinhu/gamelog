@@ -172,6 +172,9 @@ model User {
   comments          Comment[]
   wishlist          WishlistItem[]
   syncJobs          SyncJob[]
+  authAccount       AuthAccount?
+  sessions          Session[]
+  authTokens        AuthToken[]
   /// Notificações recebidas
   notifications     Notification[]     @relation("NotificationRecipient")
   /// Notificações que eu causei (curti, comentei, segui…)
@@ -883,4 +886,63 @@ model WebVital {
   @@index([createdAt])
   @@index([route, name, createdAt])
   @@map("web_vitals")
+}
+
+// -----------------------------------------------------------------------------
+//  Login próprio (antes: Supabase Auth). Sessão = token aleatório num cookie
+//  httpOnly; no banco só o SHA-256 dele. Ver src/lib/session.ts e src/lib/password.ts.
+// -----------------------------------------------------------------------------
+
+model AuthAccount {
+  /// Mesmo id do perfil (users.id)
+  userId          String    @id @map("user_id") @db.Uuid
+  /// Minúsculo. Null = conta só da Steam (entra só pela Steam)
+  email           String?   @unique @db.VarChar(254)
+  /// bcrypt (as senhas antigas vieram do Supabase no mesmo formato). Null = sem senha
+  passwordHash    String?   @map("password_hash") @db.VarChar(100)
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_accounts")
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  /// SHA-256 (hex) do token do cookie; o token em si nunca é guardado
+  tokenHash  String   @unique @map("token_hash") @db.Char(64)
+  userId     String   @map("user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  expiresAt  DateTime @map("expires_at")
+  /// Última vez que o prazo foi renovado (no máximo 1x por dia)
+  renewedAt  DateTime @default(now()) @map("renewed_at")
+  userAgent  String?  @map("user_agent") @db.VarChar(200)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+enum AuthTokenKind {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+/** Links de confirmação de e-mail e de nova senha (uso único, com prazo). */
+model AuthToken {
+  tokenHash String        @id @map("token_hash") @db.Char(64)
+  userId    String        @map("user_id") @db.Uuid
+  kind      AuthTokenKind
+  expiresAt DateTime      @map("expires_at")
+  usedAt    DateTime?     @map("used_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@map("auth_tokens")
 }

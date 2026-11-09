@@ -1,19 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 import { appUrl } from "@/lib/app-url";
-import { safeNext } from "../../_actions/types";
 
-/** Links do Supabase por e-mail (confirmar conta e criar nova senha): troca o `code` por sessão. */
-export async function GET(req: NextRequest) {
-  const code = req.nextUrl.searchParams.get("code");
-  const next = safeNext(req.nextUrl.searchParams.get("next"));
-
-  if (code) {
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, appUrl()));
-    console.error("[auth] callback falhou", error.code, error.message);
-  }
-
-  return NextResponse.redirect(new URL(`/login?error=${next === "/reset-password" ? "reset" : "confirm"}`, appUrl()));
+/** Links antigos de e-mail do Supabase (antes do login próprio): não valem mais. */
+export function GET() {
+  return NextResponse.redirect(new URL("/login?error=confirm", appUrl()));
 }

@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { appUrl } from "@/lib/app-url";
-import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { STEAM_MODE_COOKIE, STEAM_STATE_COOKIE, steamLoginUrl, type SteamLoginMode } from "@/lib/steam/openid";
 import { cleanRef, REF_COOKIE } from "@/lib/referral";
 import { clientIpHash, rateLimit } from "@/lib/rate-limit";
@@ -18,9 +17,6 @@ export async function GET(req: NextRequest) {
   // "Entrar com Steam" pode criar conta: limita por IP contra criação em massa
   if (!(await rateLimit("steam-login:ip", user?.id ?? (await clientIpHash()))).ok) {
     return NextResponse.redirect(new URL(user ? "/settings/profile?steam_error=STEAM_UNAVAILABLE" : "/login?error=limite", appUrl()));
-  }
-  if (mode === "signin" && !hasSupabaseAdmin()) {
-    return NextResponse.redirect(new URL("/login?error=steam", appUrl()));
   }
 
   const state = randomBytes(24).toString("base64url");

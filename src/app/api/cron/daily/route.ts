@@ -7,6 +7,8 @@ import { backfillRawgPlaytime } from "@/lib/time-to-beat";
 import { cleanupRateLimits } from "@/lib/rate-limit";
 import { cleanupSyncJobs } from "@/lib/jobs/queue";
 import { cleanupVitals } from "@/lib/vitals-data";
+import { cleanupSessions } from "@/lib/session";
+import { cleanupUnverifiedAccounts } from "@/lib/auth/accounts";
 
 export const maxDuration = 60;
 
@@ -36,8 +38,10 @@ export async function GET(req: NextRequest) {
   const rateLimits = await step("limites", cleanupRateLimits);
   const syncJobs = await step("fila de sincronização", () => cleanupSyncJobs());
   const vitals = await step("medições de velocidade", () => cleanupVitals());
+  const sessions = await step("sessões e links vencidos", cleanupSessions);
+  const unverified = await step("cadastros sem confirmar", () => cleanupUnverifiedAccounts());
 
-  const result = { deals, releasesRefresh, releases, weekly, rawg, rateLimitsCleaned: rateLimits, syncJobsCleaned: syncJobs, vitalsCleaned: vitals, ms: Date.now() - started };
+  const result = { deals, releasesRefresh, releases, weekly, rawg, rateLimitsCleaned: rateLimits, syncJobsCleaned: syncJobs, vitalsCleaned: vitals, sessionsCleaned: sessions, unverifiedRemoved: unverified, ms: Date.now() - started };
   console.log("[cron] daily", result);
   return NextResponse.json(result);
 }
