@@ -1,29 +1,38 @@
 import { describe, expect, it } from "vitest";
 import { isOwnStoragePath, sniffImageType, storagePath } from "./storage-url";
 
-const BASE = "https://abc.supabase.co";
+const BASE = "https://pub-abc123.r2.dev";
 const U = "aaaaaaaa-0000-4000-8000-000000000001";
-const url = (path: string) => `${BASE}/storage/v1/object/public/profile-media/${path}`;
+const url = (path: string) => `${BASE}/${path}`;
 
 describe("storagePath", () => {
   it("aceita arquivo do nosso bucket", () => {
     expect(storagePath(url(`${U}/post-1761-abc123-hd.jpg`), BASE)).toBe(`${U}/post-1761-abc123-hd.jpg`);
+    expect(storagePath(url(`${U}/x.jpg`), `${BASE}/`)).toBe(`${U}/x.jpg`);
   });
 
-  it("recusa domínio parecido (antes passava pelo startsWith)", () => {
-    expect(storagePath(`https://abc.supabase.co.evil.com/storage/v1/object/public/profile-media/${U}/x.jpg`, BASE)).toBeNull();
-    expect(storagePath(`https://abc.supabase.co@evil.com/storage/v1/object/public/profile-media/${U}/x.jpg`, BASE)).toBeNull();
-    expect(storagePath(`http://abc.supabase.co/storage/v1/object/public/profile-media/${U}/x.jpg`, BASE)).toBeNull();
+  it("aceita bucket publicado num domínio com caminho", () => {
+    expect(storagePath(`https://media.site.gg/fotos/${U}/a.png`, "https://media.site.gg/fotos")).toBe(`${U}/a.png`);
+    expect(storagePath(`https://media.site.gg/outra/${U}/a.png`, "https://media.site.gg/fotos")).toBeNull();
   });
 
-  it("recusa outro bucket, subpastas e caminhos tortos", () => {
-    expect(storagePath(`${BASE}/storage/v1/object/public/outro/${U}/x.jpg`, BASE)).toBeNull();
+  it("recusa domínio parecido", () => {
+    expect(storagePath(`https://pub-abc123.r2.dev.evil.com/${U}/x.jpg`, BASE)).toBeNull();
+    expect(storagePath(`https://pub-abc123.r2.dev@evil.com/${U}/x.jpg`, BASE)).toBeNull();
+    expect(storagePath(`http://pub-abc123.r2.dev/${U}/x.jpg`, BASE)).toBeNull();
+    expect(storagePath(`https://abc.supabase.co/storage/v1/object/public/profile-media/${U}/x.jpg`, BASE)).toBeNull();
+  });
+
+  it("recusa subpastas, consultas e caminhos tortos", () => {
     expect(storagePath(url(`${U}/../outro/x.jpg`), BASE)).toBeNull();
     expect(storagePath(url(`${U}/%2e%2e/x.jpg`), BASE)).toBeNull();
     expect(storagePath(url(`${U}/a/b.jpg`), BASE)).toBeNull();
     expect(storagePath(url(`${U}%2Fx.jpg`), BASE)).toBeNull();
+    expect(storagePath(url(`${U}/x.jpg?track=1`), BASE)).toBeNull();
+    expect(storagePath(url(`outra-pasta/x.jpg`), BASE)).toBeNull();
     expect(storagePath("nem-url", BASE)).toBeNull();
     expect(storagePath(null, BASE)).toBeNull();
+    expect(storagePath(url(`${U}/x.jpg`), undefined)).toBeNull();
   });
 
   it("dono do arquivo", () => {
