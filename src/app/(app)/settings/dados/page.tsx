@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { DeleteAccountForm } from "./_components/delete-account-form";
 
 export const metadata: Metadata = { title: "Seus dados" };
@@ -30,7 +29,7 @@ export default async function DataPage() {
       </Section>
 
       <Section title="Excluir conta" description="Apaga sua conta e tudo o que você publicou." danger>
-        <DeleteAccountForm username={user.username} available={hasSupabaseAdmin()} />
+        <DeleteAccountForm username={user.username} available />
       </Section>
 
       <p className="text-center text-xs text-zinc-600">

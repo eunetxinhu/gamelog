@@ -5,7 +5,7 @@ name: Sincronizar Steam
 # src/lib/steam/schedule.ts), então quem joga muito é atualizado a cada ~3 h.
 #
 # Configure em Settings → Secrets and variables → Actions:
-#   APP_URL      URL pública do site (ex.: https://gamelog.vercel.app)
+#   APP_URL      URL pública do site, a mesma que abre no navegador (ex.: https://gamelogwaras.vercel.app)
 #   CRON_SECRET  o mesmo valor da variável CRON_SECRET na Vercel
 on:
   schedule:
@@ -26,6 +26,14 @@ jobs:
             echo "::notice::Defina os segredos APP_URL e CRON_SECRET para ativar a sincronização de hora em hora."
             exit 0
           fi
-          curl --fail-with-body --silent --show-error --max-time 90 \
+          out=$(mktemp)
+          code=$(curl --silent --show-error --max-time 90 -o "$out" -w "%{http_code}" \
             -H "Authorization: Bearer $CRON_SECRET" \
-            "${APP_URL%/}/api/cron/steam-sync"
+            "${APP_URL%/}/api/cron/steam-sync") || code=000
+          cat "$out"; echo
+          case "$code" in
+            2*) ;;
+            404) echo "::error::APP_URL ($APP_URL) não tem o site (404 da Vercel). Use o endereço que abre o site, ex.: https://gamelogwaras.vercel.app"; exit 1 ;;
+            401) echo "::error::CRON_SECRET daqui é diferente do CRON_SECRET da Vercel."; exit 1 ;;
+            *) echo "::error::O site respondeu $code. Veja Vercel → Logs e o painel da Neon."; exit 1 ;;
+          esac

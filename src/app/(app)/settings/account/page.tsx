@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { hasSupabaseAdmin } from "@/lib/supabase/admin";
+import { uploadsEnabled } from "@/lib/uploads";
 import { AccountForm, type GameOption } from "./_components/account-form";
 import { ProfileCardEmbed } from "./_components/profile-card-embed";
 import { appUrl } from "@/lib/app-url";
@@ -46,7 +46,7 @@ export default async function AccountPage() {
         }}
         favorites={slots}
         options={[...options.values()]}
-        canUpload={hasSupabaseAdmin()}
+        canUpload={uploadsEnabled()}
       />
 
       <section className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 sm:p-6">

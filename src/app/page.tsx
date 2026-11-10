@@ -6,7 +6,6 @@ import { Newspaper, Share2, Target, Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getActivities } from "@/lib/activity";
-import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { ActivityCard } from "@/components/activity-card";
 import { SITE_NAME } from "@/lib/brand";
 import { BrandLogo } from "@/components/brand-logo";
@@ -28,7 +27,7 @@ export default async function Home() {
     Promise.all([prisma.user.count(), prisma.activity.count({ where: { type: "PLATINUM" } }), prisma.game.count()]),
   ]);
   const [players, platinumCount, games] = stats;
-  const steamLogin = hasSupabaseAdmin();
+  const steamLogin = true;
 
   return (
     <div className="min-h-dvh">

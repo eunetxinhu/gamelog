@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { AuthForm } from "../_components/auth-form";
 import { safeNext } from "../_actions/types";
 import { BrandStage } from "@/components/brand-stage";
@@ -27,7 +26,7 @@ export default async function LoginPage({ searchParams }: Props) {
 
   return (
     <BrandStage>
-      <AuthForm mode="login" next={next} notice={notice} steamLogin={hasSupabaseAdmin()} />
+      <AuthForm mode="login" next={next} notice={notice} steamLogin />
     </BrandStage>
   );
 }

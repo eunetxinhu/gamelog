@@ -15,7 +15,7 @@ if (process.env.VERCEL_ENV !== "production") {
 }
 
 if (!process.env.DIRECT_URL) {
-  console.error("[migrate] DIRECT_URL não está configurada na Vercel. Cadastre a conexão direta do Supabase (porta 5432) em Settings → Environment Variables.");
+  console.error("[migrate] DIRECT_URL não está configurada na Vercel. Cadastre a conexão direta da Neon (sem \"-pooler\" no host) em Settings → Environment Variables.");
   process.exit(1);
 }
 

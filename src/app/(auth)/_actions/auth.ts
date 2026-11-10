@@ -2,42 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { appUrl } from "@/lib/app-url";
 import { safeNext, type AuthFormState } from "./types";
 import { cleanRef } from "@/lib/referral";
 import { clientIpHash, hashSubject, rateLimit } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/lib/auth";
+import { authenticate, consumeToken, createEmailAccount, isEmail, normalizeEmail, sendPasswordReset, sendVerificationEmail, setPassword } from "@/lib/auth/accounts";
+import { endSession, startSession } from "@/lib/session";
+import { emailEnabled } from "@/lib/email";
+import { passwordProblem } from "@/lib/password";
 
 const USERNAME = /^[a-z0-9_]{3,30}$/;
-
-/** Mensagens em pt-BR para os códigos de erro do Supabase Auth. */
-function authMessage(code: string | undefined, fallback: string) {
-  switch (code) {
-    case "invalid_credentials":
-      return "E-mail ou senha incorretos.";
-    case "email_not_confirmed":
-      return "Confirme seu e-mail antes de entrar. Procure o link que enviamos (veja também o spam).";
-    case "user_already_exists":
-    case "email_exists":
-      return "Já existe uma conta com esse e-mail.";
-    case "weak_password":
-      return "Senha fraca. Use pelo menos 6 caracteres.";
-    case "over_email_send_rate_limit":
-    case "over_request_rate_limit":
-      return "Muitas tentativas. Aguarde alguns minutos e tente de novo.";
-    case "signup_disabled":
-      return "Novos cadastros estão desativados.";
-    case "same_password":
-      return "A nova senha precisa ser diferente da atual.";
-    case "session_not_found":
-    case "session_expired":
-      return "O link de redefinição expirou. Peça um novo.";
-    default:
-      console.error("[auth]", code, fallback);
-      return "Não foi possível concluir agora. Tente novamente.";
-  }
-}
 
 export async function signIn(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "").trim();
@@ -50,10 +24,15 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
   const byEmail = await rateLimit("login:email", hashSubject(email));
   if (!byEmail.ok) return { error: byEmail.message, email };
 
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: authMessage(error.code, error.message), email };
-
+  const res = await authenticate(email, password);
+  if (!res.ok) {
+    if (res.error === "unverified") {
+      await sendVerificationEmail(res.userId, normalizeEmail(email));
+      return { email, error: "Confirme seu e-mail antes de entrar. Mandamos um link novo agora (veja também o spam)." };
+    }
+    return { error: "E-mail ou senha incorretos.", email };
+  }
+  await startSession(res.userId);
   redirect(next);
 }
 
@@ -67,7 +46,9 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
   if (!USERNAME.test(username)) {
     return { ...keep, error: "O nome de usuário precisa ter de 3 a 30 caracteres: letras minúsculas, números ou _." };
   }
-  if (!email || password.length < 6) return { ...keep, error: "Informe um e-mail e uma senha com pelo menos 6 caracteres." };
+  if (!isEmail(email)) return { ...keep, error: "Informe um e-mail válido." };
+  const weak = passwordProblem(password);
+  if (weak) return { ...keep, error: weak };
 
   const limit = await rateLimit("signup:ip", await clientIpHash());
   if (!limit.ok) return { ...keep, error: limit.message };
@@ -75,27 +56,18 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
   const taken = await prisma.user.findUnique({ where: { username }, select: { id: true } });
   if (taken) return { ...keep, error: "Esse nome de usuário já está em uso." };
 
-  const supabase = await createSupabaseServerClient();
-  const callback = new URL("/auth/callback", appUrl());
-  callback.searchParams.set("next", next);
+  const res = await createEmailAccount({ email, password, username, ref: cleanRef(formData.get("ref")) });
+  if (!res.ok) return { ...keep, error: res.error === "email_taken" ? "Já existe uma conta com esse e-mail." : "Esse nome de usuário já está em uso." };
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    // `username` vira o perfil público no primeiro login (src/lib/auth.ts)
-    options: { data: { username, ref: cleanRef(formData.get("ref")) }, emailRedirectTo: callback.toString() },
-  });
-  if (error) return { ...keep, error: authMessage(error.code, error.message) };
-
-  // Confirmação de e-mail desligada no Supabase: já volta com sessão
-  if (data.session) redirect(next);
-
+  if (res.verified) {
+    await startSession(res.userId);
+    redirect(next);
+  }
   return { ...keep, info: `Enviamos um link de confirmação para ${email}. Abra-o para ativar sua conta.` };
 }
 
 export async function signOut() {
-  const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
+  await endSession();
   redirect("/login");
 }
 
@@ -106,43 +78,39 @@ export async function signOut() {
 export async function requestPasswordReset(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "").trim();
   if (!email) return { error: "Informe seu e-mail." };
+  if (!emailEnabled()) return { email, error: "O envio de e-mails está desligado agora. Fale com a moderação." };
 
   // Mesmo bloqueado, a resposta não pode revelar se o e-mail existe
   const ip = await rateLimit("reset:ip", await clientIpHash());
   const byEmail = ip.ok ? await rateLimit("reset:email", hashSubject(email)) : ip;
   if (!byEmail.ok) return { email, error: byEmail.message };
 
-  const supabase = await createSupabaseServerClient();
-  const callback = new URL("/auth/callback", appUrl());
-  callback.searchParams.set("next", "/reset-password");
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: callback.toString() });
-  // Limite de envio é o único erro que vale mostrar; o resto cai na mensagem neutra
-  if (error?.code === "over_email_send_rate_limit" || error?.code === "over_request_rate_limit") {
-    return { email, error: authMessage(error.code, error.message) };
-  }
-  if (error) console.error("[auth] reset", error.code, error.message);
-
+  await sendPasswordReset(email);
   return {
     email,
-    info: `Se existir uma conta com ${email}, enviamos um link para criar uma nova senha. Abra-o neste mesmo navegador (veja também o spam).`,
+    info: `Se existir uma conta com ${email}, enviamos um link para criar uma nova senha (veja também o spam). Ele vale por 1 hora.`,
   };
 }
 
-/** Define a nova senha. Só funciona com a sessão aberta pelo link do e-mail (ou logado). */
+/** Define a nova senha: pelo link do e-mail (token) ou logado. Derruba as outras sessões. */
 export async function updatePassword(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
-  if (password.length < 6) return { error: "A senha precisa ter pelo menos 6 caracteres." };
+  const token = String(formData.get("token") ?? "") || null;
+  const weak = passwordProblem(password);
+  if (weak) return { error: weak };
   if (password !== confirm) return { error: "As senhas não são iguais." };
 
-  const user = await getCurrentUser();
-  const limit = await rateLimit("password:user", user?.id ?? (await clientIpHash()));
+  const current = token ? null : await getCurrentUser();
+  const limit = await rateLimit("password:user", current?.id ?? (await clientIpHash()));
   if (!limit.ok) return { error: limit.message };
 
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) return { error: authMessage(error.code, error.message) };
+  const userId = token ? await consumeToken(token, "RESET_PASSWORD") : (current?.id ?? null);
+  if (!userId) return { error: "O link de redefinição expirou ou já foi usado. Peça um novo." };
 
+  await setPassword(userId, password);
+  // Quem pediu pelo e-mail provou que é dono dele
+  if (token) await prisma.authAccount.updateMany({ where: { userId, emailVerifiedAt: null }, data: { emailVerifiedAt: new Date() } });
+  await startSession(userId);
   redirect("/feed?senha=alterada");
 }

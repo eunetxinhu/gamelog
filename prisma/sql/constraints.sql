@@ -17,13 +17,12 @@ ALTER TABLE follows
 ALTER TABLE users
   ADD CONSTRAINT users_steam_id_format CHECK (steam_id IS NULL OR steam_id ~ '^7656119[0-9]{10}$');
 
--- Vínculo com o Supabase Auth: apagar a conta remove o perfil.
--- É um trigger (criado na migration "social"), não FK: FK para auth.users
--- quebra o `prisma migrate dev` por ser referência entre schemas.
+-- (Histórico) No Supabase havia um trigger em auth.users que apagava o perfil junto
+-- com a conta. Com o login próprio, auth_accounts tem FK com cascade para users.
 
--- Segurança: o app acessa o banco só pelo Prisma (role postgres, server-side).
--- O Supabase expõe o schema "public" via Data API com a anon key; sem RLS,
--- QUALQUER visitante leria os dados dos usuários. RLS ligado e sem policies = bloqueado.
+-- Segurança: o app acessa o banco só pelo Prisma, no servidor. RLS ligado e sem
+-- policies bloqueia qualquer outro acesso (era essencial no Supabase, que expunha o
+-- schema "public" pela Data API; na Neon fica como camada extra).
 ALTER TABLE users           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE games           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE game_logs       ENABLE ROW LEVEL SECURITY;

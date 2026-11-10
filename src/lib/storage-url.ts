@@ -1,27 +1,25 @@
 // Validação de URLs do nosso Storage e do conteúdo dos arquivos (sem rede: testável).
 
-export const MEDIA_BUCKET = "profile-media";
-const PUBLIC_PREFIX = `/storage/v1/object/public/${MEDIA_BUCKET}/`;
-
 /**
- * Caminho dentro do bucket (`<userId>/arquivo.jpg`) se a URL for mesmo do nosso Storage;
- * senão `null`. Compara a origem exata (não aceita `projeto.supabase.co.outro-site.com`),
- * exige o prefixo do bucket e recusa `..`, barras invertidas e caracteres codificados
- * que mudem o caminho.
+ * Caminho dentro do bucket (`<userId>/arquivo.jpg`) se a URL for mesmo das nossas fotos
+ * (`publicBase` = endereço público do bucket no R2); senão `null`. Compara a origem exata
+ * (não aceita `pub-x.r2.dev.outro-site.com`), exige o prefixo e recusa `..`, barras
+ * invertidas e caracteres codificados que mudem o caminho.
  */
-export function storagePath(url: string | null | undefined, supabaseUrl: string | undefined): string | null {
-  if (!url || !supabaseUrl) return null;
+export function storagePath(url: string | null | undefined, publicBase: string | undefined): string | null {
+  if (!url || !publicBase) return null;
   let parsed: URL;
   let base: URL;
   try {
     parsed = new URL(url);
-    base = new URL(supabaseUrl);
+    base = new URL(publicBase);
   } catch {
     return null;
   }
-  if (parsed.origin !== base.origin || parsed.username || parsed.password) return null;
-  if (!parsed.pathname.startsWith(PUBLIC_PREFIX)) return null;
-  const raw = parsed.pathname.slice(PUBLIC_PREFIX.length);
+  if (parsed.origin !== base.origin || parsed.username || parsed.password || parsed.search || parsed.hash) return null;
+  const prefix = base.pathname.endsWith("/") ? base.pathname : `${base.pathname}/`;
+  if (!parsed.pathname.startsWith(prefix)) return null;
+  const raw = parsed.pathname.slice(prefix.length);
   // Exatamente o formato que nós geramos: <uuid da pessoa>/<nome com letras, números, - _ .>
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[A-Za-z0-9._-]+$/i.test(raw) || raw.includes("..")) return null;
   return raw;

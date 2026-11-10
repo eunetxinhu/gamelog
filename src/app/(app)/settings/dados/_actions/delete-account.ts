@@ -1,10 +1,11 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { deleteAccount } from "@/lib/account-data";
 import { rateLimit } from "@/lib/rate-limit";
+import { SESSION_COOKIE } from "@/lib/session";
+import { cookies } from "next/headers";
 
 export type DeleteAccountState = { error?: string };
 
@@ -22,9 +23,8 @@ export async function deleteMyAccount(_prev: DeleteAccountState, formData: FormD
   const result = await deleteAccount(user.id);
   if (!result.ok) return { error: result.message };
 
-  // A sessão já não vale (o usuário não existe mais no Auth): limpa os cookies do Supabase
-  const jar = await cookies();
-  for (const c of jar.getAll()) if (c.name.startsWith("sb-")) jar.delete(c.name);
+  // As sessões foram apagadas junto com a conta: tira o cookie que sobrou no navegador
+  (await cookies()).delete(SESSION_COOKIE);
 
   redirect("/login?error=conta-excluida");
 }

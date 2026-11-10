@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { AuthForm } from "../_components/auth-form";
 import { safeNext } from "../_actions/types";
 import { cleanRef } from "@/lib/referral";
@@ -19,7 +18,7 @@ export default async function SignupPage({ searchParams }: Props) {
 
   return (
     <BrandStage>
-      <AuthForm mode="signup" next={next} steamLogin={hasSupabaseAdmin()} inviteRef={cleanRef(query.ref)} />
+      <AuthForm mode="signup" next={next} steamLogin inviteRef={cleanRef(query.ref)} />
     </BrandStage>
   );
 }

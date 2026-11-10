@@ -9,7 +9,7 @@ import { escapeLike, FUZZY_THRESHOLD, normalizeQuery } from "@/lib/search-query"
  *
  * word_similarity(q, título) compara o que foi digitado com o trecho mais parecido do
  * título, então funciona bem com buscas curtas dentro de nomes longos. A extensão fica
- * no schema "extensions" (padrão do Supabase), por isso os nomes vão qualificados.
+ * no schema "extensions" (criado pela migration, como era no Supabase), por isso os nomes vão qualificados.
  */
 
 export type LocalGameHit = {

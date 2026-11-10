@@ -5,7 +5,6 @@ import { Trophy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getProgression } from "@/lib/progression";
-import { hasSupabaseAdmin } from "@/lib/supabase/admin";
 import { Avatar } from "@/components/avatar";
 import { SITE_NAME } from "@/lib/brand";
 import { BrandLogo } from "@/components/brand-logo";
@@ -67,11 +66,9 @@ export default async function InvitePage({ params }: Props) {
         </div>
 
         <div className="mt-7 space-y-2">
-          {hasSupabaseAdmin() && (
-            <a href={`/api/steam/login?ref=${ref}`} className="block rounded-lg bg-[#1b2838] px-4 py-3 text-sm font-semibold text-white ring-1 ring-white/15 hover:bg-[#2a475e]">
-              Criar conta com Steam
-            </a>
-          )}
+          <a href={`/api/steam/login?ref=${ref}`} className="block rounded-lg bg-[#1b2838] px-4 py-3 text-sm font-semibold text-white ring-1 ring-white/15 hover:bg-[#2a475e]">
+            Criar conta com Steam
+          </a>
           <Link href={`/signup?ref=${ref}`} className="block rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-500">
             Criar conta com e-mail
           </Link>

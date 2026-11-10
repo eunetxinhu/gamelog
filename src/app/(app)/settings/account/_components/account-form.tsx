@@ -17,7 +17,7 @@ type Props = {
   steamAvatarUrl: string | null;
   favorites: (GameOption | null)[]; // sempre 4 posições
   options: GameOption[];
-  /** Upload de imagem disponível (precisa da chave secreta do Supabase no servidor) */
+  /** Upload de imagem disponível (precisa do Cloudflare R2 configurado no servidor) */
   canUpload: boolean;
 };
 

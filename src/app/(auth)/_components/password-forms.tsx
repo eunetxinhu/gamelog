@@ -33,12 +33,13 @@ export function ForgotPasswordForm() {
 }
 
 /** Passo 2: criar a senha nova (aberto pelo link do e-mail). */
-export function ResetPasswordForm({ email }: { email: string | null }) {
+export function ResetPasswordForm({ email, token }: { email: string | null; token: string | null }) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(updatePassword, {});
 
   return (
     <Shell title="Criar nova senha" subtitle={email ? `Para a conta ${email}.` : "Escolha uma senha nova."}>
       <form action={action} className="mt-6 space-y-4">
+        {token && <input type="hidden" name="token" value={token} />}
         <Field label="Nova senha" name="password" type="password" autoComplete="new-password" minLength={6} />
         <Field label="Repita a nova senha" name="confirm" type="password" autoComplete="new-password" minLength={6} />
         {state.error && <Notice tone="error">{state.error}</Notice>}

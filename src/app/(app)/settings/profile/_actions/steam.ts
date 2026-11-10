@@ -5,8 +5,7 @@ import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { enqueueSteamSync, getJobView, latestJobId, needsWorker, runWorker, type SyncJobView } from "@/lib/jobs/queue";
-import { isSteamOnlyEmail } from "@/lib/steam/signin";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isSteamOnlyAccount } from "@/lib/auth/accounts";
 import type { SteamSyncError } from "./types";
 
 export type StartSyncResult = { ok: true; jobId: string } | { ok: false; error: SteamSyncError };
@@ -45,8 +44,7 @@ export async function unlinkSteam(): Promise<{ ok: boolean; message?: string }> 
   const user = await getCurrentUser();
   if (!user) return { ok: false };
 
-  const { data } = await (await createSupabaseServerClient()).auth.getUser();
-  if (isSteamOnlyEmail(data.user?.email)) {
+  if (await isSteamOnlyAccount(user.id)) {
     return { ok: false, message: "Sua conta foi criada com a Steam e ela é o seu login. Não dá para desvincular." };
   }
 
