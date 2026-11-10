@@ -1,11 +1,5 @@
 // Validação de URLs do nosso Storage e do conteúdo dos arquivos (sem rede: testável).
 
-/** Bucket antigo do Supabase (só para o script de migração reconhecer as URLs velhas). */
-export const MEDIA_BUCKET = "profile-media";
-
-/** Prefixo das URLs públicas antigas do Supabase Storage. */
-export const legacySupabasePrefix = (supabaseUrl: string) => `${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/${MEDIA_BUCKET}/`;
-
 /**
  * Caminho dentro do bucket (`<userId>/arquivo.jpg`) se a URL for mesmo das nossas fotos
  * (`publicBase` = endereço público do bucket no R2); senão `null`. Compara a origem exata

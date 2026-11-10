@@ -185,9 +185,17 @@ A migration `fotos_lancamentos_busca` ativa a extensão `pg_trgm` no schema `ext
 
 Os textos dos e-mails ficam em `src/lib/email.ts`.
 
-### Migração do Supabase (nov/2026)
+### Saída do Supabase (nov/2026)
 
-O site saiu do Supabase (banco, login e fotos) para Neon + login próprio + Cloudflare R2. A cópia é feita uma vez pelo workflow **Migrar do Supabase** (`scripts/migrar-do-supabase.mts`): copia todas as tabelas, cria o login de cada conta com o mesmo hash de senha (ninguém precisa trocar a senha), copia as fotos para o R2, troca as URLs e confere a contagem de linhas. Tudo numa transação: se algo falhar, a Neon fica como estava. Com "simular" marcado, faz tudo e desfaz no fim.
+O projeto do Supabase foi **apagado** (não só pausado) e nenhum backup tinha funcionado (Docker Hub barrando downloads e conexão só IPv6), então o site recomeçou com o banco vazio na Neon: contas, registros e fotos antigos se perderam. O catálogo de jogos se refaz sozinho (cada jogo entra quando alguém abre a página) e a biblioteca da Steam volta na primeira sincronização de cada pessoa.
+
+Depois de criar a sua conta de novo, vire moderador pelo SQL Editor da Neon:
+
+```sql
+UPDATE users SET is_admin = true WHERE username = 'SEU_USUARIO';
+```
+
+**Confira o backup.** Actions → Backup do banco tem que ficar verde toda noite; o GitHub avisa por e-mail quando um workflow agendado falha.
 
 ---
 

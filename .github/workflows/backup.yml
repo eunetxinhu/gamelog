@@ -40,14 +40,24 @@ jobs:
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # pg_dump da mesma versão do servidor da Neon (Postgres 17), pelo apt oficial do
+      # Postgres. Sem Docker: o limite de downloads do Docker Hub derrubou todos os
+      # backups de out–nov/2026 (junto com a conexão IPv6 do Supabase).
+      - name: Instalar pg_dump 17
+        if: steps.check.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
       - name: Dump (schema e dados)
         if: steps.check.outputs.enabled == 'true'
         run: |
           set -euo pipefail
           mkdir -p dump
-          # pg_dump da mesma versão do servidor da Neon (Postgres 17), via Docker
-          docker run --rm -e DB_URL postgres:17-alpine \
-            sh -c 'pg_dump "$DB_URL" --format=custom --no-owner --no-privileges' > dump/poneglyph.dump
+          pg_dump "$DB_URL" --format=custom --no-owner --no-privileges -f dump/poneglyph.dump
           # Dump vazio = algo deu errado (conexão, permissão): falha em vez de guardar lixo
           test -s dump/poneglyph.dump
           ls -la dump
